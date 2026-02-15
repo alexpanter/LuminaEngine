@@ -247,13 +247,16 @@ namespace Lumina::Import::Mesh::GLTF
         THashSet<FString> SeenMeshes;
         for (const fastgltf::Mesh& Mesh : Asset.meshes)
         {
-            auto It = SeenMeshes.find(Mesh.name.c_str());
+            FString SanitizedMeshName = Mesh.name.c_str();
+            eastl::replace(SanitizedMeshName.begin(), SanitizedMeshName.end(), '.', '_');
+            
+            auto It = SeenMeshes.find(SanitizedMeshName.c_str());
             if (It != SeenMeshes.end())
             {
                 continue;
             }
             
-            SeenMeshes.emplace(Mesh.name.c_str());
+            SeenMeshes.emplace(SanitizedMeshName);
             
             FFixedString MeshName;
             if (Mesh.name.empty())
@@ -262,7 +265,7 @@ namespace Lumina::Import::Mesh::GLTF
             }
             else
             {
-                MeshName.append_convert(Mesh.name);
+                MeshName.append_convert(SanitizedMeshName);
             }
             
             auto StaticMesh = MakeUnique<FMeshResource>();
@@ -287,11 +290,29 @@ namespace Lumina::Import::Mesh::GLTF
             {
                 for (auto& Image : Asset.images)
                 {
-                    auto& URI = std::get<fastgltf::sources::URI>(Image.data);
                     FMeshImportImage GLTFImage;
-                    GLTFImage.ByteOffset = URI.fileByteOffset;
-                    GLTFImage.RelativePath = URI.uri.c_str();
-                    ImportData.Textures.emplace(GLTFImage);
+                    if (auto* URI = std::get_if<fastgltf::sources::URI>(&Image.data))
+                    {
+                        GLTFImage.ByteOffset = URI->fileByteOffset;
+                        GLTFImage.RelativePath = URI->uri.c_str();
+                        ImportData.Textures.emplace(Move(GLTFImage));
+                    }
+                    else if (auto* BufferView = std::get_if<fastgltf::sources::BufferView>(&Image.data))
+                    {
+                        
+                    }
+                    else if (auto* Array = std::get_if<fastgltf::sources::Array>(&Image.data))
+                    {
+                        
+                    }
+                    else if (auto* Vector = std::get_if<fastgltf::sources::Vector>(&Image.data))
+                    {
+                        
+                    }
+                    else if (auto* ByteView = std::get_if<fastgltf::sources::ByteView>(&Image.data))
+                    {
+                        
+                    }
                 }
             }
             

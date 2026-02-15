@@ -282,30 +282,34 @@ namespace Lumina::Platform
         }
         
         TVector<COMDLG_FILTERSPEC> fileTypes;
-        TVector<FString> StringStorage;
+        TVector<FWString> StringStorage;
 
         if (Filter && strlen(Filter) > 0)
         {
             const char* p = Filter;
             while (*p)
             {
-                FString Name;
-                FString Spec;
+                size_t NameLen = strlen(p);
+                FWString wideName = UTF8_TO_TCHAR(std::string(p, NameLen).c_str());
+                p += NameLen + 1;
 
-                size_t len = strlen(p);
-                Name.assign(p, p + len);
-                p += len + 1;
+                size_t specLen = strlen(p);
+                FWString wideSpec = UTF8_TO_TCHAR(std::string(p, specLen).c_str());
+                p += specLen + 1;
 
-                len = strlen(p);
-                Spec.assign(p, p + len);
-                p += len + 1;
+                StringStorage.push_back(wideName);
+                StringStorage.push_back(wideSpec);
 
-                StringStorage.push_back(Name);
-                StringStorage.push_back(Spec);
-
-                fileTypes.push_back({ UTF8_TO_TCHAR(StringStorage[StringStorage.size() - 2].c_str()),
-                                      UTF8_TO_TCHAR(StringStorage[StringStorage.size() - 1].c_str()) });
+                fileTypes.push_back({ 
+                    StringStorage[StringStorage.size() - 2].c_str(),
+                    StringStorage[StringStorage.size() - 1].c_str() 
+                });
             }
+        }
+
+        if (!fileTypes.empty())
+        {
+            FileDialog->SetFileTypes(static_cast<UINT>(fileTypes.size()), fileTypes.data());
         }
 
         if (!fileTypes.empty())

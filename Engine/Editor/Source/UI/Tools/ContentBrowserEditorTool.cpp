@@ -7,7 +7,6 @@
 #include "EASTL/sort.h"
 #include "FileSystem/FileSystem.h"
 #include "Paths/Paths.h"
-#include "Platform/Filesystem/FileHelper.h"
 #include "Platform/Process/PlatformProcess.h"
 #include "Scripting/Lua/Scripting.h"
 #include "TaskSystem/TaskSystem.h"
