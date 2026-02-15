@@ -1024,7 +1024,7 @@ namespace Lumina
 
     void FVulkanCommandList::AddMarker(const char* Name, const FColor& Color)
     {
-        if (PendingState.IsRecording())
+        if (PendingState.IsRecording() && GRenderContext->GetRenderContextDescription().bValidation)
         {
             VkDebugUtilsLabelEXT Label = {};
             Label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
@@ -1039,7 +1039,7 @@ namespace Lumina
 
     void FVulkanCommandList::PopMarker()
     {
-        if(PendingState.IsRecording())
+        if(PendingState.IsRecording() && GRenderContext->GetRenderContextDescription().bValidation)
         {
             vkCmdEndDebugUtilsLabelEXT(CurrentCommandBuffer->CommandBuffer);
         }
