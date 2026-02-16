@@ -23,7 +23,6 @@
 #include "Renderer/RendererUtils.h"
 #include "World/World.h"
 #include "World/Entity/Components/CharacterComponent.h"
-#include "World/Entity/Components/CharacterControllerComponent.h"
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/PhysicsComponent.h"
 #include "World/Entity/Components/TransformComponent.h"
@@ -671,10 +670,13 @@ namespace Lumina::Physics
         STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
         
         JPH::ShapeRefC Shape;
+        glm::vec3 ColliderOffset(0.0f);
 
         if (Registry.all_of<SBoxColliderComponent>(Entity))
         {
             const SBoxColliderComponent& BC = Registry.get<SBoxColliderComponent>(Entity);
+            ColliderOffset = BC.Offset;
+
             JPH::BoxShapeSettings Settings(JoltUtils::ToJPHVec3(BC.HalfExtent * TransformComponent.GetScale()));
             Settings.SetEmbedded();
             auto Result = Settings.Create();
@@ -688,6 +690,8 @@ namespace Lumina::Physics
         else if (Registry.all_of<SSphereColliderComponent>(Entity))
         {
             const SSphereColliderComponent& SC = Registry.get<SSphereColliderComponent>(Entity);
+            ColliderOffset = SC.Offset;
+
             JPH::SphereShapeSettings Settings(SC.Radius * TransformComponent.MaxScale());
             Settings.SetEmbedded();
             auto Result = Settings.Create();
@@ -704,6 +708,9 @@ namespace Lumina::Physics
 
         glm::quat Rotation      = TransformComponent.GetRotation();
         glm::vec3 Position      = TransformComponent.GetLocation();
+        
+        glm::vec3 RotatedOffset = Rotation * ColliderOffset;
+        Position += RotatedOffset;
 
         JPH::BodyCreationSettings Settings(
             Shape,
@@ -712,10 +719,12 @@ namespace Lumina::Physics
             MotionType,
             Layer);
 
-        Settings.mRestitution = 0.5f;
-        Settings.mFriction = 0.3f;
-        Settings.mAngularDamping = RigidBodyComponent.AngularDamping;
-        Settings.mLinearDamping = RigidBodyComponent.LinearDamping; 
+        Settings.mMaxLinearVelocity     = RigidBodyComponent.MaxLinearVelocity;
+        Settings.mMaxAngularVelocity    = RigidBodyComponent.MaxAngularVelocity;
+        Settings.mRestitution           = RigidBodyComponent.RestitutionOverride;
+        Settings.mFriction              = RigidBodyComponent.FrictionOverride;
+        Settings.mAngularDamping        = RigidBodyComponent.AngularDamping;
+        Settings.mLinearDamping         = RigidBodyComponent.LinearDamping; 
 
         JPH::BodyInterface& BodyInterface = JoltSystem->GetBodyInterface();
         

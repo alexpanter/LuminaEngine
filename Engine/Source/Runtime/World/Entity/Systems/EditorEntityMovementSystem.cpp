@@ -94,10 +94,9 @@ namespace Lumina
 				double MouseDeltaX = FInputProcessor::Get().GetMouseDeltaX();
 				double MouseDeltaY = FInputProcessor::Get().GetMouseDeltaY();
 
-				Transform.AddYaw(-MouseDeltaX * 0.1);
-				Transform.AddPitch(MouseDeltaY * 0.1);
+				Transform.AddYaw(static_cast<float>(-MouseDeltaX * 0.1));
+				Transform.AddPitch(static_cast<float>(MouseDeltaY * 0.1));
 
-				//Speed change.
 				Velocity.Scale += Math::Pow(1.05f, Velocity.Scale) * static_cast<float>(MouseDeltaZ);
 				Velocity.Scale = Math::Clamp(Velocity.Scale, 1.0f, 50.0f);
 			}

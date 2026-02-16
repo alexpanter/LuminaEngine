@@ -24,6 +24,7 @@
 #include "World/Entity/Components/EditorComponent.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
+#include "World/Entity/Components/StaticMeshComponent.h"
 #include "World/Entity/Components/TagComponent.h"
 #include "World/Entity/Components/VelocityComponent.h"
 #include "World/Scene/RenderScene/RenderScene.h"
@@ -249,7 +250,7 @@ namespace Lumina
             View.each([&](entt::entity SelectedEntity)
             {
                 World->GetEntityRegistry().emplace_or_replace<FNeedsTransformUpdate>(SelectedEntity);
-        
+                
                 if (bCopyPressed)
                 {
                     AddEntityToCopies(SelectedEntity);
@@ -275,6 +276,15 @@ namespace Lumina
                 World->GetEntityRegistry().emplace_or_replace<FNeedsTransformUpdate>(SelectedEntity);
             });
         }
+        
+        View.each([&](entt::entity Entity)
+        {
+            if (SStaticMeshComponent* MeshComponent = World->GetEntityRegistry().try_get<SStaticMeshComponent>(Entity))
+            {
+                const STransformComponent& Transform = World->GetEntityRegistry().get<STransformComponent>(Entity);
+                World->DrawBox(Transform.GetLocation(), MeshComponent->GetAABB().GetSize() * 0.5f * Transform.GetScale(), Transform.GetRotation(), FColor::Red, 5.0f);
+            }
+        });
 
         
         auto CopyView = World->GetEntityRegistry().view<FCopiedTag>();

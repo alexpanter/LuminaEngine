@@ -26,6 +26,15 @@ namespace Lumina
     
         PROPERTY(Script, Editable, Category = "Physics")
         float Mass = 70.0f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        float Padding = 0.02f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        float PenetrationRecoverySpeed = 1.0f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        float PredictiveContactDistance = 0.1f;
     
         PROPERTY(Script, Editable, Category = "Physics")
         float MaxStrength = 100.0f;

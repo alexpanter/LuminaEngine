@@ -16,6 +16,21 @@ namespace Lumina
         
         PROPERTY(Script, Editable, Category = "Physics")
         float Mass = 1.0f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        bool bAllowSleeping = true;
+        
+        PROPERTY(Script, Editable, ClampMin = 0.001f, Category = "Physics")
+        float MaxLinearVelocity = 500.0f;
+        
+        PROPERTY(Script, Editable, ClampMin = 0.001f, Category = "Physics")
+        float MaxAngularVelocity = 0.25f * LE_PI * 60.0f;
+        
+        PROPERTY(Script, Editable, ClampMin = 0.001f, ClampMax = 1.0f, Category = "Physics")
+        float RestitutionOverride = 0.5f;
+        
+        PROPERTY(Script, Editable, ClampMin = 0.001f, ClampMax = 1.0f, Category = "Physics")
+        float FrictionOverride = 0.3f;
 
         PROPERTY(Script, Editable, ClampMin = 0.001f, ClampMax = 1.0f, Category = "Physics")
         float LinearDamping = 0.0f;

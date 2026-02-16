@@ -95,7 +95,7 @@ namespace Lumina
         TransparentPass(RenderGraph);
         BatchedLineDraw(RenderGraph);
         BillboardPass(RenderGraph);
-        SelectionPass(RenderGraph);
+        //SelectionPass(RenderGraph);
         ToneMappingPass(RenderGraph);
         DebugDrawPass(RenderGraph);
     }
