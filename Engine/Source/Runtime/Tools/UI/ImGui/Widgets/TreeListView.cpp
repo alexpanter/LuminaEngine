@@ -3,6 +3,7 @@
 
 #include "imgui.h"
 #include "imgui_internal.h"
+#include "Tools/UI/ImGui/ImGuiDesignIcons.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
 
 namespace Lumina
@@ -110,7 +111,7 @@ namespace Lumina
         
         ImGui::PushID(static_cast<int>(entt::to_integral(Entity)));
 
-        ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_DrawLinesFull;
+        ImGuiTreeNodeFlags Flags = ImGuiTreeNodeFlags_SpanFullWidth | ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_DrawLinesFull | ImGuiTreeNodeFlags_AllowOverlap;
 
         if (!bHasChildren)
         {
@@ -127,6 +128,7 @@ namespace Lumina
             Flags |= ImGuiTreeNodeFlags_Selected;
         }
         
+        
         FFixedString DisplayName = Display.DisplayName.c_str();
         if (bHasChildren)
         {
@@ -135,7 +137,13 @@ namespace Lumina
             DisplayName.append(")");
         }
         
-        ImGui::PushStyleColor(ImGuiCol_Text, Display.DisplayColor);
+        ImVec4 TextColor = Display.DisplayColor;
+        if (State.bDisabled)
+        {
+            TextColor.w *= 0.4f;
+        }
+        
+        ImGui::PushStyleColor(ImGuiCol_Text, TextColor);
         
         State.bExpanded = ImGui::TreeNodeEx("##TreeNode", Flags, "%s", DisplayName.c_str());
         
@@ -195,6 +203,25 @@ namespace Lumina
             }
         }
         
+        if (Display.bShowDisabledIcon)
+        {
+            ImGui::SameLine();
+            float AvailableWidth = ImGui::GetContentRegionAvail().x;
+            float ButtonWidth = 40.0f;
+
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + AvailableWidth - ButtonWidth + ImGui::GetStyle().FramePadding.x);
+        
+            const char* Icon = State.bDisabled ? LE_ICON_EYE_OFF : LE_ICON_EYE;
+            if (ImGui::SmallButton(Icon))
+            {
+                State.bDisabled = !State.bDisabled;
+                if (Context.VisibilityToggleFunction)
+                {
+                    Context.VisibilityToggleFunction(*this, Entity);
+                }
+            }
+        }
+        
         if (State.bExpanded)
         {
             for (entt::entity Child : TreeNode.Children)
@@ -208,7 +235,6 @@ namespace Lumina
             
             ImGui::TreePop();
         }
-
         
         ImGui::PopStyleColor();
         

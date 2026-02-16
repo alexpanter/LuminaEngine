@@ -15,6 +15,7 @@
 #include "Tools/Import/ImportHelpers.h"
 #include "World/World.h"
 #include "World/Entity/Components/BillboardComponent.h"
+#include "world/entity/components/entitytags.h"
 #include "world/entity/components/environmentcomponent.h"
 #include "world/entity/components/lightcomponent.h"
 #include "World/Entity/Components/LineBatcherComponent.h"
@@ -147,8 +148,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION("Compile Draw Commands");
             
-            auto StaticView = World->GetEntityRegistry().view<SStaticMeshComponent, STransformComponent>();
-            auto SkeletalView = World->GetEntityRegistry().view<SSkeletalMeshComponent, STransformComponent>();
+            auto StaticView = World->GetEntityRegistry().view<SStaticMeshComponent, STransformComponent>(entt::exclude<SDisabledTag>);
+            auto SkeletalView = World->GetEntityRegistry().view<SSkeletalMeshComponent, STransformComponent>(entt::exclude<SDisabledTag>);
 
             const size_t EntityCount = StaticView.size_hint() + SkeletalView.size_hint();
             const size_t EstimatedProxies = EntityCount * 2;
@@ -399,7 +400,7 @@ namespace Lumina
             LUMINA_PROFILE_SECTION("Process Billboard Primitives");
 
             uint32 NumBillboards = 0;
-            auto View = World->GetEntityRegistry().view<SBillboardComponent, STransformComponent>();
+            auto View = World->GetEntityRegistry().view<SBillboardComponent, STransformComponent>(entt::exclude<SDisabledTag>);
             View.each([this, NumBillboards](const SBillboardComponent& BillboardComponent, const STransformComponent& TransformComponent)
             {
                 if (!BillboardComponent.Texture.IsValid() || !BillboardComponent.Texture->GetRHIRef()->IsValid())
@@ -420,7 +421,7 @@ namespace Lumina
             LUMINA_PROFILE_SECTION("Directional Light Processing");
 
             LightData.bHasSun = false;
-            auto View = World->GetEntityRegistry().view<SDirectionalLightComponent>();
+            auto View = World->GetEntityRegistry().view<SDirectionalLightComponent>(entt::exclude<SDisabledTag>);
             View.each([this](const SDirectionalLightComponent& DirectionalLightComponent)
             {
                 LightData.bHasSun = true;
@@ -508,7 +509,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION("Point Light Processing");
 
-            auto View = World->GetEntityRegistry().view<SPointLightComponent, STransformComponent>();
+            auto View = World->GetEntityRegistry().view<SPointLightComponent, STransformComponent>(entt::exclude<SDisabledTag>);
             View.each([&] (const SPointLightComponent& PointLightComponent, const STransformComponent& TransformComponent)
             {
                 FLight Light;
@@ -594,7 +595,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION("Spot Light Processing");
 
-            auto View = World->GetEntityRegistry().view<SSpotLightComponent, STransformComponent>();
+            auto View = World->GetEntityRegistry().view<SSpotLightComponent, STransformComponent>(entt::exclude<SDisabledTag>);
             View.each([&] (SSpotLightComponent& SpotLightComponent, STransformComponent& TransformComponent)
             {
                 const FTransform& Transform = TransformComponent.WorldTransform;
@@ -782,7 +783,7 @@ namespace Lumina
             RenderSettings.bHasEnvironment = false;
             LightData.AmbientLight = glm::vec4(0.0f);
             RenderSettings.bSSAO = false;
-            auto View = World->GetEntityRegistry().view<SEnvironmentComponent>();
+            auto View = World->GetEntityRegistry().view<SEnvironmentComponent>(entt::exclude<SDisabledTag>);
             View.each([this] (const SEnvironmentComponent& EnvironmentComponent)
             {
                 LightData.AmbientLight          = glm::vec4(EnvironmentComponent.AmbientColor, EnvironmentComponent.Intensity);

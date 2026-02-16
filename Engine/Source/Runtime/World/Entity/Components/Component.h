@@ -30,9 +30,16 @@ namespace Lumina
         }
 
         template<typename TComponent>
-        TComponent& EmplaceComponent(entt::registry& Registry, entt::entity Entity, const entt::meta_any& Any)
+        decltype(auto) EmplaceComponent(entt::registry& Registry, entt::entity Entity, const entt::meta_any& Any)
         {
-            return Registry.emplace_or_replace<TComponent>(Entity, Any ? Any.cast<const TComponent&>() : TComponent{});
+            if constexpr (eastl::is_empty_v<TComponent>)
+            {
+                Registry.emplace<TComponent>(Entity);
+            }
+            else
+            {
+                return Registry.emplace_or_replace<TComponent>(Entity, Any ? Any.cast<const TComponent&>() : TComponent{});
+            }
         }
         
         template<typename TComponent>
@@ -226,23 +233,26 @@ namespace Lumina
                 .traits(ECS::ETraits::Component)
                 .template func<&GetStructType<TComponent>>("static_struct"_hs);
             
-            Meta.template func<&HasComponent<TComponent>>("has"_hs)
-            .template func<&GetComponent<TComponent>>("get"_hs)
-            .template func<&RemoveComponent<TComponent>>("remove"_hs)
+            Meta.template func<&RemoveComponent<TComponent>>("remove"_hs)
             .template func<&ClearComponent<TComponent>>("clear"_hs)
             .template func<&EmplaceComponent<TComponent>>("emplace"_hs)
-            .template func<&PatchComponent<TComponent>>("patch"_hs)
-            .template func<&Serialize<TComponent>>("serialize"_hs);
+            .template func<&HasComponent<TComponent>>("has"_hs);
             
-            Meta.template func<&PatchComponentLua<TComponent>>("patch_lua"_hs)
-            .template func<&EmplaceComponentLua<TComponent>>("emplace_lua"_hs)
-            .template func<&GetComponentLua<TComponent>>("get_lua"_hs)
-            .template func<&TryGetComponentLua<TComponent>>("try_get_lua"_hs)
-            .template func<&OnConstruct_Lua<TComponent>>("on_construct_lua"_hs)
-            .template func<&OnDestroy_Lua<TComponent>>("on_destroy_lua"_hs)
-
-            .template func<&ConnectListener_Lua<TComponent>>("connect_listener_lua"_hs)
-            .template func<&TriggerEvent_Lua<TComponent>>("trigger_event_lua"_hs);
+            if constexpr (!eastl::is_empty_v<TComponent>)
+            {
+                Meta.template func<&GetComponent<TComponent>>("get"_hs);
+                Meta.template func<&PatchComponentLua<TComponent>>("patch_lua"_hs);
+                Meta.template func<&GetComponentLua<TComponent>>("get_lua"_hs);
+                Meta.template func<&TryGetComponentLua<TComponent>>("try_get_lua"_hs);
+                Meta.template func<&OnConstruct_Lua<TComponent>>("on_construct_lua"_hs);
+                Meta.template func<&OnDestroy_Lua<TComponent>>("on_destroy_lua"_hs);
+                Meta.template func<&EmplaceComponentLua<TComponent>>("emplace_lua"_hs);
+                Meta.template func<&PatchComponent<TComponent>>("patch"_hs);
+                Meta.template func<&Serialize<TComponent>>("serialize"_hs);
+                Meta.template func<&ConnectListener_Lua<TComponent>>("connect_listener_lua"_hs);
+                Meta.template func<&TriggerEvent_Lua<TComponent>>("trigger_event_lua"_hs);
+            }
+            
         }
     }
 }

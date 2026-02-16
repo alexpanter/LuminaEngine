@@ -21,17 +21,21 @@ namespace Lumina
     
     struct RUNTIME_API FTreeNodeDisplay
     {
-        FName DisplayName;
-        FFixedString TooltipText;
-        ImVec4 DisplayColor = ImVec4(0.725f, 0.725f, 0.725f, 1.0f);
+        FName           DisplayName;
+        FFixedString    TooltipText;
+        ImVec4          DisplayColor = ImVec4(0.725f, 0.725f, 0.725f, 1.0f);
+        
+        bool            bShowDisabledIcon = false;
+
     };
     
     struct RUNTIME_API FTreeNodeState
     {
-        uint8 bExpanded:1 = false;
-        uint8 bVisible:1 = false;
-        uint8 bSelected:1 = false;
-        uint8 bPassesFilter:1 = false;
+        uint8 bExpanded:1       = false;
+        uint8 bVisible:1        = false;
+        uint8 bSelected:1       = false;
+        uint8 bPassesFilter:1   = false;
+        uint8 bDisabled:1       = false;
     };
     
     struct FRootNode {};
@@ -60,6 +64,9 @@ namespace Lumina
         
         /** Called when a key is pressed while hovering the tile item, return true to absorb. */
         TFunction<bool(FTreeListView&, entt::entity, ImGuiKey)>         KeyPressedFunction;
+        
+        /** Called when the visibility icon is toggled */
+        TFunction<void(FTreeListView&, entt::entity)>                   VisibilityToggleFunction;
     };
     
     

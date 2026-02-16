@@ -44,6 +44,7 @@ enum class EName : uint32
 
 // Pi-related
 #define LE_PI                  3.14159265358979323846
+#define LE_PI_F                3.14159265358979323846f
 #define LE_TWO_PI              (2.0 * LE_PI)
 #define LE_HALF_PI             (0.5 * LE_PI)
 

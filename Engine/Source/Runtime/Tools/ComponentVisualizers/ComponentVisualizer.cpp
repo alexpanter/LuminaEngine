@@ -76,7 +76,7 @@ namespace Lumina
         const SSphereColliderComponent& Sphere = Registry.get<SSphereColliderComponent>(Entity);
         const STransformComponent& Transform = Registry.get<STransformComponent>(Entity);
         
-        PDI->DrawSphere(Transform.GetLocation() * Sphere.Offset, Sphere.Radius * Transform.MaxScale(), FColor::Green, 12, 1.5f, true, 0.0f);
+        PDI->DrawSphere(Transform.GetLocation() + Sphere.Offset, Sphere.Radius * Transform.MaxScale(), FColor::Green, 12, 1.5f, true, 0.0f);
     }
 
     CStruct* CComponentVisualizer_BoxCollider::GetSupportedComponentType() const

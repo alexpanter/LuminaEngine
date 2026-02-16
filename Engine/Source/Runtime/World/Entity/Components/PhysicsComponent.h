@@ -24,7 +24,7 @@ namespace Lumina
         float MaxLinearVelocity = 500.0f;
         
         PROPERTY(Script, Editable, ClampMin = 0.001f, Category = "Physics")
-        float MaxAngularVelocity = 0.25f * LE_PI * 60.0f;
+        float MaxAngularVelocity = 0.25f * LE_PI_F * 60.0f;
         
         PROPERTY(Script, Editable, ClampMin = 0.001f, ClampMax = 1.0f, Category = "Physics")
         float RestitutionOverride = 0.5f;

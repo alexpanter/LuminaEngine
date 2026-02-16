@@ -11,6 +11,7 @@
 #include "Entity/EntityUtils.h"
 #include "Entity/Components/DirtyComponent.h"
 #include "Entity/Components/EditorComponent.h"
+#include "entity/components/entitytags.h"
 #include "Entity/Components/InterpolatingMovementComponent.h"
 #include "Entity/Components/LineBatcherComponent.h"
 #include "Entity/Components/NameComponent.h"
@@ -97,7 +98,7 @@ namespace Lumina
         EntityRegistry.on_destroy<SScriptComponent>().connect<&ThisClass::OnScriptComponentDestroyed>(this);
         SystemContext.EventSink<FSwitchActiveCameraEvent>().connect<&ThisClass::OnChangeCameraEvent>(this);
         
-        auto CameraView = EntityRegistry.view<SCameraComponent>();
+        auto CameraView = EntityRegistry.view<SCameraComponent>(entt::exclude<SDisabledTag>);
         CameraView.each([&](entt::entity Entity, SCameraComponent& Camera)
         {
            if (Camera.bAutoActivate)
@@ -106,19 +107,19 @@ namespace Lumina
            }
         });
         
-        auto ScriptView = EntityRegistry.view<SScriptComponent>();
+        auto ScriptView = EntityRegistry.view<SScriptComponent>(entt::exclude<SDisabledTag>);
         ScriptView.each([&](entt::entity Entity, SScriptComponent&)
         {
            OnScriptComponentCreated(EntityRegistry, Entity); 
         });
         
-        auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent>);
+        auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
         RootView.each([&](entt::entity RootEntity, SScriptComponent& ScriptComponent)
         {
             ScriptComponent.InvokeScriptFunction("OnReady");
         });
         
-        auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>();
+        auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
         RelationshipView.each([&](entt::entity Entity, SScriptComponent& Script, FRelationshipComponent& Relationship)
         {
             if (Relationship.Parent == entt::null)

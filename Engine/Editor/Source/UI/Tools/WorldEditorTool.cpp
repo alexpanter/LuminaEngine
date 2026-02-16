@@ -22,6 +22,7 @@
 #include "World/Entity/Components/CameraComponent.h"
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
+#include "world/entity/components/entitytags.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
@@ -70,8 +71,7 @@ namespace Lumina
                 DrawEntityEditor(bFocused, LastSelected);
             }
         });
-
-
+        
         bGuizmoSnapEnabled  = GConfig->Get("Editor.WorldEditorTool.GuizmoSnapEnabled", true);
         GuizmoSnapTranslate = GConfig->Get("Editor.WorldEditorTool.GuizmoSnapTranslate", 0.1f);
         GuizmoSnapRotate    = GConfig->Get("Editor.WorldEditorTool.GuizmoSnapRotate", 5.0f);
@@ -136,6 +136,21 @@ namespace Lumina
                 EntityDestroyRequests.push(Data.Entity);
             }
         };
+        
+        OutlinerContext.VisibilityToggleFunction = [this](FTreeListView& Tree, entt::entity Item)
+        {
+            FEntityListViewItemData& Data = Tree.Get<FEntityListViewItemData>(Item);
+            FTreeNodeState& State = Tree.Get<FTreeNodeState>(Item);
+            
+            if (State.bDisabled)
+            {
+                World->GetEntityRegistry().emplace<SDisabledTag>(Data.Entity);
+            }
+            else
+            {
+                World->GetEntityRegistry().remove<SDisabledTag>(Data.Entity);
+            }
+        };
 
         OutlinerContext.RebuildTreeFunction = [this](FTreeListView& Tree)
         {
@@ -153,7 +168,7 @@ namespace Lumina
             FEntityListViewItemData& Data = Tree.Get<FEntityListViewItemData>(Item);
             
             ClearSelectedEntities();
-            AddSelectedEntity(Data.Entity, true);
+            AddSelectedEntity(Data.Entity, false);
             
             RebuildPropertyTables(Data.Entity);
         };
@@ -1764,10 +1779,11 @@ namespace Lumina
         ClearLastSelectedEntity();
         World->GetEntityRegistry().emplace_or_replace<FLastSelectedTag>(Entity);
         World->GetEntityRegistry().emplace_or_replace<FSelectedInEditorComponent>(Entity);
+        RebuildPropertyTables(Entity);
         
         if (bRebuild)
         {
-            RebuildPropertyTables(Entity);
+            OutlinerListView.MarkTreeDirty();
         }
     }
 
@@ -2199,8 +2215,11 @@ namespace Lumina
             FFixedString Name;
             Name.append(LE_ICON_CUBE).append(" ").append(NameComponent.Name.c_str()).append_convert(FString(" - (" + eastl::to_string(entt::to_integral(WorldEntity)) + ")"));
             
-            entt::entity ItemEntity = Tree.CreateNode(ParentItem, Name);
-            Tree.Get<FTreeNodeDisplay>(ItemEntity).TooltipText = FString("Entity: " + eastl::to_string(entt::to_integral(WorldEntity))).c_str();
+            entt::entity ItemEntity     = Tree.CreateNode(ParentItem, Name);
+            FTreeNodeDisplay& Display   = Tree.Get<FTreeNodeDisplay>(ItemEntity);
+            Display.TooltipText         = FString("Entity: " + eastl::to_string(entt::to_integral(WorldEntity))).c_str();
+            Display.bShowDisabledIcon   = true;
+            
             Tree.EmplaceUserData<FEntityListViewItemData>(ItemEntity).Entity = WorldEntity;
 
             if (World->GetEntityRegistry().any_of<FSelectedInEditorComponent>(WorldEntity))
@@ -2209,11 +2228,18 @@ namespace Lumina
                 State.bSelected = true;
             }
             
+            if (World->GetEntityRegistry().any_of<SDisabledTag>(WorldEntity))
+            {
+                FTreeNodeState& State = Tree.Get<FTreeNodeState>(ItemEntity);
+                State.bDisabled = true;
+            }
+            
             ECS::Utils::ForEachComponent(World->GetEntityRegistry(), WorldEntity, [&](void* Component, entt::basic_sparse_set<>& Set, entt::meta_type Meta)
             {
                 FFixedString NameString;
                 NameString.assign(LE_ICON_PUZZLE).append(" ").append(Meta.name());
                 entt::entity ComponentEntity = Tree.CreateNode(ItemEntity, NameString);
+                
                 Tree.Get<FTreeNodeDisplay>(ComponentEntity).TooltipText = Meta.name();
                 Tree.EmplaceUserData<FEntityListViewItemData>(ComponentEntity).Entity = WorldEntity;
             });

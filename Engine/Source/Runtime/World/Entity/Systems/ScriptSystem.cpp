@@ -1,9 +1,8 @@
 ﻿#include "pch.h"
 #include "ScriptSystem.h"
-
 #include "World/World.h"
+#include "world/entity/components/entitytags.h"
 #include "World/Entity/Components/ScriptComponent.h"
-#include "World/Entity/Events/WorldEvents.h"
 
 
 namespace Lumina
@@ -12,7 +11,7 @@ namespace Lumina
     {
         LUMINA_PROFILE_SCOPE(); 
         
-        auto View = Context.CreateView<SScriptComponent>();
+        auto View = Context.CreateView<SScriptComponent>(entt::exclude<SDisabledTag>);
         View.each([&](entt::entity Entity, const SScriptComponent& ScriptComponent)
         {
             if (const TSharedPtr<Scripting::FLuaScript>& Script = ScriptComponent.Script)
