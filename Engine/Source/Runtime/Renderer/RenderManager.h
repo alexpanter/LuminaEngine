@@ -36,7 +36,7 @@ namespace Lumina
         uint32 GetCurrentFrameIndex() const { return CurrentFrameIndex; }
         
     private:
-
+        
         #if WITH_EDITOR
         IImGuiRenderer*     ImGuiRenderer = nullptr;
         #endif

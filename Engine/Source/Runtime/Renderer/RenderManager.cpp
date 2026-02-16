@@ -65,7 +65,6 @@ namespace Lumina
 
         // Internally executes the render graph.
         GRenderContext->FrameEnd(UpdateContext, RenderGraph);
-
         
         GRenderContext->FlushPendingDeletes();
         

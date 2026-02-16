@@ -1204,7 +1204,11 @@ namespace Lumina
         
         uint32 Timestamps[2] = {0, 0};
         
-        VK_CHECK(vkGetQueryPoolResults(GetDevice()->GetDevice(), TimerQueryPool, VulkanTimerQuery->BeginQueryIndex, 2, sizeof(Timestamps), Timestamps, sizeof(Timestamps[0]), 0));
+        VkResult Result = vkGetQueryPoolResults(GetDevice()->GetDevice(), TimerQueryPool, VulkanTimerQuery->BeginQueryIndex, 2, sizeof(Timestamps), Timestamps, sizeof(Timestamps[0]), 0);
+        if (Result == VK_NOT_READY)
+        {
+            return false;
+        }
         
         const auto TimestampPeriod = GetDevice()->GetPhysicalDeviceProperties().limits.timestampPeriod;
         const float Scale = 1e-9f * TimestampPeriod;

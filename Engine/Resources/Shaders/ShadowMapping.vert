@@ -28,14 +28,14 @@ void main()
     {
         VertexData = LoadStaticVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex);
     }
-    
-    FLight Light = LightData.Lights[LightIndex];
+
     mat4 ModelMatrix = GetModelMatrix(gl_InstanceIndex);
-    
+
     vec4 vWorldPos = ModelMatrix * vec4(VertexData.Position, 1.0);
-    
+
     outWorldPos = vWorldPos.xyz;
-    outLightPos = Light.Position;
-    
-    gl_Position = Light.ViewProjection[gl_ViewIndex] * vWorldPos;
+
+    outLightPos = LightData.Lights[LightIndex].Position;
+
+    gl_Position = LightData.Lights[LightIndex].ViewProjection[gl_ViewIndex] * vWorldPos;
 }

@@ -408,7 +408,7 @@ namespace Lumina
         uint8 bDrawAABB:1               = false;
         uint8 bSSAO:1                   = false;
         uint8 bFrustumCull:1            = true;
-        uint8 bOcclusionCull:1          = false; //@ TODO Fix AABBs
+        uint8 bOcclusionCull:1          = true;
         uint8 bWireframe:1              = false;
     };
 }

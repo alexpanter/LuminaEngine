@@ -40,7 +40,6 @@ namespace Lumina
         {
             for (FRenderGraphPass* Pass : Passes)
             {
-
                 // The user has promised us this pass can now run at any time without issues, so we dispatch it and keep going.
                 if (Pass->GetDescriptor()->HasAnyFlag(ERGExecutionFlags::Async))
                 {
@@ -70,7 +69,7 @@ namespace Lumina
                 }
             }
         }
-
+        
         CommandList->Close();
 
         for (const FTaskHandle& Task : TaskHandles)
@@ -83,6 +82,6 @@ namespace Lumina
             GRenderContext->ExecuteCommandLists(ComputeCommandLists.data(), (uint32)ComputeCommandLists.size(), ECommandQueue::Compute);   
         }
         
-        GRenderContext->ExecuteCommandLists(AllCommandLists.data(), (uint32)AllCommandLists.size(), ECommandQueue::Graphics);   
+        GRenderContext->ExecuteCommandLists(AllCommandLists.data(), (uint32)AllCommandLists.size(), ECommandQueue::Graphics);
     }
 }

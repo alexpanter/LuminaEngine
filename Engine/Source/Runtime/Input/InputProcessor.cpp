@@ -87,12 +87,10 @@ namespace Lumina
 		if (Mode == EMouseMode::Captured || Mode == EMouseMode::Hidden)
 		{
 			IO.ConfigFlags |= ImGuiConfigFlags_NoMouse;
-			IO.MouseDrawCursor = false;
 		}
 		else
 		{
 			IO.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
-			IO.MouseDrawCursor = true;
 		}
 		#endif
 	}

@@ -235,8 +235,7 @@ mat4 GetModelMatrix(uint Index)
 
 vec3 GetModelLocation(uint Index)
 {
-    mat4 Matrix = GetModelMatrix(Index);
-    return vec3(Matrix[3].xyz);
+    return vec3(GetModelMatrix(Index)[3].xyz);
 }
 
 uint GetEntityID(uint Index)
