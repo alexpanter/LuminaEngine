@@ -319,7 +319,7 @@ namespace Lumina
         
         CComponentVisualizerRegistry& ComponentVisualizerRegistry = CComponentVisualizerRegistry::Get();
 
-        auto View = World->GetEntityRegistry().view<FSelectedInEditorComponent>();
+        auto View = World->GetEntityRegistry().view<FSelectedInEditorComponent>(entt::exclude<SDisabledTag>);
         View.each([&] (entt::entity SelectedEntity)
         {
             ECS::Utils::ForEachComponent(World->GetEntityRegistry(), SelectedEntity, [&](void*, entt::basic_sparse_set<>& Set, const entt::meta_type& Type)

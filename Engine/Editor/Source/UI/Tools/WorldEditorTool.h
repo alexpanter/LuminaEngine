@@ -11,10 +11,9 @@
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Systems/EntitySystem.h"
 
-    namespace Lumina
+namespace Lumina
 {
     DECLARE_MULTICAST_DELEGATE(FOnGamePreview);
-    
     
     /**
      * Base class for display and manipulating scenes.
