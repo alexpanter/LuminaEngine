@@ -31,6 +31,7 @@ namespace Lumina
         void OnInitialize() override;
         void Deinitialize(const FUpdateContext& UpdateContext) override;
         void Update(const FUpdateContext& UpdateContext) override;
+        
         FName GetToolName() const override;
         virtual void OnAssetLoadFinished() { }
         void OnSave() override;
@@ -45,10 +46,7 @@ namespace Lumina
         {
             return Cast<T>(Asset.Get());
         }
-        
-        virtual bool ShouldGenerateThumbnailOnLoad() const { return false; }
-        virtual void GenerateThumbnailOnLoad();
-
+    
     protected:
 
         TObjectPtr<CObject>         Asset;

@@ -14,17 +14,28 @@ namespace Lumina
         template<typename... TArgs>
         void InvokeScriptFunction(FStringView Name, TArgs&&... Args)
         {
-            if (Script && Script->ScriptTable.valid())
+            if (!Script)
             {
-                if (sol::optional<sol::function> ScriptFunc = Script->ScriptTable[Name.data()])
-                {
-                    sol::protected_function_result Result = (*ScriptFunc)(Script->ScriptTable, Forward<TArgs>(Args)...);
-                    if (!Result.valid())
-                    {
-                        sol::error Error = Result;
-                        LOG_ERROR("Script Error: {} - {}", Script->Path, Error.what());
-                    }
-                }
+                return;
+            }
+            
+            sol::table ScriptTable = Script->ScriptTable;
+            if (!ScriptTable.valid())
+            {
+                return;
+            }
+            
+            sol::protected_function ScriptFunction = Script->ScriptTable[Name.data()];
+            if (!ScriptFunction.valid())
+            {
+                return;
+            }
+            
+            sol::protected_function_result Result = ScriptFunction(Script->ScriptTable, Forward<TArgs>(Args)...);
+            if (!Result.valid())
+            {
+                sol::error Error = Result;
+                LOG_ERROR("Script Error: {} - {}", Script->Path, Error.what());
             }
         }
         

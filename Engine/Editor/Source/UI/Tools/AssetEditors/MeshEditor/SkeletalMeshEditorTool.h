@@ -27,6 +27,7 @@ namespace Lumina
         void OnAssetLoadFinished() override;
         void DrawToolMenu(const FUpdateContext& UpdateContext) override;
         void InitializeDockingLayout(ImGuiID InDockspaceID, const ImVec2& InDockspaceSize) const override;
+        bool ShouldGenerateThumbnailOnSave() const override { return true; }
 
         bool bShowBones = false;
         bool bShowAABB = false;

@@ -54,6 +54,7 @@
 
         void OnInitialize() override;
         void OnDeinitialize(const FUpdateContext& UpdateContext) override;
+        bool ShouldGenerateThumbnailOnSave() const override { return true; }
         
         void Update(const FUpdateContext& UpdateContext) override;
         void EndFrame() override;

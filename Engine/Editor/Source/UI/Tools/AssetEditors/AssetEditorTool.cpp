@@ -11,10 +11,6 @@ namespace Lumina
 {
     void FAssetEditorTool::OnInitialize()
     {
-        if (ShouldGenerateThumbnailOnLoad())
-        {
-            GenerateThumbnailOnLoad();
-        }
     }
 
     void FAssetEditorTool::Deinitialize(const FUpdateContext& UpdateContext)
@@ -38,7 +34,10 @@ namespace Lumina
 
     void FAssetEditorTool::OnSave()
     {
-        GenerateThumbnailOnLoad();
+        if (ShouldGenerateThumbnailOnSave() && Asset->GetPackage())
+        {
+            GenerateThumbnail(Asset->GetPackage());
+        }
         
         if (CPackage::SavePackage(Asset->GetPackage(), Asset->GetPackage()->GetPackagePath()))
         {
@@ -54,92 +53,5 @@ namespace Lumina
     bool FAssetEditorTool::IsAssetEditorTool() const
     {
         return true;
-    }
-
-    void FAssetEditorTool::GenerateThumbnailOnLoad()
-    {
-        if (!World)
-        {
-            return;
-        }
-        
-        FRHIImageRef RenderTarget = World->GetRenderer()->GetRenderTarget();
-    
-        FRHICommandListRef CommandList = GRenderContext->CreateCommandList(FCommandListInfo::Graphics());
-        CommandList->Open();
-    
-        FRHIStagingImageRef StagingImage = GRenderContext->CreateStagingImage(RenderTarget->GetDescription(), ERHIAccess::HostRead);
-        CommandList->CopyImage(RenderTarget, FTextureSlice(), StagingImage, FTextureSlice());
-    
-        CommandList->Close();
-        GRenderContext->ExecuteCommandList(CommandList);
-    
-        size_t RowPitch = 0;
-        void* MappedMemory = GRenderContext->MapStagingTexture(StagingImage, FTextureSlice(), ERHIAccess::HostRead, &RowPitch);
-        if (!MappedMemory)
-        {
-            return;
-        }
-    
-        const uint32 SourceWidth  = RenderTarget->GetDescription().Extent.x;
-        const uint32 SourceHeight = RenderTarget->GetDescription().Extent.y;
-        
-        CPackage* AssetPackage = Asset->GetPackage();
-    
-        // Thumbnail dimensions
-        constexpr uint32 ThumbWidth = 256;
-        constexpr uint32 ThumbHeight = 256;
-        
-        AssetPackage->GetPackageThumbnail()->ImageWidth = ThumbWidth;
-        AssetPackage->GetPackageThumbnail()->ImageHeight = ThumbHeight;
-
-        constexpr size_t BytesPerPixel = 4;
-        constexpr size_t TotalBytes = ThumbWidth * ThumbHeight * BytesPerPixel;
-        
-        AssetPackage->GetPackageThumbnail()->ImageData.resize(TotalBytes);
-        
-        const uint8* SourceData = static_cast<const uint8*>(MappedMemory);
-        uint8* DestData = AssetPackage->GetPackageThumbnail()->ImageData.data();
-        
-        // Downsample with bilinear filtering
-        const float ScaleX = static_cast<float>(SourceWidth) / ThumbWidth;
-        const float ScaleY = static_cast<float>(SourceHeight) / ThumbHeight;
-        
-        for (uint32 DestY = 0; DestY < ThumbHeight; ++DestY)
-        {
-            const uint32 FlippedDestY = ThumbHeight - 1 - DestY;
-    
-            for (uint32 DestX = 0; DestX < ThumbWidth; ++DestX)
-            {
-                const float SrcX = DestX * ScaleX;
-                const float SrcY = DestY * ScaleY;
-
-                const uint32 X0 = static_cast<uint32>(SrcX);
-                const uint32 Y0 = static_cast<uint32>(SrcY);
-                const uint32 X1 = Math::Min(X0 + 1, SourceWidth - 1);
-                const uint32 Y1 = Math::Min(Y0 + 1, SourceHeight - 1);
-
-                const float FracX = SrcX - X0;
-                const float FracY = SrcY - Y0;
-
-                const uint8* P00 = SourceData + (Y0 * RowPitch) + (X0 * BytesPerPixel);
-                const uint8* P10 = SourceData + (Y0 * RowPitch) + (X1 * BytesPerPixel);
-                const uint8* P01 = SourceData + (Y1 * RowPitch) + (X0 * BytesPerPixel);
-                const uint8* P11 = SourceData + (Y1 * RowPitch) + (X1 * BytesPerPixel);
-
-                uint8* DestPixel = DestData + (FlippedDestY * ThumbWidth * BytesPerPixel) + (DestX * BytesPerPixel);
-
-                for (uint32 Channel = 0; Channel < BytesPerPixel; ++Channel)
-                {
-                    const float Top     = Math::Lerp(static_cast<float>(P00[Channel]), static_cast<float>(P10[Channel]), FracX);
-                    const float Bottom  = Math::Lerp(static_cast<float>(P01[Channel]), static_cast<float>(P11[Channel]), FracX);
-                    const float Result  = Math::Lerp(Top, Bottom, FracY);
-
-                    DestPixel[Channel] = static_cast<uint8>(Result + 0.5f);
-                }
-            }
-        }
-        
-        GRenderContext->UnMapStagingTexture(StagingImage);
     }
 }

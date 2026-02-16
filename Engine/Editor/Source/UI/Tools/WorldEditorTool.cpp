@@ -1182,6 +1182,11 @@ namespace Lumina
             return;
         }
         
+        if (ShouldGenerateThumbnailOnSave() && World->GetPackage())
+        {
+            GenerateThumbnail(World->GetPackage());
+        }
+        
         if (CPackage::SavePackage(World->GetPackage(), World->GetPackage()->GetPackagePath()))
         {
             FAssetRegistry::Get().AssetSaved(World);

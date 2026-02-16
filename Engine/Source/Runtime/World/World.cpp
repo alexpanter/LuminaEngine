@@ -147,6 +147,7 @@ namespace Lumina
     
     void CWorld::TeardownWorld()
     {
+        RegistryPending.clear<>();
         EntityRegistry.clear<>();
         
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);

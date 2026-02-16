@@ -550,9 +550,4 @@ namespace Lumina
         ImGui::DockBuilderDockWindow(GetToolWindowName(TexturePreviewName).c_str(), leftDockID);
         ImGui::DockBuilderDockWindow(GetToolWindowName(TexturePropertiesName).c_str(), rightDockID);
     }
-
-    void FTextureEditorTool::GenerateThumbnailOnLoad()
-    {
-        
-    }
 }

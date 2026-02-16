@@ -93,6 +93,10 @@ namespace Lumina
         
         virtual void OnInitialize() = 0;
         virtual void OnDeinitialize(const FUpdateContext& UpdateContext) = 0;
+        
+        virtual bool ShouldGenerateThumbnailOnSave() const { return false; }
+        
+        virtual void GenerateThumbnail(CPackage* Package);
 
         NODISCARD virtual bool IsSingleWindowTool() const { return false; }
 

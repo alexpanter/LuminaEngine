@@ -93,14 +93,17 @@ namespace Lumina
             }
             
             FPackageThumbnail* Thumbnail = MaybePackage->GetPackageThumbnail();
-            if (Thumbnail->ImageData.empty())
-            {
-                return;
-            }
             
             FPackageThumbnail::EState Expected = FPackageThumbnail::EState::None;
             if (!Thumbnail->LoadState.compare_exchange_strong(Expected, FPackageThumbnail::EState::Loading, std::memory_order_acquire))
             {
+                return;
+            }
+            
+            if (Thumbnail->ImageData.empty())
+            {
+                FWriteScopeLock Lock(ThumbnailLock);
+                Thumbnails.insert_or_assign(Package, Thumbnail);
                 return;
             }
             
@@ -141,8 +144,7 @@ namespace Lumina
             Thumbnail->LoadState.store(FPackageThumbnail::EState::Loaded, std::memory_order_release);
 
             FWriteScopeLock Lock(ThumbnailLock);
-            Thumbnails.emplace(Package, Thumbnail);
-            
+            Thumbnails.insert_or_assign(Package, Thumbnail);
         });
     }
 
@@ -159,12 +161,20 @@ namespace Lumina
                     return CachedThumbnail;
                 }
                 
+                if (CachedThumbnail)
+                {
+                    auto LoadState = CachedThumbnail->LoadState.load(std::memory_order_acquire);
+                    if (LoadState != FPackageThumbnail::EState::Loading || LoadState != FPackageThumbnail::EState::Failed)
+                    {
+                        AsyncLoadThumbnailsForPackage(Package);
+                    }
+                }
+                
                 return nullptr;
             }
         }
     
         AsyncLoadThumbnailsForPackage(Package);
-    
         return nullptr;
     }
 }

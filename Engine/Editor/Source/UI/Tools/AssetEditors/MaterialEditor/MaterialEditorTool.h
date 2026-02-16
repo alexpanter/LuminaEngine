@@ -34,7 +34,7 @@ namespace Lumina
         void DrawHelpMenu() override;
 
         bool DrawViewport(const FUpdateContext& UpdateContext, ImTextureRef ViewportTexture) override;
-        bool ShouldGenerateThumbnailOnLoad() const override { return true; }
+        bool ShouldGenerateThumbnailOnSave() const override { return true; }
         void OnAssetLoadFinished() override;
         void DrawToolMenu(const FUpdateContext& UpdateContext) override;
         void DrawMaterialGraph();

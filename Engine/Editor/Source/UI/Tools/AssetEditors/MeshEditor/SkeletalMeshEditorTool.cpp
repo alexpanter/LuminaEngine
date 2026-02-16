@@ -8,7 +8,6 @@
 #include "World/Entity/Components/LightComponent.h"
 #include "World/Entity/Components/SkeletalMeshComponent.h"
 #include "world/entity/components/velocitycomponent.h"
-#include <cstdint>
 #include <UI/Tools/AssetEditors/AssetEditorTool.h>
 #include <UI/Tools/EditorTool.h>
 #include <Lumina.h>
@@ -20,7 +19,6 @@
 #include <Core/Math/Transform.h>
 #include <Core/Object/Object.h>
 #include <Core/Object/ObjectCore.h>
-#include <Core/UpdateContext.h>
 #include <Platform/GenericPlatform.h>
 #include <Renderer/MeshData.h>
 #include <Renderer/Vertex.h>
