@@ -327,9 +327,9 @@ namespace Lumina
 
         if (Compiler.HasErrors())
         {
-            for (const FMaterialCompiler::FError& Error : Compiler.GetErrors())
+            for (const EdNodeGraph::FError& Error : Compiler.GetErrors())
             {
-                CompilationResult.CompilationLog += "ERROR - [" + Error.ErrorName + "]: " + Error.ErrorDescription + "\n";
+                CompilationResult.CompilationLog += "ERROR - [" + Error.Name + "]: " + Error.Description + "\n";
             }
                 
             CompilationResult.bIsError = true;

@@ -16,8 +16,10 @@ namespace Lumina
         EComponentMask GetComponentMask() const { return Mask; }
         void SetComponentMask(EComponentMask InMask) { Mask = InMask; }
         
+        void SetInputType(EMaterialInputType Type) { InputType = Type; }
+        
         EMaterialInputType  InputType = EMaterialInputType::Float;
-        EComponentMask      Mask = EComponentMask::RGBA;
+        EComponentMask      Mask = EComponentMask::None;
         
     };
 }

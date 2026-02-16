@@ -6,11 +6,6 @@
 
 namespace Lumina
 {
-    void CMaterialExpression_TextureSample::Serialize(FArchive& Ar)
-    {
-        CMaterialExpression::Serialize(Ar);
-    }
-
     void CMaterialExpression_TextureSample::BuildNode()
     {
         CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGBA", ENodePinDirection::Output, EMaterialInputType::Texture));

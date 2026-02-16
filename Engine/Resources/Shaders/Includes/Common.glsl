@@ -28,6 +28,7 @@ const float INV_PI  = 0.31830988618;
 
 #define MAX_SCALARS 24
 #define MAX_VECTORS 24
+#define MAX_TEXTURES 24
 
 //////////////////////////////////////////////////////////
 
@@ -167,6 +168,19 @@ struct FCameraView
     mat4 InverseCameraView;
     mat4 CameraProjection;  // Projection matrix
     mat4 InverseCameraProjection; // Inverse Camera Projection.
+};
+
+struct FMaterialInputs
+{
+    vec3    Diffuse;
+    float   Metallic;
+    float   Roughness;
+    float   Specular;
+    vec3    Emissive;
+    float   AmbientOcclusion;
+    vec3    Normal;
+    float   Opacity;
+    vec3    WorldPositionOffset;
 };
 
 struct FEntityAABB

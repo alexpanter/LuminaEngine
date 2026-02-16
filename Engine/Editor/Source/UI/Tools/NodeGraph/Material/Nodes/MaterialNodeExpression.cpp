@@ -64,91 +64,7 @@ namespace Lumina
 
     void CMaterialExpression_ComponentMask::GenerateDefinition(FMaterialCompiler& Compiler)
     {
-        FString NodeName = GetNodeFullName();
-        if (!InputPin || !InputPin->HasConnection())
-        {
-            // No input connected - generate a default based on mask
-            FString DefaultValue = GetDefaultValueForMask();
-            EMaterialValueType OutputType = GetOutputTypeFromMask();
-            FString TypeStr = Compiler.GetVectorType(OutputType);
-            
-            Compiler.AddRaw(TypeStr + " " + NodeName + " = " + DefaultValue + ";\n");
-            Compiler.RegisterNodeOutput(NodeName, OutputType, GetOutputMask());
-            return;
-        }
-        
-        // Get the input value
-        CMaterialOutput* ConnectedOutput = InputPin->GetConnection<CMaterialOutput>(0);
-        FString InputNodeName = ConnectedOutput->GetOwningNode()->GetNodeFullName();
-        
-        // Get input type info
-        FMaterialCompiler::FNodeOutputInfo InputInfo = Compiler.GetNodeOutputInfo(InputNodeName);
-        
-        // Build the swizzle mask based on R,G,B,A booleans
-        FString Swizzle = BuildSwizzleMask();
-        
-        // Determine output type based on how many components are selected
-        EMaterialValueType OutputType = GetOutputTypeFromMask();
-        FString OutputTypeStr = Compiler.GetVectorType(OutputType);
-        
-        // Calculate actual output component count
-        int32 InputComponentCount = Compiler.GetComponentCount(InputInfo.Type);
-        int32 OutputComponentCount = GetSelectedComponentCount();
-        
-        if (OutputComponentCount > InputComponentCount)
-        {
-            FMaterialCompiler::FError Error;
-            Error.ErrorName = "Invalid Component Mask";
-            Error.ErrorDescription = "Cannot extract " + eastl::to_string(OutputComponentCount) + 
-                                    " components from " + Compiler.GetVectorType(InputInfo.Type) + 
-                                    " (only has " + eastl::to_string(InputComponentCount) + " components)";
-            Error.ErrorNode = this;
-            Compiler.AddError(Error);
-            
-            // Generate fallback code
-            Compiler.AddRaw("// ERROR: Invalid component mask\n");
-            Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + GetDefaultValueForMask() + ";\n");
-            Compiler.RegisterNodeOutput(NodeName, OutputType, GetOutputMask());
-            return;
-        }
-        
-        // If we need a swizzle to get the components
-        if (!Swizzle.empty())
-        {
-            // Check if we need type casting
-            if (OutputComponentCount == 1)
-            {
-                // Extracting a single component - result is float
-                Compiler.AddRaw("float " + NodeName + " = " + InputNodeName + Swizzle + ";\n");
-                // IMPORTANT: Register as Float1, not based on input type!
-                Compiler.RegisterNodeOutput(NodeName, EMaterialValueType::Float, EComponentMask::R);
-            }
-            else
-            {
-                // Extracting multiple components - need vec constructor if not all components
-                bool NeedsConstruction = (OutputComponentCount != InputComponentCount);
-                
-                if (NeedsConstruction)
-                {
-                    Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + OutputTypeStr + "(" + InputNodeName + Swizzle + ");\n");
-                }
-                else
-                {
-                    // Just pass through
-                    Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + InputNodeName + ";\n");
-                }
-                
-                // Register with correct output mask based on selected components
-                EComponentMask OutputMask = static_cast<EComponentMask>((1 << OutputComponentCount) - 1);
-                Compiler.RegisterNodeOutput(NodeName, OutputType, OutputMask);
-            }
-        }
-        else
-        {
-            // No swizzle needed - all components selected, just pass through
-            Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + InputNodeName + ";\n");
-            Compiler.RegisterNodeOutput(NodeName, OutputType, GetOutputMask());
-        }
+
     }
 
     ImVec2 CMaterialExpression_ComponentMask::GetMinNodeTitleBarSize() const
@@ -231,21 +147,7 @@ namespace Lumina
 
         return static_cast<EComponentMask>(Mask);
     }
-
-    EMaterialValueType CMaterialExpression_ComponentMask::GetOutputTypeFromMask() const
-    {
-        int32 Count = GetSelectedComponentCount();
     
-        switch (Count)
-        {
-        case 1: return EMaterialValueType::Float;
-        case 2: return EMaterialValueType::Float2;
-        case 3: return EMaterialValueType::Float3;
-        case 4: return EMaterialValueType::Float4;
-        default: return EMaterialValueType::Float;
-        }
-    }
-
     FString CMaterialExpression_ComponentMask::GetDefaultValueForMask() const
     {
         int32 Count = GetSelectedComponentCount();
@@ -280,69 +182,90 @@ namespace Lumina
 
     void CMaterialExpression_Append::GenerateDefinition(FMaterialCompiler& Compiler)
     {
-        FString NodeName = GetNodeFullName();
         
-        // Get input values with proper types
-        FMaterialCompiler::FInputValue AValue = Compiler.GetTypedInputValue(InputA, 0.0f);
-        FMaterialCompiler::FInputValue BValue = Compiler.GetTypedInputValue(InputB, 0.0f);
+    }
+
+    void CMaterialExpression_MakeFloat2::BuildNode()
+    {
+        Super::BuildNode();
         
-        // Calculate total component count
-        int32 TotalComponents = AValue.ComponentCount + BValue.ComponentCount;
+        Output->SetInputType(EMaterialInputType::Float2);
+        Output->SetComponentMask(EComponentMask::RG);
         
-        // Validate we don't exceed vec4
-        if (TotalComponents > 4)
-        {
-            FMaterialCompiler::FError Error;
-            Error.ErrorName = "Too Many Components";
-            Error.ErrorDescription = "Cannot append " + 
-                                    Compiler.GetVectorType(AValue.Type) + " and " + 
-                                    Compiler.GetVectorType(BValue.Type) + 
-                                    " (total " + eastl::to_string(TotalComponents) + 
-                                    " components exceeds vec4 limit)";
-            Error.ErrorNode = this;
-            Compiler.AddError(Error); 
-            
-            // Generate error fallback
-            Compiler.AddRaw("// ERROR: Too many components to append\n");
-            Compiler.AddRaw("vec4 " + NodeName + " = vec4(0.0);\n");
-            Compiler.RegisterNodeOutput(NodeName, EMaterialValueType::Float4, EComponentMask::RGBA);
-            return;
-        }
+        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input, EMaterialInputType::Float));
+        R->SetInputType(EMaterialInputType::Float);
+        R->SetComponentMask(EComponentMask::R);
+    
+        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input, EMaterialInputType::Float));
+        G->SetInputType(EMaterialInputType::Float);
+        G->SetComponentMask(EComponentMask::G);
+    
+    }
+
+    void CMaterialExpression_MakeFloat2::GenerateDefinition(FMaterialCompiler& Compiler)
+    {
+        Compiler.MakeFloat2(R, G);
+    }
+
+    void CMaterialExpression_MakeFloat3::BuildNode()
+    {
+        Super::BuildNode();
         
-        // Determine output type
-        EMaterialValueType OutputType = Compiler.GetTypeFromComponentCount(TotalComponents);
-        FString OutputTypeStr = Compiler.GetVectorType(OutputType);
+        Output->SetInputType(EMaterialInputType::Float3);
+        Output->SetComponentMask(EComponentMask::RGB);
         
-        // Generate the append operation
-        if (AValue.ComponentCount == 1 && BValue.ComponentCount == 1)
-        {
-            // float + float = vec2
-            Compiler.AddRaw("vec2 " + NodeName + " = vec2(" + AValue.Value + ", " + BValue.Value + ");\n");
-        }
-        else if (AValue.ComponentCount == 1)
-        {
-            // float + vecN = vecN+1
-            Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + OutputTypeStr + "(" + AValue.Value + ", " + BValue.Value + ");\n");
-        }
-        else if (BValue.ComponentCount == 1)
-        {
-            // vecN + float = vecN+1
-            Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + OutputTypeStr + "(" + AValue.Value + ", " + BValue.Value + ");\n");
-        }
-        else
-        {
-            // vecN + vecM = vecN+M
-            Compiler.AddRaw(OutputTypeStr + " " + NodeName + " = " + OutputTypeStr + "(" + AValue.Value + ", " + BValue.Value + ");\n");
-        }
+        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input, EMaterialInputType::Float));
+        R->SetInputType(EMaterialInputType::Float);
+        R->SetComponentMask(EComponentMask::R);
+    
+        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input, EMaterialInputType::Float));
+        G->SetInputType(EMaterialInputType::Float);
+        G->SetComponentMask(EComponentMask::G);
         
-        // Register output
-        EComponentMask OutputMask = static_cast<EComponentMask>((1 << TotalComponents) - 1);
-        Compiler.RegisterNodeOutput(NodeName, OutputType, OutputMask);
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input, EMaterialInputType::Float));
+        B->SetInputType(EMaterialInputType::Float);
+        B->SetComponentMask(EComponentMask::B);
+    
+    }
+
+    void CMaterialExpression_MakeFloat3::GenerateDefinition(FMaterialCompiler& Compiler)
+    {
+        Compiler.MakeFloat3(R, G, B);
+    }
+
+    void CMaterialExpression_MakeFloat4::BuildNode()
+    {
+        Super::BuildNode();
+        
+        Output->SetInputType(EMaterialInputType::Float4);
+        Output->SetComponentMask(EComponentMask::RGBA);
+        
+        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input, EMaterialInputType::Float));
+        R->SetInputType(EMaterialInputType::Float);
+        R->SetComponentMask(EComponentMask::R);
+    
+        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input, EMaterialInputType::Float));
+        G->SetInputType(EMaterialInputType::Float);
+        G->SetComponentMask(EComponentMask::G);
+        
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input, EMaterialInputType::Float));
+        B->SetInputType(EMaterialInputType::Float);
+        B->SetComponentMask(EComponentMask::B);
+        
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input, EMaterialInputType::Float));
+        A->SetInputType(EMaterialInputType::Float);
+        A->SetComponentMask(EComponentMask::A);
+    
+    }
+
+    void CMaterialExpression_MakeFloat4::GenerateDefinition(FMaterialCompiler& Compiler)
+    {
+        Compiler.MakeFloat4(R, G, B, A);
     }
 
     void CMaterialExpression_WorldPos::BuildNode()
     {
-        CMaterialExpression::BuildNode();
+        Super::BuildNode();
     }
 
     void CMaterialExpression_WorldPos::GenerateDefinition(FMaterialCompiler& Compiler)
@@ -352,7 +275,7 @@ namespace Lumina
 
     void CMaterialExpression_CameraPos::BuildNode()
     {
-        CMaterialExpression::BuildNode();
+        Super::BuildNode();
     }
 
     void CMaterialExpression_CameraPos::GenerateDefinition(FMaterialCompiler& Compiler)
@@ -362,7 +285,7 @@ namespace Lumina
 
     void CMaterialExpression_EntityID::BuildNode()
     {
-        CMaterialExpression::BuildNode();
+        Super::BuildNode();
     }
 
     void CMaterialExpression_EntityID::GenerateDefinition(FMaterialCompiler& Compiler)
@@ -438,6 +361,7 @@ namespace Lumina
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("XY");
+                ValuePin->SetComponentMask(EComponentMask::RG);
                 ValuePin->InputType = EMaterialInputType::Float2;
                 
                 CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "X", ENodePinDirection::Output, EMaterialInputType::Float));
@@ -460,6 +384,7 @@ namespace Lumina
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("RGB");
+                ValuePin->SetComponentMask(EComponentMask::RGB);
                 ValuePin->InputType = EMaterialInputType::Float3;
                 
                 CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
@@ -488,6 +413,7 @@ namespace Lumina
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("RGBA");
+                ValuePin->SetComponentMask(EComponentMask::RGBA);
                 ValuePin->InputType = EMaterialInputType::Float4;
 
                 

@@ -38,11 +38,7 @@ namespace Lumina
         if (Itr != Parameters.end())
         {
             const FMaterialParameter& Param = *Itr;
-
-            int CecIndex = Param.Index / 4;
-            int ComponentIndex = Param.Index % 4;
-            
-            MaterialUniforms.Scalars[CecIndex][ComponentIndex] = Value;
+            MaterialUniforms.Scalars[Param.Index] = Value;
             return true;
         }
         else

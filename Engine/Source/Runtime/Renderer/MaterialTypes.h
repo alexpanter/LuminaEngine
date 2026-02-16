@@ -5,14 +5,16 @@
 
 #define MAX_VECTORS 24
 #define MAX_SCALARS 24
+#define MAX_TEXTURES 24
 
 
 namespace Lumina
 {
     struct FMaterialUniforms
     {
-        glm::vec4 Scalars[MAX_SCALARS / 4];
-        glm::vec4 Vectors[MAX_VECTORS];
+        glm::vec4   Vectors[MAX_VECTORS];
+        float       Scalars[MAX_SCALARS];
+        uint32      Textures[MAX_TEXTURES];
     };
     
 

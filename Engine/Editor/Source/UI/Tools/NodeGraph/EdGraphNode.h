@@ -21,6 +21,16 @@ namespace Lumina
 
         Count       = 2,
     };
+    
+    namespace EdNodeGraph
+    {
+        struct FError
+        {
+            FString             Name;
+            FString             Description;
+            CEdGraphNode*       Node = nullptr;
+        };
+    }
 
     REFLECT()
     class CEdGraphNode : public CObject
@@ -58,10 +68,10 @@ namespace Lumina
         virtual void DrawContextMenu() { }
         virtual void DrawNodeTitleBar();
 
-        void SetError(const FString& InError) { Error = InError; }
-        FString GetError() const { return Error; }
-        bool HasError() const { return !Error.empty(); }
-        void ClearError() { Error = {}; }
+        void SetError(const EdNodeGraph::FError& InError) { Error = InError; }
+        const EdNodeGraph::FError& GetError() const { return Error.value(); }
+        bool HasError() const { return Error.has_value(); }
+        void ClearError() { Error = eastl::nullopt; }
         
         CEdNodeGraphPin* GetPin(uint16 ID, ENodePinDirection Direction);
         CEdNodeGraphPin* GetPinByIndex(uint32 Index, ENodePinDirection Direction);
@@ -94,10 +104,9 @@ namespace Lumina
         uint32 DebugExecutionOrder;
 
 
-        FString     FullName;
-        FString     Error;
-        bool        bInitialPosSet = false;
-        bool        bWasBuild = false;
+        FString                             FullName;
+        TOptional<EdNodeGraph::FError>      Error;
+        bool                                bWasBuild = false;
     };
     
 }

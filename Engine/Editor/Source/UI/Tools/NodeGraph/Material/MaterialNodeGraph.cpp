@@ -116,8 +116,8 @@ namespace Lumina
         RegisterGraphNode(CMaterialExpression_Lerp::StaticClass());
         RegisterGraphNode(CMaterialExpression_Clamp::StaticClass());
 
-        RegisterGraphNode(CMaterialExpression_Append::StaticClass());
-        RegisterGraphNode(CMaterialExpression_ComponentMask::StaticClass());
+        //RegisterGraphNode(CMaterialExpression_Append::StaticClass());
+        //RegisterGraphNode(CMaterialExpression_ComponentMask::StaticClass());
         RegisterGraphNode(CMaterialExpression_VertexNormal::StaticClass());
         RegisterGraphNode(CMaterialExpression_TexCoords::StaticClass());
         RegisterGraphNode(CMaterialNodeGetTime::StaticClass());
@@ -134,6 +134,10 @@ namespace Lumina
         RegisterGraphNode(CMaterialExpression_BreakFloat3::StaticClass());
         RegisterGraphNode(CMaterialExpression_BreakFloat4::StaticClass());
 
+        RegisterGraphNode(CMaterialExpression_MakeFloat2::StaticClass());
+        RegisterGraphNode(CMaterialExpression_MakeFloat3::StaticClass());
+        RegisterGraphNode(CMaterialExpression_MakeFloat4::StaticClass());
+        
         RegisterGraphNode(CMaterialExpression_TextureSample::StaticClass());
 
         ValidateGraph();
@@ -165,12 +169,12 @@ namespace Lumina
 
         if (CyclicNode != nullptr)
         {
-            CyclicNode->SetError("Cyclic");
-            FMaterialCompiler::FError Error;
-            Error.ErrorName = "Cyclic";
-            Error.ErrorDescription = "Cycle detected in material node graph! Graph must be acyclic!";
-            Error.ErrorNode = static_cast<CMaterialGraphNode*>(CyclicNode);
+            EdNodeGraph::FError Error;
+            Error.Name          = "Cyclic";
+            Error.Description   = "Cycle detected in material node graph! Graph must be acyclic!";
+            Error.Node          = CyclicNode;
             Compiler.AddError(Error);
+            
             return;
         }
 
@@ -213,9 +217,9 @@ namespace Lumina
 
         for (auto& Error : Compiler.GetErrors())
         {
-            if (Error.ErrorNode)
+            if (Error.Node)
             {
-                Error.ErrorNode->SetError(Error.ErrorName);
+                Error.Node->SetError(Error);
             }
         }
     }
@@ -256,7 +260,6 @@ namespace Lumina
         THashSet<CEdGraphNode*> ReachableNodes;
         uint32 ProcessedNodeCount = 0;
     
-        // Step 0: Define the root node (output node)
         CEdGraphNode* RootNode = nullptr;
         for (CEdGraphNode* Node : NodesToSort)
         {
@@ -273,7 +276,6 @@ namespace Lumina
             return nullptr;
         }
     
-        // Step 1: Traverse backwards starting from the root node to find all reachable nodes
         TQueue<CEdGraphNode*> ReverseQueue;
         ReverseQueue.push(RootNode);
         ReachableNodes.insert(RootNode);
@@ -283,13 +285,12 @@ namespace Lumina
             CEdGraphNode* Node = ReverseQueue.front();
             ReverseQueue.pop();
     
-            // Check input pins (dependencies) to see which nodes can be reached from the current node
             for (CEdNodeGraphPin* InputPin : Node->GetInputPins())
             {
                 for (CEdNodeGraphPin* ConnectedPin : InputPin->GetConnections())
                 {
                     CEdGraphNode* ConnectedNode = ConnectedPin->GetOwningNode();
-                    if (ReachableNodes.insert(ConnectedNode).second)  // If newly added
+                    if (ReachableNodes.insert(ConnectedNode).second)
                     {
                         ReverseQueue.push(ConnectedNode);
                     }
@@ -297,7 +298,6 @@ namespace Lumina
             }
         }
     
-        // Step 2: Initialize in-degree map only for reachable nodes
         for (CEdGraphNode* Node : NodesToSort)
         {
             if (ReachableNodes.find(Node) != ReachableNodes.end())
@@ -306,10 +306,9 @@ namespace Lumina
             }
         }
     
-        // Step 3: Compute in-degrees only for reachable nodes
         for (CEdGraphNode* Node : NodesToSort)
         {
-            if (ReachableNodes.find(Node) == ReachableNodes.end())  // Skip orphaned nodes
+            if (ReachableNodes.find(Node) == ReachableNodes.end())
             {
                 continue;
             }
@@ -319,7 +318,7 @@ namespace Lumina
                 for (CEdNodeGraphPin* ConnectedPin : OutputPin->GetConnections())
                 {
                     CEdGraphNode* ConnectedNode = ConnectedPin->GetOwningNode();
-                    if (ReachableNodes.find(ConnectedNode) != ReachableNodes.end())  // Only count reachable connections
+                    if (ReachableNodes.find(ConnectedNode) != ReachableNodes.end())
                     {
                         InDegree[ConnectedNode]++;
                     }
@@ -327,7 +326,6 @@ namespace Lumina
             }
         }
     
-        // Step 4: Add nodes with zero in-degree to the queue
         for (auto& Pair : InDegree)
         {
             if (Pair.second == 0)
@@ -336,7 +334,6 @@ namespace Lumina
             }
         }
     
-        // Step 5: Perform topological sort
         while (!ReadyQueue.empty())
         {
             CEdGraphNode* Node = ReadyQueue.front();
@@ -362,10 +359,8 @@ namespace Lumina
             }
         }
     
-        // Step 6: Check for cycles (if the number of processed nodes is not equal to the number of reachable nodes, there was a cycle)
         if (ProcessedNodeCount != ReachableNodes.size())
         {
-            // Find nodes that still have a nonzero in-degree (they are part of the cycle)
             for (auto& Pair : InDegree)
             {
                 if (Pair.second > 0)

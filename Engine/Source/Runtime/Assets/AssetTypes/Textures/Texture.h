@@ -9,14 +9,12 @@
 
 namespace Lumina
 {
-
     REFLECT()
     class RUNTIME_API CTexture : public CObject
     {
         GENERATED_BODY()
         
     public:
-
         
         void Serialize(FArchive& Ar) override;
         void PreLoad() override;
@@ -28,7 +26,8 @@ namespace Lumina
         FTextureResource* GetTextureResource() const { return TextureResource.get(); }
         uint8 GetNumMips() const { return TextureResource.get() ? TextureResource->Mips.size() : 0u; }
         
-        
         TUniquePtr<FTextureResource> TextureResource;
+        
+        int64 GlobalTextureIndex;
     };
 }

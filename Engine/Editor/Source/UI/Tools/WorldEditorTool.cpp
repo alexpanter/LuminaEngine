@@ -8,6 +8,7 @@
 #include "Core/Object/Class.h"
 #include "Core/Object/ObjectIterator.h"
 #include "Core/Object/Package/Package.h"
+#include "Core/Serialization/JsonArchiver.h"
 #include "EASTL/sort.h"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/matrix_decompose.hpp"
@@ -2857,10 +2858,7 @@ namespace Lumina
                     ComponentDestroyRequests.push(FComponentDestroyRequest{Table->GetType(), Entity});
                 }
             
-                if (ImGui::IsItemHovered())
-                {
-                    ImGui::SetTooltip("Remove Component");
-                }
+                ImGuiX::ItemTooltip("{}", "Remove Component");
             
                 ImGui::PopStyleVar();
                 ImGui::PopStyleColor(4);

@@ -419,7 +419,6 @@ namespace Lumina
         FString BuildSwizzleMask() const;
         int32 GetSelectedComponentCount() const;
         EComponentMask GetOutputMask() const;
-        EMaterialValueType GetOutputTypeFromMask() const;
         FString GetDefaultValueForMask() const;
 
         CMaterialInput* InputPin = nullptr;
@@ -456,9 +455,69 @@ namespace Lumina
         CMaterialInput* InputA = nullptr;
         CMaterialInput* InputB = nullptr;        
     };
+    
+    REFLECT()
+    class CMaterialExpression_MakeFloat2 : public CMaterialExpression
+    {
+        GENERATED_BODY()
+    public:
+
+        void BuildNode() override;
+
+        FFixedString GetNodeCategory() const override { return "Utility"; }
+        FString GetNodeDisplayName() const override { return "MakeVec2"; }
+        void* GetNodeDefaultValue() override { return nullptr; }
+        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
+        void GenerateDefinition(FMaterialCompiler& Compiler) override;
+
+
+        CMaterialInput* R = nullptr;
+        CMaterialInput* G = nullptr;
+    };
+    
+    REFLECT()
+    class CMaterialExpression_MakeFloat3 : public CMaterialExpression
+    {
+        GENERATED_BODY()
+    public:
+
+        void BuildNode() override;
+
+        FFixedString GetNodeCategory() const override { return "Utility"; }
+        FString GetNodeDisplayName() const override { return "MakeVec3"; }
+        void* GetNodeDefaultValue() override { return nullptr; }
+        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
+        void GenerateDefinition(FMaterialCompiler& Compiler) override;
+
+
+        CMaterialInput* R = nullptr;
+        CMaterialInput* G = nullptr;
+        CMaterialInput* B = nullptr;
+    };
+    
+    REFLECT()
+    class CMaterialExpression_MakeFloat4 : public CMaterialExpression
+    {
+        GENERATED_BODY()
+    public:
+
+        void BuildNode() override;
+
+        FFixedString GetNodeCategory() const override { return "Utility"; }
+        FString GetNodeDisplayName() const override { return "MakeVec4"; }
+        void* GetNodeDefaultValue() override { return nullptr; }
+        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
+        void GenerateDefinition(FMaterialCompiler& Compiler) override;
+
+
+        CMaterialInput* R = nullptr;
+        CMaterialInput* G = nullptr;
+        CMaterialInput* B = nullptr;
+        CMaterialInput* A = nullptr;
+    };
 
     REFLECT()
-        class CMaterialExpression_BreakFloat2 : public CMaterialExpression
+    class CMaterialExpression_BreakFloat2 : public CMaterialExpression
     {
         GENERATED_BODY()
     public:
@@ -478,7 +537,7 @@ namespace Lumina
     };
 
     REFLECT()
-        class CMaterialExpression_BreakFloat3 : public CMaterialExpression_BreakFloat2
+    class CMaterialExpression_BreakFloat3 : public CMaterialExpression_BreakFloat2
     {
         GENERATED_BODY()
     public:
@@ -496,7 +555,7 @@ namespace Lumina
     };
 
     REFLECT()
-        class CMaterialExpression_BreakFloat4 : public CMaterialExpression_BreakFloat3
+    class CMaterialExpression_BreakFloat4 : public CMaterialExpression_BreakFloat3
     {
         GENERATED_BODY()
     public:

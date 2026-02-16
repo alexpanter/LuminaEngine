@@ -16,6 +16,7 @@ namespace Lumina
 
     enum class EComponentMask : uint8
     {
+        None,
         RGBA,
         R,
         G,
@@ -30,6 +31,7 @@ namespace Lumina
     {
         switch (Mask)
         {
+        case EComponentMask::None: return "";
         case EComponentMask::R:    return ".r";
         case EComponentMask::G:    return ".g";
         case EComponentMask::B:    return ".b";

@@ -98,7 +98,6 @@ namespace Lumina
             Node->GridX = Position.x;
             Node->GridY = Position.y;
             
-            
             if (!Node->WantsTitlebar())
             {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
@@ -147,6 +146,7 @@ namespace Lumina
                     {
                         PinColor = ImVec4(255.0f, 0.0f, 0.0f, 255.0f);
                     }
+                    
                     DrawPinIcon(InputPin->HasConnection(), 255.0f, PinColor);
                     ImGui::Spring(0);
     
@@ -203,6 +203,25 @@ namespace Lumina
     
         NodeEditor::Suspend();
         {
+            
+            NodeEditor::NodeId NodeId;
+            if (NodeEditor::ShowNodeContextMenu(&NodeId))
+            {
+                ImGui::OpenPopup("Node Context Menu");
+            }
+            
+            NodeEditor::PinId PinId;
+            if (NodeEditor::ShowPinContextMenu(&PinId))
+            {
+                ImGui::OpenPopup("Pin Context Menu");
+            }
+            
+            NodeEditor::LinkId LinkId;
+            if (NodeEditor::ShowLinkContextMenu(&LinkId))
+            {
+                ImGui::OpenPopup("Link Context Menu");
+            }
+            
             if (NodeEditor::ShowBackgroundContextMenu())
             {
                 ImGui::OpenPopup("Create New Node");
@@ -213,129 +232,128 @@ namespace Lumina
                 DrawGraphContextMenu();
                 ImGui::EndPopup();
             }
-        }
         
-        if (NodeEditor::BeginShortcut())
-        {
-            static ImVec2 CopiedPivot;
-            if (NodeEditor::AcceptCopy())
+            if (NodeEditor::BeginShortcut())
             {
-                CopiedNodes.clear();
-                
-                NodeEditor::NodeId Selections[12];
-                int Num = NodeEditor::GetSelectedNodes(Selections, std::size(Selections));
-                
-                ImVec2 Min(FLT_MAX, FLT_MAX);
-                ImVec2 Max(-FLT_MAX, -FLT_MAX);
-                
-                for (int i = 0; i < Num; ++i)
+                static ImVec2 CopiedPivot;
+                if (NodeEditor::AcceptCopy())
                 {
-                    NodeEditor::NodeId Selection = Selections[i];
-                    auto NodeItr = eastl::find_if(Nodes.begin(), Nodes.end(), [&] (const TObjectPtr<CEdGraphNode>& A)
+                    CopiedNodes.clear();
+                
+                    NodeEditor::NodeId Selections[12];
+                    int Num = NodeEditor::GetSelectedNodes(Selections, std::size(Selections));
+                
+                    ImVec2 Min(FLT_MAX, FLT_MAX);
+                    ImVec2 Max(-FLT_MAX, -FLT_MAX);
+                
+                    for (int i = 0; i < Num; ++i)
                     {
-                        return A->GetNodeID() == Selection.Get() && A->IsDeletable();
-                    });
+                        NodeEditor::NodeId Selection = Selections[i];
+                        auto NodeItr = eastl::find_if(Nodes.begin(), Nodes.end(), [&] (const TObjectPtr<CEdGraphNode>& A)
+                        {
+                            return A->GetNodeID() == Selection.Get() && A->IsDeletable();
+                        });
                     
-                    if (NodeItr == Nodes.end())
-                    {
-                        continue;
+                        if (NodeItr == Nodes.end())
+                        {
+                            continue;
+                        }
+                    
+                        CopiedNodes.push_back(NodeItr->Get());
+                    
+                        ImVec2 Pos = NodeEditor::GetNodePosition(Selection);
+                        ImVec2 Size = NodeEditor::GetNodeSize(Selection);
+
+                        Min.x = eastl::min(Min.x, Pos.x);
+                        Min.y = eastl::min(Min.y, Pos.y);
+
+                        Max.x = eastl::max(Max.x, Pos.x + Size.x);
+                        Max.y = eastl::max(Max.y, Pos.y + Size.y);
                     }
-                    
-                    CopiedNodes.push_back(NodeItr->Get());
-                    
-                    ImVec2 Pos = NodeEditor::GetNodePosition(Selection);
-                    ImVec2 Size = NodeEditor::GetNodeSize(Selection);
-
-                    Min.x = eastl::min(Min.x, Pos.x);
-                    Min.y = eastl::min(Min.y, Pos.y);
-
-                    Max.x = eastl::max(Max.x, Pos.x + Size.x);
-                    Max.y = eastl::max(Max.y, Pos.y + Size.y);
+                
+                    CopiedPivot = (Min + Max) * 0.5f;
                 }
-                
-                CopiedPivot = (Min + Max) * 0.5f;
-            }
             
-            if (NodeEditor::AcceptPaste())
-            {
-                NodeEditor::ClearSelection();
+                if (NodeEditor::AcceptPaste())
+                {
+                    NodeEditor::ClearSelection();
                 
-                ImVec2 PasteLocation = NodeEditor::ScreenToCanvas(ImGui::GetMousePos());
+                    ImVec2 PasteLocation = NodeEditor::ScreenToCanvas(ImGui::GetMousePos());
 
-                ImVec2 Delta = PasteLocation - CopiedPivot;
+                    ImVec2 Delta = PasteLocation - CopiedPivot;
                 
-                for (CEdGraphNode* Node : CopiedNodes)
-                {
-                    ImVec2 CopiedCanvasPosition = NodeEditor::GetNodePosition(Node->GetNodeID());
-                    
-                    CEdGraphNode* NewNode = CreateNode(Node->GetClass());
-                    Node->CopyPropertiesTo(NewNode);
-                    
-                    ImVec2 NewPosition = CopiedCanvasPosition + Delta;
-                    NodeEditor::SetNodePosition(NewNode->GetNodeID(), NewPosition);
-                    NodeEditor::SelectNode(NewNode->GetNodeID(), true);
-                }
-            }
-            
-            if (NodeEditor::AcceptDuplicate())
-            {
-                TVector<CEdGraphNode*> DupNodes;
-                
-                NodeEditor::NodeId Selections[12];
-                int Num = NodeEditor::GetSelectedNodes(Selections, std::size(Selections));
-                
-                ImVec2 Min(FLT_MAX, FLT_MAX);
-                ImVec2 Max(-FLT_MAX, -FLT_MAX);
-                
-                for (int i = 0; i < Num; ++i)
-                {
-                    NodeEditor::NodeId Selection = Selections[i];
-                    auto NodeItr = eastl::find_if(Nodes.begin(), Nodes.end(), [&] (const TObjectPtr<CEdGraphNode>& A)
+                    for (CEdGraphNode* Node : CopiedNodes)
                     {
-                        return A->GetNodeID() == Selection.Get() && A->IsDeletable();
-                    });
+                        ImVec2 CopiedCanvasPosition = NodeEditor::GetNodePosition(Node->GetNodeID());
                     
-                    if (NodeItr == Nodes.end())
-                    {
-                        continue;
+                        CEdGraphNode* NewNode = CreateNode(Node->GetClass());
+                        Node->CopyPropertiesTo(NewNode);
+                    
+                        ImVec2 NewPosition = CopiedCanvasPosition + Delta;
+                        NodeEditor::SetNodePosition(NewNode->GetNodeID(), NewPosition);
+                        NodeEditor::SelectNode(NewNode->GetNodeID(), true);
                     }
-                    
-                    DupNodes.push_back(NodeItr->Get());
-                    
-                    ImVec2 Pos = NodeEditor::GetNodePosition(Selection);
-                    ImVec2 Size = NodeEditor::GetNodeSize(Selection);
-
-                    Min.x = eastl::min(Min.x, Pos.x);
-                    Min.y = eastl::min(Min.y, Pos.y);
-
-                    Max.x = eastl::max(Max.x, Pos.x + Size.x);
-                    Max.y = eastl::max(Max.y, Pos.y + Size.y);
                 }
-                
-                CopiedPivot = (Min + Max) * 0.5f;
-                
-                NodeEditor::ClearSelection();
-                ImVec2 PasteLocation = NodeEditor::ScreenToCanvas(ImGui::GetMousePos());
-                ImVec2 Delta = PasteLocation - CopiedPivot;
-                
-                for (CEdGraphNode* Node : DupNodes)
+            
+                if (NodeEditor::AcceptDuplicate())
                 {
-                    ImVec2 CopiedCanvasPosition = NodeEditor::GetNodePosition(Node->GetNodeID());
+                    TVector<CEdGraphNode*> DupNodes;
+                
+                    NodeEditor::NodeId Selections[12];
+                    int Num = NodeEditor::GetSelectedNodes(Selections, std::size(Selections));
+                
+                    ImVec2 Min(FLT_MAX, FLT_MAX);
+                    ImVec2 Max(-FLT_MAX, -FLT_MAX);
+                
+                    for (int i = 0; i < Num; ++i)
+                    {
+                        NodeEditor::NodeId Selection = Selections[i];
+                        auto NodeItr = eastl::find_if(Nodes.begin(), Nodes.end(), [&] (const TObjectPtr<CEdGraphNode>& A)
+                        {
+                            return A->GetNodeID() == Selection.Get() && A->IsDeletable();
+                        });
                     
-                    CEdGraphNode* NewNode = CreateNode(Node->GetClass());
-                    Node->CopyPropertiesTo(NewNode);
+                        if (NodeItr == Nodes.end())
+                        {
+                            continue;
+                        }
+                    
+                        DupNodes.push_back(NodeItr->Get());
+                    
+                        ImVec2 Pos = NodeEditor::GetNodePosition(Selection);
+                        ImVec2 Size = NodeEditor::GetNodeSize(Selection);
 
-                    ImVec2 NewPosition = CopiedCanvasPosition + Delta;
-                    NodeEditor::SetNodePosition(NewNode->GetNodeID(), NewPosition);
-                    NodeEditor::SelectNode(NewNode->GetNodeID(), true);
+                        Min.x = eastl::min(Min.x, Pos.x);
+                        Min.y = eastl::min(Min.y, Pos.y);
+
+                        Max.x = eastl::max(Max.x, Pos.x + Size.x);
+                        Max.y = eastl::max(Max.y, Pos.y + Size.y);
+                    }
+                
+                    CopiedPivot = (Min + Max) * 0.5f;
+                
+                    NodeEditor::ClearSelection();
+                    ImVec2 PasteLocation = NodeEditor::ScreenToCanvas(ImGui::GetMousePos());
+                    ImVec2 Delta = PasteLocation - CopiedPivot;
+                
+                    for (CEdGraphNode* Node : DupNodes)
+                    {
+                        ImVec2 CopiedCanvasPosition = NodeEditor::GetNodePosition(Node->GetNodeID());
+                    
+                        CEdGraphNode* NewNode = CreateNode(Node->GetClass());
+                        Node->CopyPropertiesTo(NewNode);
+
+                        ImVec2 NewPosition = CopiedCanvasPosition + Delta;
+                        NodeEditor::SetNodePosition(NewNode->GetNodeID(), NewPosition);
+                        NodeEditor::SelectNode(NewNode->GetNodeID(), true);
+                    }
                 }
             }
         }
-        
         NodeEditor::Resume();
 
         NodeEditor::EndShortcut();
-    
+        
         bool bAnyNodeSelected = false;
         for (CEdGraphNode* Node : Nodes)
         {
@@ -713,7 +731,47 @@ namespace Lumina
         
         ImGui::PopStyleVar(2);
     }
-    
+
+    void CEdNodeGraph::DrawNodeContextMenu(CEdGraphNode* Node)
+    {
+        constexpr ImVec2 PopupSize(320, 450);
+        constexpr float CategorySpacing = 4.0f;
+
+        ImGui::SetNextWindowSize(PopupSize, ImGuiCond_Always);
+        
+        
+        constexpr float HeaderHeight = 54;
+        constexpr float FooterHeight = 32;
+        ImVec2 ChildSize = ImVec2(PopupSize.x, PopupSize.y - HeaderHeight - FooterHeight);
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, CategorySpacing));
+        
+        if (ImGui::BeginChild("##NodeList", ChildSize, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
+        {
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarBg, ImVec4(0.08f, 0.08f, 0.10f, 0.9f));
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrab, ImVec4(0.25f, 0.25f, 0.27f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabHovered, ImVec4(0.35f, 0.35f, 0.37f, 1.0f));
+            ImGui::PushStyleColor(ImGuiCol_ScrollbarGrabActive, ImVec4(0.45f, 0.45f, 0.47f, 1.0f));
+            
+            if (ImGui::BeginChild("##ScrollRegion", ImVec2(0, 0), false))
+            {
+                ImGuiX::Text("Node: {}", Node->GetNodeDisplayName());
+                
+                ImGui::EndChild();
+            }
+            
+            ImGui::PopStyleColor(4);
+            ImGui::EndChild();
+        }
+        
+        ImGui::PopStyleVar(2);
+    }
+
+    void CEdNodeGraph::DrawPinContextMenu(CEdNodeGraphPin* Pin)
+    {
+    }
+
     CEdGraphNode* CEdNodeGraph::CreateNode(CClass* NodeClass)
     {
         CEdGraphNode* NewNode = NewObject<CEdGraphNode>(NodeClass);

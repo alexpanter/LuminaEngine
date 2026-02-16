@@ -45,6 +45,8 @@ namespace Lumina
         
         void DrawGraph();
         virtual void DrawGraphContextMenu();
+        virtual void DrawNodeContextMenu(CEdGraphNode* Node);
+        virtual void DrawPinContextMenu(CEdNodeGraphPin* Pin);
         
         virtual void ValidateGraph()  { }
         

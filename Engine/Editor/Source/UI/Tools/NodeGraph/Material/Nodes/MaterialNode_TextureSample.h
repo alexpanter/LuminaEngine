@@ -11,8 +11,6 @@ namespace Lumina
     {
         GENERATED_BODY()
     public:
-
-        void Serialize(FArchive& Ar) override;
         
         void BuildNode() override;
         FFixedString GetNodeCategory() const override { return "Textures"; }

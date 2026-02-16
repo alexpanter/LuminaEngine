@@ -1,11 +1,8 @@
 ﻿#pragma once
-#include <sstream>
-
 #include "MaterialInput.h"
 #include "Containers/Array.h"
 #include "Containers/String.h"
 #include "Core/Object/ObjectHandleTyped.h"
-#include "Renderer/RHIFwd.h"
 
 namespace Lumina
 {
@@ -19,26 +16,10 @@ namespace Lumina
 
 namespace Lumina
 {
-
-    enum class EMaterialValueType : uint8
-    {
-        Float,
-        Float2,
-        Float3,
-        Float4
-    };
-
     class FMaterialCompiler
     {
     public:
-        struct FError
-        {
-            FString             ErrorName;
-            FString             ErrorDescription;
-            CMaterialGraphNode* ErrorNode = nullptr;
-            FMaterialNodePin*   ErrorPin = nullptr;
-        };
-
+        
         struct FScalarParam
         {
             uint16 Index;
@@ -53,16 +34,17 @@ namespace Lumina
 
         struct FNodeOutputInfo
         {
-            EMaterialValueType Type;
+            EMaterialInputType Type;
             EComponentMask Mask;
             FString NodeName;
         };
 
         struct FInputValue
         {
-            FString Value;
-            EMaterialValueType Type;
-            int32 ComponentCount;
+            FString             Value;
+            EMaterialInputType  Type;
+            EComponentMask      Mask;
+            int32               ComponentCount;
         };
 
     public:
@@ -88,7 +70,11 @@ namespace Lumina
         void BreakFloat2(CMaterialInput* A);
         void BreakFloat3(CMaterialInput* A);
         void BreakFloat4(CMaterialInput* A);
-
+        
+        void MakeFloat2(CMaterialInput* R, CMaterialInput* G);
+        void MakeFloat3(CMaterialInput* R, CMaterialInput* G, CMaterialInput* B);
+        void MakeFloat4(CMaterialInput* R, CMaterialInput* G, CMaterialInput* B, CMaterialInput* A);
+        
         // Texture operations
         void DefineTextureSample(const FString& ID);
         void TextureSample(const FString& ID, CTexture* Texture, CMaterialInput* Input);
@@ -130,20 +116,16 @@ namespace Lumina
         void AddRaw(const FString& Raw);
 
         void GetBoundTextures(TVector<TObjectPtr<CTexture>>& Images);
-
-        // Node output tracking
-        void RegisterNodeOutput(const FString& NodeName, EMaterialValueType Type, EComponentMask Mask);
-        FNodeOutputInfo GetNodeOutputInfo(const FString& NodeName) const;
-
+        
         FORCEINLINE bool HasErrors() const { return !Errors.empty(); }
-        FORCEINLINE void AddError(const FError& Error) { Errors.push_back(Error); }
-        FORCEINLINE const TVector<FError>& GetErrors() const { return Errors; }
+        FORCEINLINE void AddError(const EdNodeGraph::FError& Error) { Errors.push_back(Error); }
+        FORCEINLINE const TVector<EdNodeGraph::FError>& GetErrors() const { return Errors; }
 
-        FString GetVectorType(EMaterialValueType Type) const;
+        FString GetVectorType(EMaterialInputType Type) const;
         FString GetVectorType(int32 ComponentCount) const;
         int32 GetComponentCount(EComponentMask Mask) const;
-        int32 GetComponentCount(EMaterialValueType Type) const;
-        EMaterialValueType GetTypeFromComponentCount(int32 Count) const;
+        int32 GetComponentCount(EMaterialInputType Type) const;
+        EMaterialInputType GetTypeFromComponentCount(int32 Count) const;
 
 
         
@@ -152,19 +134,17 @@ namespace Lumina
     private:
         
         
-        EMaterialValueType DetermineResultType(EMaterialValueType A, EMaterialValueType B, bool IsComponentWise = true);
+        EMaterialInputType DetermineResultType(EMaterialInputType A, EMaterialInputType B, bool IsComponentWise = true);
         
-        void EmitBinaryOp(const FString& Op, CMaterialInput* A, CMaterialInput* B, 
-                         float DefaultA, float DefaultB, bool IsComponentWise = true);
+        NODISCARD EMaterialInputType EmitBinaryOp(const FString& Op, CMaterialInput* A, CMaterialInput* B, float DefaultA, float DefaultB, bool IsComponentWise = true);
 
     private:
         FString ShaderChunks;
         TVector<TObjectPtr<CTexture>> BoundImages;
-        TVector<FError> Errors;
+        TVector<EdNodeGraph::FError> Errors;
         
         THashMap<FName, FScalarParam> ScalarParameters;
         THashMap<FName, FVectorParam> VectorParameters;
-        THashMap<FString, FNodeOutputInfo> NodeOutputs;
         
         uint16 NumScalarParams = 0;
         uint16 NumVectorParams = 0;

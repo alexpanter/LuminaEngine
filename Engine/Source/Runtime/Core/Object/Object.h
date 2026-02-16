@@ -62,6 +62,9 @@ namespace Lumina
         /** Is the object considered an asset? */
         RUNTIME_API virtual bool IsAsset() const { return false; }
         
+        /** If this object is an asset, should it serialize as binary, or a text format */
+        RUNTIME_API virtual bool IsBinary() const { return true; }
+        
         /** Called just before the object is serialized from disk */
         RUNTIME_API virtual void PreLoad() {}
         

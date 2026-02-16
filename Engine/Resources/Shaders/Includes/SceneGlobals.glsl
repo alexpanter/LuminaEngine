@@ -5,6 +5,7 @@
 
 #include "Common.glsl"
 
+
 //////////////////////////////////////////////////////////
 // BUFFER REFERENCES
 //////////////////////////////////////////////////////////
@@ -65,8 +66,9 @@ layout(set = 0, binding = 6) restrict buffer ClusterSSBO
 
 layout(set = 0, binding = 7) restrict buffer MaterialUniforms
 {
-    vec4 Scalars[MAX_SCALARS / 4];
-    vec4 Vectors[MAX_VECTORS];
+    vec4    Vectors[MAX_VECTORS];
+    float   Scalars[MAX_SCALARS];
+    uint    Textures[MAX_TEXTURES];
 } uMaterialUniforms;
 
 layout(set = 0, binding = 8)        uniform sampler2DArray uShadowCascade;
@@ -81,7 +83,6 @@ layout(set = 0, binding = 12)       uniform sampler2D uHDRSceneColor;
 //////////////////////////////////////////////////////////
 
 layout(set = 1, binding = 0) uniform sampler2D uGlobalTextures[];
-
 
 //////////////////////////////////////////////////////////
 
@@ -133,9 +134,7 @@ FVertexData LoadSkinnedVertex(uvec2 VertexAddress, uvec2 IndexAddress, uint Vert
 
 float GetMaterialScalar(uint Index)
 {
-    uint v = Index / 4;
-    uint c = Index % 4;
-    return uMaterialUniforms.Scalars[v][c];
+    return uMaterialUniforms.Scalars[Index];
 }
 
 vec4 GetMaterialVec4(uint Index)

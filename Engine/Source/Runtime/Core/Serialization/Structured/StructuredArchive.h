@@ -304,10 +304,11 @@ namespace Lumina
         virtual FArchiveSlot EnterMapValue() override;
 
     private:
+        
         struct FFieldInfo
         {
-            FName FieldName;
-            uint64 Offset;
+            FName   FieldName;
+            uint64  Offset;
         };
 
         THashMap<StructuredArchive::FSlotID, TVector<FFieldInfo>> RecordFields;

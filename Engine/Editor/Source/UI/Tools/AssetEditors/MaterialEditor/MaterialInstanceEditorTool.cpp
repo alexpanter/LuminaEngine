@@ -83,9 +83,7 @@ namespace Lumina
                             {
                             case EMaterialParameterType::Scalar:
                             {
-                                int VecIndex = Param.Index / 4;
-                                int ComponentIndex = Param.Index % 4;
-                                float* ValuePtr = &Instance->MaterialUniforms.Scalars[VecIndex][ComponentIndex];
+                                float* ValuePtr = &Instance->MaterialUniforms.Scalars[Param.Index];
 
                                 ImGui::PushID(&Param);
                                 if (ImGui::DragFloat("##Scalar", ValuePtr, 0.1f))
