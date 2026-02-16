@@ -164,7 +164,7 @@ namespace Lumina
                 if (CachedThumbnail)
                 {
                     auto LoadState = CachedThumbnail->LoadState.load(std::memory_order_acquire);
-                    if (LoadState != FPackageThumbnail::EState::Loading || LoadState != FPackageThumbnail::EState::Failed)
+                    if (LoadState == FPackageThumbnail::EState::None) // The package thumbnail may be dirty.
                     {
                         AsyncLoadThumbnailsForPackage(Package);
                     }

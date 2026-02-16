@@ -54,7 +54,10 @@ namespace Lumina
         glm::vec3 HalfExtent = glm::vec3(0.5f);
 
         PROPERTY(Editable)
-        glm::vec3 Offset;
+        glm::vec3 TranslationOffset;
+        
+        PROPERTY(Editable)
+        glm::vec3 RotationOffset;
     };
 
     REFLECT(Component)
@@ -66,7 +69,7 @@ namespace Lumina
         float Radius = 0.5f;
 
         PROPERTY(Editable)
-        glm::vec3 Offset;
+        glm::vec3 TranslationOffset;
     };
     
 }

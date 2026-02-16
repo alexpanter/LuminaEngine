@@ -1862,7 +1862,8 @@ namespace Lumina
         if (bShouldPlay != bGamePreviewRunning && bShouldPlay == true)
         {
             bGamePreviewRunning = true;
-            
+            PropertyTables.clear();
+
             World->SetActive(false);
             ProxyWorld = World;
             
@@ -1872,7 +1873,7 @@ namespace Lumina
             
             OutlinerListView.ClearTree();
             OutlinerListView.MarkTreeDirty();
-            
+
             World->GetEntityRegistry().on_construct<entt::entity>().disconnect<&FWorldEditorTool::OnEntityCreated>(this);
             World->GetEntityRegistry().on_destroy<entt::entity>().disconnect<&FWorldEditorTool::OnEntityCreated>(this);
 
@@ -1881,6 +1882,7 @@ namespace Lumina
         }
         else if (bShouldPlay != bGamePreviewRunning && bShouldPlay == false)
         {
+            PropertyTables.clear();
             World->SetPaused(true);
             World->StopSimulation();
             bGamePreviewRunning = false;

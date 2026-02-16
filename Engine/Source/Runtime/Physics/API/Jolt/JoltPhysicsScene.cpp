@@ -376,9 +376,9 @@ namespace Lumina::Physics
                 return;
             }
             
-            JPH::RVec3 Pos = Body->GetPosition();
-            JPH::Quat Rot = Body->GetRotation();
-        
+            JPH::RVec3 Pos          = Body->GetPosition();
+            JPH::Quat Rot           = Body->GetRotation();
+            
             TransformComponent.SetLocation(JoltUtils::FromJPHRVec3(Pos));
             TransformComponent.SetRotation(JoltUtils::FromJPHQuat(Rot));
             
@@ -670,13 +670,16 @@ namespace Lumina::Physics
         STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
         
         JPH::ShapeRefC Shape;
-        glm::vec3 ColliderOffset(0.0f);
+
+        glm::vec3 ColliderTranslationOffset(0.0f);
+        glm::vec3 ColliderRotationOffset(0.0f);
 
         if (Registry.all_of<SBoxColliderComponent>(Entity))
         {
             const SBoxColliderComponent& BC = Registry.get<SBoxColliderComponent>(Entity);
-            ColliderOffset = BC.Offset;
-
+            ColliderTranslationOffset       = BC.TranslationOffset;
+            ColliderRotationOffset          = BC.RotationOffset;
+            
             JPH::BoxShapeSettings Settings(JoltUtils::ToJPHVec3(BC.HalfExtent * TransformComponent.GetScale()));
             Settings.SetEmbedded();
             auto Result = Settings.Create();
@@ -689,8 +692,8 @@ namespace Lumina::Physics
         }
         else if (Registry.all_of<SSphereColliderComponent>(Entity))
         {
-            const SSphereColliderComponent& SC = Registry.get<SSphereColliderComponent>(Entity);
-            ColliderOffset = SC.Offset;
+            const SSphereColliderComponent& SC  = Registry.get<SSphereColliderComponent>(Entity);
+            ColliderTranslationOffset           = SC.TranslationOffset;
 
             JPH::SphereShapeSettings Settings(SC.Radius * TransformComponent.MaxScale());
             Settings.SetEmbedded();
@@ -709,8 +712,16 @@ namespace Lumina::Physics
         glm::quat Rotation      = TransformComponent.GetRotation();
         glm::vec3 Position      = TransformComponent.GetLocation();
         
-        glm::vec3 RotatedOffset = Rotation * ColliderOffset;
-        Position += RotatedOffset;
+        glm::quat QuatRotation(ColliderRotationOffset);
+        JPH::RotatedTranslatedShapeSettings RTS(JoltUtils::ToJPHVec3(ColliderTranslationOffset), JoltUtils::ToJPHQuat(QuatRotation), Shape);
+        auto RTSResult = RTS.Create();
+        if (RTSResult.HasError())
+        {
+            LOG_ERROR("Failed to create offset shape for Entity: {} - {}", entt::to_integral(Entity), RTSResult.GetError());
+            return;
+        }
+        
+        Shape = RTSResult.Get();
 
         JPH::BodyCreationSettings Settings(
             Shape,
@@ -726,12 +737,13 @@ namespace Lumina::Physics
         Settings.mAngularDamping        = RigidBodyComponent.AngularDamping;
         Settings.mLinearDamping         = RigidBodyComponent.LinearDamping; 
 
-        JPH::BodyInterface& BodyInterface = JoltSystem->GetBodyInterface();
+        JPH::BodyInterface& BodyInterface   = JoltSystem->GetBodyInterface();
+        JPH::Body* Body                     = BodyInterface.CreateBody(Settings);
         
-        JPH::Body* Body = BodyInterface.CreateBody(Settings);
         Body->SetUserData(static_cast<uint64>(Entity));
+        RigidBodyComponent.BodyID           = Body->GetID().GetIndexAndSequenceNumber();
+        
         BodyInterface.AddBody(Body->GetID(), JPH::EActivation::Activate);
-        RigidBodyComponent.BodyID = Body->GetID().GetIndexAndSequenceNumber();
     }
 
     void FJoltPhysicsScene::OnRigidBodyComponentDestroyed(entt::registry& Registry, entt::entity Entity)
