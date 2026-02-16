@@ -2,6 +2,9 @@
 #include "InputProcessor.h"
 #include "Core/Windows/Window.h"
 #include "Events/Event.h"
+#if WITH_EDITOR
+#include "imgui.h"
+#endif
 
 namespace Lumina
 {
@@ -78,6 +81,20 @@ namespace Lumina
 		}
 		
 		glfwSetInputMode(Windowing::GetPrimaryWindowHandle()->GetWindow(), GLFW_CURSOR, DesiredInputMode);
+		
+		#if WITH_EDITOR
+		ImGuiIO& IO = ImGui::GetIO();
+		if (Mode == EMouseMode::Captured || Mode == EMouseMode::Hidden)
+		{
+			IO.ConfigFlags |= ImGuiConfigFlags_NoMouse;
+			IO.MouseDrawCursor = false;
+		}
+		else
+		{
+			IO.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+			IO.MouseDrawCursor = true;
+		}
+		#endif
 	}
 
 	void FInputProcessor::EndFrame()
