@@ -35,11 +35,11 @@ namespace Lumina
         AllCommandLists.push_back(CommandList);
         CommandList->Open();
         
-        
         for (TVector<FRenderGraphPass*>& Passes : PassGroups)
         {
             for (FRenderGraphPass* Pass : Passes)
             {
+
                 // The user has promised us this pass can now run at any time without issues, so we dispatch it and keep going.
                 if (Pass->GetDescriptor()->HasAnyFlag(ERGExecutionFlags::Async))
                 {

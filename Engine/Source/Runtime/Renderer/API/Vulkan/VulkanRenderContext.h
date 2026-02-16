@@ -12,6 +12,7 @@
 #include "Renderer/RenderContext.h"
 #include "Renderer/ErrorHandling/Vulkan/VulkanCrashTracker.h"
 #include "VkBootstrap.h"
+#include "Containers/BitSetAllocator.h"
 #include "Types/BitFlags.h"
 
 namespace Lumina
@@ -33,8 +34,6 @@ namespace Lumina
     {
         VkDebugUtilsMessengerEXT DebugMessenger = nullptr;
         PFN_vkSetDebugUtilsObjectNameEXT DebugUtilsObjectNameEXT = nullptr;
-        PFN_vkCmdDebugMarkerBeginEXT vkCmdDebugMarkerBeginEXT = nullptr;
-        PFN_vkCmdDebugMarkerEndEXT vkCmdDebugMarkerEndEXT = nullptr;
     };
 
     enum class EVulkanExtensions : uint8
@@ -170,6 +169,11 @@ namespace Lumina
         void ResetEventQuery(IEventQuery* Query) override;
         bool PollEventQuery(IEventQuery* Query) override;
         void WaitEventQuery(IEventQuery* Query) override;
+        
+        FRHITimerQueryRef CreateTimerQuery() override;
+        bool PollTimerQuery(ITimerQuery* Query) override;
+        float GetTimerQueryTime(ITimerQuery* Query) override;
+        void ResetTimerQuery(ITimerQuery* Query) override;
 
         void AddCommandQueueWait(ECommandQueue Waiting, ECommandQueue WaitOn) override;
         
@@ -225,6 +229,8 @@ namespace Lumina
 
 
         RHI::ICrashTracker& GetCrashTracker() const override;
+        
+        NODISCARD VkQueryPool GetTimerQueryPool() const { return TimerQueryPool; }
 
         //-------------------------------------------------------------------------------------
 
@@ -236,6 +242,9 @@ namespace Lumina
         FVulkanRenderContextFunctions& GetDebugUtils();
     
     private:
+
+        FBitSetAllocator                                    TimerQueryAllocator;      
+        VkQueryPool                                         TimerQueryPool = VK_NULL_HANDLE;
 
         FVulkanSwapchain*                                   Swapchain = nullptr;
         FVulkanDevice*                                      VulkanDevice = nullptr;

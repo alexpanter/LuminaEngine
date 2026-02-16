@@ -2,7 +2,6 @@
 #include "VulkanRenderContext.h"
 #define VOLK_IMPLEMENTATION
 #include <volk/volk.h>
-
 #include "Convert.h"
 #include "VulkanCommandList.h"
 #include "VulkanDevice.h"
@@ -153,8 +152,8 @@ namespace Lumina
     FQueue::FQueue(FVulkanRenderContext* InRenderContext, VkQueue InQueue, uint32 InQueueFamilyIndex, ECommandQueue InType)
         : IDeviceChild(InRenderContext->GetDevice())
         , RenderContext(InRenderContext)
-        , Type(InType)
         , Queue(InQueue)
+        , Type(InType)
         , QueueFamilyIndex(InQueueFamilyIndex)
     {
         
@@ -464,7 +463,8 @@ namespace Lumina
     }
     
     FVulkanRenderContext::FVulkanRenderContext()
-        : CurrentFrameIndex(0)
+        : TimerQueryAllocator(1024)
+        , CurrentFrameIndex(0)
     {
     }
 
@@ -480,22 +480,25 @@ namespace Lumina
         GVulkanAllocationCallbacks.pfnFree          = VulkanFree;
         GVulkanAllocationCallbacks.pfnReallocation  = VulkanRealloc;
         
-        
         vkb::InstanceBuilder Builder; Builder
         .set_app_name("Lumina Engine")
         .require_api_version(1, 3, 0)
         .set_allocation_callbacks(VK_ALLOC_CALLBACK);
         if (Description.bValidation)
         {
-            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
+            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
             Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT);
-            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
-            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
-            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
-            Builder.enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             Builder.request_validation_layers();
             Builder.use_default_debug_messenger();
             Builder.set_debug_callback(VkDebugCallback);
+        }
+        
+        if (Description.bDebugUtils)
+        {
+            Builder.enable_extension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         }
 
         vkb::Result InstBuilder = Builder.build();
@@ -529,8 +532,6 @@ namespace Lumina
         
 
         DebugUtils.DebugUtilsObjectNameEXT      = (PFN_vkSetDebugUtilsObjectNameEXT)(vkGetInstanceProcAddr(VulkanInstance, "vkSetDebugUtilsObjectNameEXT"));
-        DebugUtils.vkCmdDebugMarkerBeginEXT     = (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(GetDevice()->GetDevice(), "vkCmdDebugMarkerBeginEXT");
-        DebugUtils.vkCmdDebugMarkerEndEXT       = (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(GetDevice()->GetDevice(), "vkCmdDebugMarkerEndEXT");
         
         Swapchain = Memory::New<FVulkanSwapchain>();
         Swapchain->CreateSwapchain(VulkanInstance, this, Windowing::GetPrimaryWindowHandle(), Windowing::GetPrimaryWindowHandle()->GetExtent());
@@ -1162,6 +1163,85 @@ namespace Lumina
         ASSERT(bSuccess);
         
         (void)bSuccess;
+    }
+
+    FRHITimerQueryRef FVulkanRenderContext::CreateTimerQuery()
+    {
+        VkQueryPoolCreateInfo QueryPoolInfo = {};
+        QueryPoolInfo.queryCount    = TimerQueryAllocator.GetCapacity() * 2;
+        QueryPoolInfo.queryType     = VK_QUERY_TYPE_TIMESTAMP;
+        
+        VK_CHECK(vkCreateQueryPool(GetDevice()->GetDevice(), &QueryPoolInfo, VK_ALLOC_CALLBACK, &TimerQueryPool));
+        
+        int32 QueryIndex = TimerQueryAllocator.Allocate();
+        
+        if (QueryIndex < 0)
+        {
+            LOG_ERROR("Insufficient query pool space, increase numer of timer queries");
+            return nullptr;
+        }
+        
+        auto TimerQuery = MakeRefCount<FVulkanTimerQuery>(TimerQueryAllocator);
+        TimerQuery->BeginQueryIndex = QueryIndex * 2;
+        TimerQuery->EndQueryIndex = QueryIndex * 2 + 1;
+        
+        return TimerQuery;
+    }
+
+    bool FVulkanRenderContext::PollTimerQuery(ITimerQuery* Query)
+    {
+        FVulkanTimerQuery* VulkanTimerQuery = static_cast<FVulkanTimerQuery*>(Query);
+        
+        if (!VulkanTimerQuery->bStarted)
+        {
+            return false;
+        }
+        
+        if (VulkanTimerQuery->bResolved)
+        {
+            return true;
+        }
+        
+        uint32 Timestamps[2] = {0, 0};
+        
+        VK_CHECK(vkGetQueryPoolResults(GetDevice()->GetDevice(), TimerQueryPool, VulkanTimerQuery->BeginQueryIndex, 2, sizeof(Timestamps), Timestamps, sizeof(Timestamps[0]), 0));
+        
+        const auto TimestampPeriod = GetDevice()->GetPhysicalDeviceProperties().limits.timestampPeriod;
+        const float Scale = 1e-9f * TimestampPeriod;
+        
+        VulkanTimerQuery->Time = (float)(Timestamps[1] - Timestamps[0]) * Scale;
+        VulkanTimerQuery->bResolved = true;
+        return true;
+    }
+
+    float FVulkanRenderContext::GetTimerQueryTime(ITimerQuery* Query)
+    {
+        FVulkanTimerQuery* VulkanTimerQuery = static_cast<FVulkanTimerQuery*>(Query);
+
+        if (!VulkanTimerQuery->bStarted)
+        {
+            return 0.0f;
+        }
+        
+        if (!VulkanTimerQuery->bResolved)
+        {
+            while (!PollTimerQuery(Query))
+            {
+                // Spin wait.
+            }
+        }
+        
+        VulkanTimerQuery->bStarted = false;
+        DEBUG_ASSERT(VulkanTimerQuery->bResolved);
+        return VulkanTimerQuery->Time;
+    }
+
+    void FVulkanRenderContext::ResetTimerQuery(ITimerQuery* Query)
+    {
+        FVulkanTimerQuery* VulkanTimerQuery = static_cast<FVulkanTimerQuery*>(Query);
+        VulkanTimerQuery->bStarted = false;
+        VulkanTimerQuery->bResolved = false;
+        VulkanTimerQuery->Time = 0.0f;
     }
 
     void FVulkanRenderContext::AddCommandQueueWait(ECommandQueue Waiting, ECommandQueue WaitOn)

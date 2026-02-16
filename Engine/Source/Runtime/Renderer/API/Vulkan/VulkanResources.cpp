@@ -555,22 +555,21 @@ namespace Lumina
 
     FVulkanEventQuery::FVulkanEventQuery()
     {
-//        VkQueryPoolCreateInfo QueryPoolInfo = {};
-//        QueryPoolInfo.queryCount = 1;
-//        QueryPoolInfo.pipelineStatistics = 
-//            VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_VERTICES_BIT |
-//            VK_QUERY_PIPELINE_STATISTIC_INPUT_ASSEMBLY_PRIMITIVES_BIT |
-//            VK_QUERY_PIPELINE_STATISTIC_VERTEX_SHADER_INVOCATIONS_BIT |
-//            VK_QUERY_PIPELINE_STATISTIC_CLIPPING_INVOCATIONS_BIT |
-//            VK_QUERY_PIPELINE_STATISTIC_CLIPPING_PRIMITIVES_BIT |
-//            VK_QUERY_PIPELINE_STATISTIC_FRAGMENT_SHADER_INVOCATIONS_BIT |
-//            VK_QUERY_PIPELINE_STATISTIC_COMPUTE_SHADER_INVOCATIONS_BIT;
-//
-        //vkCreateQueryPool(device, &QueryPoolInfo, nullptr, &QueryPool);
+
     }
 
     FVulkanEventQuery::~FVulkanEventQuery()
     {
+    }
+
+    FVulkanTimerQuery::FVulkanTimerQuery(FBitSetAllocator& InAllocator)
+        : Allocator(InAllocator)
+    {
+    }
+
+    FVulkanTimerQuery::~FVulkanTimerQuery()
+    {
+        Allocator.Release(BeginQueryIndex / 2);
     }
 
     FVulkanBuffer::FVulkanBuffer(FVulkanDevice* InDevice, const FRHIBufferDesc& InDescription)

@@ -1022,9 +1022,40 @@ namespace Lumina
         }
     }
 
+    void FVulkanCommandList::BeginTimerQuery(ITimerQuery* Query)
+    {
+        EndRenderPass();
+        
+        FVulkanTimerQuery* VulkanQuery = static_cast<FVulkanTimerQuery*>(Query);
+        DEBUG_ASSERT(VulkanQuery->BeginQueryIndex >= 0);
+        DEBUG_ASSERT(!VulkanQuery->bStarted);
+        DEBUG_ASSERT(CurrentCommandBuffer);
+        
+        VulkanQuery->bResolved = false;
+        
+        auto VulkanContext = static_cast<FVulkanRenderContext*>(GRenderContext);
+        
+        vkCmdResetQueryPool(CurrentCommandBuffer->CommandBuffer, VulkanContext->GetTimerQueryPool(), VulkanQuery->BeginQueryIndex, 2);
+        vkCmdWriteTimestamp(CurrentCommandBuffer->CommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VulkanContext->GetTimerQueryPool(), VulkanQuery->BeginQueryIndex);
+    }
+
+    void FVulkanCommandList::EndTimerQuery(ITimerQuery* Query)
+    {
+        FVulkanTimerQuery* VulkanQuery = static_cast<FVulkanTimerQuery*>(Query);
+        DEBUG_ASSERT(VulkanQuery->EndQueryIndex >= 0);
+        DEBUG_ASSERT(!VulkanQuery->bStarted);
+        DEBUG_ASSERT(!VulkanQuery->bResolved);
+        DEBUG_ASSERT(CurrentCommandBuffer);
+        
+        auto VulkanContext = static_cast<FVulkanRenderContext*>(GRenderContext);
+
+        vkCmdWriteTimestamp(CurrentCommandBuffer->CommandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VulkanContext->GetTimerQueryPool(), VulkanQuery->EndQueryIndex);
+        VulkanQuery->bStarted = true;
+    }
+
     void FVulkanCommandList::AddMarker(const char* Name, const FColor& Color)
     {
-        if (PendingState.IsRecording() && GRenderContext->GetRenderContextDescription().bValidation)
+        if (PendingState.IsRecording() && GRenderContext->GetRenderContextDescription().bDebugUtils)
         {
             VkDebugUtilsLabelEXT Label = {};
             Label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
@@ -1039,7 +1070,7 @@ namespace Lumina
 
     void FVulkanCommandList::PopMarker()
     {
-        if(PendingState.IsRecording() && GRenderContext->GetRenderContextDescription().bValidation)
+        if(PendingState.IsRecording() && GRenderContext->GetRenderContextDescription().bDebugUtils)
         {
             vkCmdEndDebugUtilsLabelEXT(CurrentCommandBuffer->CommandBuffer);
         }

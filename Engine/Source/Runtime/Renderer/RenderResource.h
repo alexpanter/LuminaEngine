@@ -88,6 +88,8 @@ enum ERHIResourceType : uint8
 	RRT_StagingBuffer,
 	RRT_CommandList,
 	RRT_DescriptorTable,
+	RTT_EventQuery,
+	RTT_TimerQuery,
 
 	RRT_Num
 };
@@ -354,8 +356,10 @@ namespace Lumina
 	//-------------------------------------------------------------------------------------------------------------------
 
 	class IEventQuery : public IRHIResource { };
+	class ITimerQuery : public IRHIResource { };
 
 	using FRHIEventQueryRef         = TRefCountPtr<IEventQuery>;
+	using FRHITimerQueryRef			= TRefCountPtr<ITimerQuery>;
 	using FRHIResourceRef           = TRefCountPtr<IRHIResource>;
 	using FRHIBufferRef             = TRefCountPtr<FRHIBuffer>;
 	using FRHIImageRef              = TRefCountPtr<FRHIImage>;

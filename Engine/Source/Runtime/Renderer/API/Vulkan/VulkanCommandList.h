@@ -91,6 +91,8 @@ namespace Lumina
         void SetResourceStatesForBindingSet(FRHIBindingSet* BindingSet) override;
         void SetResourceStateForRenderPass(const FRenderPassDesc& PassInfo) override;
 
+        void BeginTimerQuery(ITimerQuery* Query) override;
+        void EndTimerQuery(ITimerQuery* Query) override;
         void AddMarker(const char* Name, const FColor& Color = FColor::Red) override;
         void PopMarker() override;
 

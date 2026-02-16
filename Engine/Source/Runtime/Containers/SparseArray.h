@@ -34,10 +34,8 @@ namespace Lumina
                     new (&Data[newIdx]) T(*reinterpret_cast<const T*>(&other.Data[i]));
                     Occupied.push_back(true);
                     
-                    // Update index mapping if indices don't match
                     if (i != newIdx)
                     {
-                        // This is complex - for now, maintain original structure
                         while (Data.size() <= i)
                         {
                             Data.emplace_back_uninit();
@@ -57,7 +55,6 @@ namespace Lumina
                     }
                 }
             }
-            // Copy remaining free list entries that are still valid
             for (Index idx : other.FreeList) {
                 if (idx < Data.size() && !Occupied[idx]) {
                     FreeList.push_back(idx);

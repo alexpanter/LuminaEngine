@@ -26,6 +26,7 @@ namespace Lumina
     struct FRenderContextDesc
     {
         bool bValidation = false;
+        bool bDebugUtils = true;
     };
     
     class IRenderContext
@@ -69,6 +70,11 @@ namespace Lumina
         virtual void ResetEventQuery(IEventQuery* Query) = 0;
         virtual void WaitEventQuery(IEventQuery* Query) = 0;
         virtual bool PollEventQuery(IEventQuery* Query) = 0;
+        
+        NODISCARD virtual FRHITimerQueryRef CreateTimerQuery() = 0;
+        NODISCARD virtual bool PollTimerQuery(ITimerQuery* Query) = 0;
+        NODISCARD virtual float GetTimerQueryTime(ITimerQuery* Query) = 0;
+        virtual void ResetTimerQuery(ITimerQuery* Query) = 0;
 
         virtual void AddCommandQueueWait(ECommandQueue Waiting, ECommandQueue WaitOn) = 0;
         

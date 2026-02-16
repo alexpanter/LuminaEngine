@@ -285,6 +285,10 @@ namespace Lumina
          */
         NODISCARD virtual EResourceStates GetBufferState(FRHIBuffer* Buffer) = 0;
     
+        
+        virtual void BeginTimerQuery(ITimerQuery* Query) = 0;
+        virtual void EndTimerQuery(ITimerQuery* Query) = 0;
+        
         /**
          * Begins a debug marker region for GPU profiling/debugging
          * @param Name Label for the marker region (non-aliasing)

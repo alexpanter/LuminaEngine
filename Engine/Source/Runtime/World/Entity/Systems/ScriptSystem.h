@@ -8,12 +8,7 @@ namespace Lumina
     struct SScriptSystem
     {
         GENERATED_BODY()
-        ENTITY_SYSTEM(
-              RequiresUpdate(EUpdateStage::FrameStart)
-            , RequiresUpdate(EUpdateStage::PrePhysics)
-            , RequiresUpdate(EUpdateStage::DuringPhysics)
-            , RequiresUpdate(EUpdateStage::PostPhysics)
-            , RequiresUpdate(EUpdateStage::FrameEnd))
+        ENTITY_SYSTEM(RequiresUpdate(EUpdateStage::PrePhysics))
 
         static void Update(const FSystemContext& Context) noexcept;
     };

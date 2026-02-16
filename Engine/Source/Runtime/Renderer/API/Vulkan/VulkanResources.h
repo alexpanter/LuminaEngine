@@ -11,6 +11,7 @@
 
 namespace Lumina
 {
+    class FBitSetAllocator;
 
     // ----------------------------------------------------------------------------------
     // GLSL / GLM Type       | Vulkan VkFormat Equivalent         | Size (Bytes) | Notes
@@ -93,15 +94,31 @@ namespace Lumina
     class FVulkanEventQuery : public IEventQuery
     {
     public:
-        RENDER_RESOURCE(RRT_None)
+        RENDER_RESOURCE(RTT_EventQuery)
 
         FVulkanEventQuery();
         ~FVulkanEventQuery() override;
 
         ECommandQueue   Queue = ECommandQueue::Graphics;
         uint64          CommandListID = 0;
-
-        VkQueryPool QueryPool = nullptr;
+    };
+    
+    class FVulkanTimerQuery : public ITimerQuery
+    {
+    public:
+        RENDER_RESOURCE(RTT_TimerQuery)
+        
+        FVulkanTimerQuery(FBitSetAllocator& InAllocator);
+        ~FVulkanTimerQuery() override;
+        
+        
+        FBitSetAllocator& Allocator;
+        int32 BeginQueryIndex = -1;
+        int32 EndQueryIndex = -1;
+        
+        bool bStarted = false;
+        bool bResolved = false;
+        float Time = 0.0f;
     };
     
     class FVulkanViewport : public FRHIViewport

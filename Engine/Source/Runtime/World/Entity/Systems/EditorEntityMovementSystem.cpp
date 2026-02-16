@@ -105,9 +105,6 @@ namespace Lumina
 			if (FInputProcessor::Get().IsMouseButtonUp(EMouseKey::ButtonRight))
 			{
 				FInputProcessor::Get().SetMouseMode(EMouseMode::Normal);
-
-				//"Zoom".
-				Transform.Transform.Location += Forward * static_cast<float>(MouseDeltaZ);
 			}
 		}
 	}
