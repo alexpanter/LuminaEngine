@@ -27,7 +27,6 @@ namespace Lumina
             Indirect,
             Bone,
             Cluster,
-            Materials,
             SimpleVertex,
             
             Num,
@@ -112,7 +111,6 @@ namespace Lumina
         FBindingCache                       BindingCache;
 
         FRHIViewportRef                     SceneViewport;
-        
         
         FSceneGlobalData                    SceneGlobalData;
         

@@ -16,6 +16,7 @@ layout(location = 4) out vec2 outUV;
 layout(location = 5) flat out uint outEntityID;
 layout(location = 6) flat out uint outReceiveShadow;
 layout(location = 7) flat out uint outSelected;
+layout(location = 8) flat out uint outMatIndex;
 
 precise invariant gl_Position;
 
@@ -51,7 +52,7 @@ void main()
     vec3 NormalVS       = normalize(mat3(View) * NormalWS);
 
     // Outputs
-    outUV               = VertexData.UV;
+    outUV               = vec2(VertexData.UV.x, 1.0 - VertexData.UV.y);
     outFragPos          = ViewPos;
     outNormal           = vec4(NormalVS, 1.0);
     outNormalWS         = vec4(NormalWS, 1.0);
@@ -59,5 +60,6 @@ void main()
     outEntityID         = InstanceData.EntityID;
     outReceiveShadow    = uint(HasFlag(InstanceData.Flags, INSTANCE_FLAG_RECEIVE_SHADOW));
     outSelected         = uint(HasFlag(InstanceData.Flags, INSTANCE_FLAG_SELECTED));
+    outMatIndex         = InstanceData.MaterialIndex;
     gl_Position         = Projection * ViewPos;
 }

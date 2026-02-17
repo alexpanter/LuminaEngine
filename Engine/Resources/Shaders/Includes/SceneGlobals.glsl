@@ -2,6 +2,7 @@
 
 #extension GL_EXT_buffer_reference : require
 #extension GL_EXT_buffer_reference_uvec2 : require
+#extension GL_EXT_nonuniform_qualifier : require
 
 #include "Common.glsl"
 
@@ -66,9 +67,7 @@ layout(set = 0, binding = 6) restrict buffer ClusterSSBO
 
 layout(set = 0, binding = 7) restrict buffer MaterialUniforms
 {
-    vec4    Vectors[MAX_VECTORS];
-    float   Scalars[MAX_SCALARS];
-    uint    Textures[MAX_TEXTURES];
+    FMaterialUniforms Uniforms[];
 } uMaterialUniforms;
 
 layout(set = 0, binding = 8)        uniform sampler2DArray uShadowCascade;
@@ -132,14 +131,19 @@ FVertexData LoadSkinnedVertex(uvec2 VertexAddress, uvec2 IndexAddress, uint Vert
     return Data;
 }
 
-float GetMaterialScalar(uint Index)
+float GetMaterialScalar(uint MatIndex, uint Index)
 {
-    return uMaterialUniforms.Scalars[Index];
+    return uMaterialUniforms.Uniforms[MatIndex].Scalars[Index];
 }
 
-vec4 GetMaterialVec4(uint Index)
+vec4 GetMaterialVec4(uint MatIndex, uint Index)
 {
-    return uMaterialUniforms.Vectors[Index];
+    return uMaterialUniforms.Uniforms[MatIndex].Vectors[Index];
+}
+
+uint GetMaterialTexture(uint MatIndex, uint Index)
+{
+    return uMaterialUniforms.Uniforms[MatIndex].Textures[Index];
 }
 
 uint DrawIDToInstanceID(uint ID)

@@ -49,8 +49,7 @@ namespace Lumina::PrimitiveMeshes
                 FVertex vertex;
                 vertex.Position = positions[idx];
                 vertex.Normal = PackNormal(normals[face]);
-                vertex.UV.x = (uint16)(uvs[i].x * 65535.0f);
-                vertex.UV.y = (uint16)(uvs[i].y * 65535.0f);
+                vertex.UV = glm::packHalf2x16(uvs[i]);
                 vertex.Color = 0xFFFFFFFF; // White
             
                 OutVertices.push_back(vertex);
@@ -86,8 +85,7 @@ namespace Lumina::PrimitiveMeshes
             FVertex v;
             v.Position = positions[i];
             v.Normal = PackNormal(normal);
-            v.UV.x = (uint16)(uvs[i].x * 65535.0f);
-            v.UV.y = (uint16)(uvs[i].y * 65535.0f);
+            v.UV     = glm::packHalf2x16(uvs[i]);
             v.Color = 0xFFFFFFFF;
             OutVertices.push_back(v);
         }
@@ -120,8 +118,7 @@ namespace Lumina::PrimitiveMeshes
                 FVertex vert;
                 vert.Position = pos;
                 vert.Normal = PackNormal(glm::normalize(pos));
-                vert.UV.x = (uint16)((u) * 65535.0f);
-                vert.UV.y = (uint16)((v) * 65535.0f);
+                vert.UV     = glm::packHalf2x16(glm::vec2(u, v));
                 vert.Color = 0xFFFFFFFF;
                 OutVertices.push_back(vert);
             }
@@ -165,8 +162,7 @@ namespace Lumina::PrimitiveMeshes
                 FVertex v;
                 v.Position = { dir.x, j ? halfHeight : -halfHeight, dir.z };
                 v.Normal = PackNormal(glm::normalize(dir));
-                v.UV.x = (uint16)(u * 65535.0f);
-                v.UV.y = (uint16)(j * 65535.0f);
+                v.UV = glm::packHalf2x16(glm::vec2(u, j));
                 v.Color = 0xFFFFFFFF;
                 OutVertices.push_back(v);
             }
@@ -196,7 +192,7 @@ namespace Lumina::PrimitiveMeshes
             FVertex center;
             center.Position = { 0, y, 0 };
             center.Normal = PackNormal(n);
-            center.UV = { 32768, 32768 };
+            center.UV = glm::packHalf2x16(glm::vec2(32768, 32768));
             center.Color = 0xFFFFFFFF;
             OutVertices.push_back(center);
             uint32 centerIdx = (uint32)OutVertices.size() - 1;
@@ -210,8 +206,7 @@ namespace Lumina::PrimitiveMeshes
                 FVertex v;
                 v.Position = { dir.x, y, dir.z };
                 v.Normal = PackNormal(n);
-                v.UV.x = (uint16)(u * 65535.0f);
-                v.UV.y = (uint16)(cap ? 0.0f : 65535.0f);
+                v.UV    = glm::packHalf2x16(glm::vec2(u, cap));
                 v.Color = 0xFFFFFFFF;
                 OutVertices.push_back(v);
     

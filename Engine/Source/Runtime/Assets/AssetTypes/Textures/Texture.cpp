@@ -49,7 +49,7 @@ namespace Lumina
 
     void CTexture::OnDestroy()
     {
-        if (TextureResource && TextureResource->RHIImage)
+        if (TextureResource && TextureResource->RHIImage && TextureResource->RHIImage->GetTextureCacheIndex() != -1)
         {
             GRenderManager->GetTextureManager().RemoveTexture(TextureResource->RHIImage);
         }

@@ -161,8 +161,7 @@ namespace Lumina::Import::Mesh::OBJ
 
                     if (Index.texcoord_index >= 0)
                     {
-                        Vertex.UV.x = (uint16)Attribute.texcoords[2 * Index.texcoord_index + 0];
-                        Vertex.UV.y = (uint16)Attribute.texcoords[2 * Index.texcoord_index + 1];
+                        Vertex.UV = glm::packHalf2x16(glm::vec2(Attribute.texcoords[2 * Index.texcoord_index + 0], Attribute.texcoords[2 * Index.texcoord_index + 1]));
                     }
     
                     if (bIsSkinned)

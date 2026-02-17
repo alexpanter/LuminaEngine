@@ -337,6 +337,8 @@ namespace Lumina
         
         glm::uvec2      VertexBufferAddress;
         glm::uvec2      IndexBufferAddress;
+        
+        uint32          MaterialIndex;
     };
     
     VERIFY_SSBO_ALIGNMENT(FInstanceData)

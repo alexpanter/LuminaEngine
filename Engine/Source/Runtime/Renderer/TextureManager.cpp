@@ -12,7 +12,7 @@ namespace Lumina::RHI
     	FBindlessLayoutDesc Desc;
     	Desc.AddBinding(FBindingLayoutItem::Texture_SRV(0));
     	Desc.SetMaxCapacity(1024);
-    	Desc.SetVisibility(ERHIShaderType::Fragment | ERHIShaderType::Vertex | ERHIShaderType::Compute);
+    	Desc.SetVisibility(ERHIShaderType::Fragment);
     	Layout = GRenderContext->CreateBindlessLayout(Desc);
     	
     	DescriptorTableManager = FDescriptorTableManager(GRenderContext, Layout);

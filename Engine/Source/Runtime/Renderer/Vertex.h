@@ -73,7 +73,7 @@ namespace Lumina
     {
         glm::vec3       Position;
         uint32          Normal;
-        glm::u16vec2    UV;
+        uint32          UV;
         uint32          Color;
         //              4 bytes of padding.
         

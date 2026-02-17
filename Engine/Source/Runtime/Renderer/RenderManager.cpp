@@ -26,6 +26,7 @@ namespace Lumina
         ImGuiRenderer = nullptr;
         #endif
 
+        MaterialManager = nullptr;
         TextureManager = nullptr;
         GRenderContext->Deinitialize();
         Memory::Delete(GRenderContext);
@@ -43,6 +44,7 @@ namespace Lumina
         ImGuiRenderer->Initialize();
         #endif
         
+        MaterialManager = MakeUnique<RHI::FMaterialManager>();
         TextureManager = MakeUnique<RHI::FTextureManager>();
     }
 

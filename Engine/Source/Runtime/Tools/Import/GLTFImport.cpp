@@ -405,10 +405,7 @@ namespace Lumina::Import::Mesh::GLTF
                             Value.y = 1.0f - Value.y;
                         }
 
-                        glm::u16vec2 VertexUV;
-                        VertexUV.x = (uint16)(glm::clamp(Value.x, 0.0f, 1.0f) * 65535.0f);
-                        VertexUV.y = (uint16)(glm::clamp(Value.y, 0.0f, 1.0f) * 65535.0f);
-                        NewResource->SetUVAt(InitialVert + Index, VertexUV);
+                        NewResource->SetUVAt(InitialVert + Index, Value);
                     });
                 }
                 

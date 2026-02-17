@@ -170,6 +170,13 @@ struct FCameraView
     mat4 InverseCameraProjection; // Inverse Camera Projection.
 };
 
+struct FMaterialUniforms
+{
+    vec4    Vectors[MAX_VECTORS];
+    float   Scalars[MAX_SCALARS];
+    uint    Textures[MAX_TEXTURES];
+};
+
 struct FMaterialInputs
 {
     vec3    Diffuse;
@@ -213,6 +220,8 @@ struct FInstanceData
     
     uvec2       VertexBufferAddress;
     uvec2       IndexBufferAddress;
+    
+    uint        MaterialIndex;
 };
 
 struct FLightShadow

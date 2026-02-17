@@ -468,8 +468,8 @@ namespace Lumina
 			UVStr = "vec2(" + UVValue.Value + ")";
 		}
 		
-		int32 Index = Texture->GetRHIRef()->GetTextureCacheIndex();
-		ShaderChunks.append("vec4 " + ID + " = texture(uGlobalTextures[" + eastl::to_string(Index) + "], " + UVStr + ");\n");
+		int32 Index = static_cast<int32>(BoundImages.size());
+		ShaderChunks.append("vec4 " + ID + " = texture(uGlobalTextures[GetMaterialTexture(MaterialIndex, " + eastl::to_string(Index) + ")], " + UVStr + ");\n");
 		BoundImages.push_back(Texture);
 	}
 

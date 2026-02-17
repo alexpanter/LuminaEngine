@@ -7,6 +7,7 @@
 #include "Paths/Paths.h"
 #include "Platform/Filesystem/FileHelper.h"
 #include "Renderer/RenderContext.h"
+#include "Renderer/RenderManager.h"
 #include "Renderer/RHIGlobals.h"
 
 #include "Renderer/ShaderCompiler.h"
@@ -41,10 +42,6 @@ namespace Lumina
         if (!PixelShaderBinaries.empty())
         {
             FShaderHeader Header;
-
-            FRHICommandListRef CommandList = GRenderContext->CreateCommandList(FCommandListInfo::Graphics());
-            CommandList->Open();
-            
             StaticVertexShader = FShaderLibrary::GetVertexShader("GeometryPass.vert");
             
             TVector<FString> Defs{"SKINNED_VERTEX"};
@@ -55,35 +52,23 @@ namespace Lumina
             Header.Binaries = PixelShaderBinaries;
             PixelShader = GRenderContext->CreatePixelShader(Header);
 
-            FRHIBufferDesc BufferDesc;
-            BufferDesc.DebugName = GetName().ToString() + "Material Uniforms";
-            BufferDesc.Size = sizeof(FMaterialUniforms);
-            BufferDesc.InitialState = EResourceStates::ConstantBuffer;
-            BufferDesc.bKeepInitialState = true;
-            BufferDesc.Usage.SetFlag(BUF_UniformBuffer);
-            UniformBuffer = GRenderContext->CreateBuffer(BufferDesc);
-        
-            Memory::Memzero(&MaterialUniforms, sizeof(FMaterialUniforms));
-            TSpan<const Byte> Bytes = AsBytes(MaterialUniforms);
-        
-            CommandList->WriteBuffer(UniformBuffer, Bytes.data(), Bytes.size_bytes());
-
             FBindingSetDesc SetDesc;
 
             uint32 Index = 0;
             for (CTexture* Binding : Textures)
             {
-                FRHIImageRef Image = Binding->GetRHIRef();
-                SetDesc.AddItem(FBindingSetItem::TextureSRV(Index, Image));
+                MaterialUniforms.Textures[Index] = Binding->GetRHIRef()->GetTextureCacheIndex();
                 Index++;
             }
-        
-            TBitFlags<ERHIShaderType> Visibility;
-            Visibility.SetMultipleFlags(ERHIShaderType::Vertex, ERHIShaderType::Fragment);
-            GRenderContext->CreateBindingSetAndLayout(Visibility, 0, SetDesc, BindingLayout, BindingSet);
             
-            CommandList->Close();
-            GRenderContext->ExecuteCommandList(CommandList);
+            if (GetMaterialIndex() == -1)
+            {
+                GRenderManager->GetMaterialManager().AddMaterial(this);
+            }
+            else
+            {
+                GRenderManager->GetMaterialManager().UpdateMaterialUniforms(this);
+            }
             
             SetReadyForRender(true);
         }
@@ -92,6 +77,11 @@ namespace Lumina
     void CMaterial::OnDestroy()
     {
         CMaterialInterface::OnDestroy();
+        
+        if (GetMaterialIndex() != -1)
+        {
+            GRenderManager->GetMaterialManager().RemoveMaterial(this);
+        }
     }
 
     bool CMaterial::SetScalarValue(const FName& Name, const float Value)
@@ -158,17 +148,7 @@ namespace Lumina
     {
         return const_cast<CMaterial*>(this);
     }
-
-    FRHIBindingSet* CMaterial::GetBindingSet() const
-    {
-        return BindingSet;
-    }
-
-    FRHIBindingLayout* CMaterial::GetBindingLayout() const
-    {
-        return BindingLayout; 
-    }
-
+    
     FRHIVertexShader* CMaterial::GetVertexShader(EVertexFormat Format) const
     {
         switch (Format)

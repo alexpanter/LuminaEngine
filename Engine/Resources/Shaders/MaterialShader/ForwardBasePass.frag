@@ -14,6 +14,7 @@ layout(location = 4) in vec2 inUV;
 layout(location = 5) flat in uint inEntityID;
 layout(location = 6) flat in uint inReceiveShadow;
 layout(location = 7) flat in uint inSelected;
+layout(location = 8) flat in uint inMatIndex;
 
 layout(location = 0) out vec4 outColor;
 layout(location = 1) out uvec2 outPicker;
@@ -24,6 +25,7 @@ layout(location = 1) out uvec2 outPicker;
 // ============================================================================
 
 uint EntityID       = inEntityID;
+uint MaterialIndex  = inMatIndex;
 vec3 ViewNormal     = normalize(inNormalVS.xyz);
 vec3 WorldNormal    = normalize(inNormalWS.xyz);
 vec3 ViewPosition   = inFragPos.xyz;

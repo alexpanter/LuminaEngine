@@ -251,6 +251,7 @@ namespace Lumina
                             .BoneOffset             = 0,
                             .VertexBufferAddress    = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
                             .IndexBufferAddress     = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .MaterialIndex          = (uint32)Material->GetMaterialIndex(),
                         });
                     }
                 });
@@ -348,6 +349,7 @@ namespace Lumina
                             .BoneOffset             = BoneDataOffset,
                             .VertexBufferAddress    = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
                             .IndexBufferAddress     = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .MaterialIndex          = (uint32)Material->GetMaterialIndex(),
                         });
                     }
                 });
@@ -1875,16 +1877,6 @@ namespace Lumina
             BufferDesc.DebugName = "Scene Global Data";
             NamedBuffers[(int)ENamedBuffer::Scene] = GRenderContext->CreateBuffer(BufferDesc);
         }
-        
-        {
-            FRHIBufferDesc BufferDesc;
-            BufferDesc.Size = sizeof(FMaterialUniforms);
-            BufferDesc.Usage.SetFlag(BUF_StorageBuffer);
-            BufferDesc.bKeepInitialState = true;
-            BufferDesc.InitialState = EResourceStates::ShaderResource;
-            BufferDesc.DebugName = "Material Uniform Data";
-            NamedBuffers[(int)ENamedBuffer::Materials] = GRenderContext->CreateBuffer(BufferDesc);
-        }
 
         {
             FRHIBufferDesc BufferDesc;
@@ -2085,7 +2077,7 @@ namespace Lumina
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(4, GetNamedBuffer(ENamedBuffer::Indirect)));
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(5, GetNamedBuffer(ENamedBuffer::Bone)));
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(6, GetNamedBuffer(ENamedBuffer::Cluster)));
-            BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(7, GetNamedBuffer(ENamedBuffer::Materials)));
+            BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(7, GRenderManager->GetMaterialManager().GetMaterialBuffer()));
             BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(8, GetNamedImage(ENamedImage::Cascade)));
             BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(9, ShadowAtlas.GetImage()));
             BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(10, GetNamedImage(ENamedImage::Picker), TStaticRHISampler<false, false>::GetRHI()));

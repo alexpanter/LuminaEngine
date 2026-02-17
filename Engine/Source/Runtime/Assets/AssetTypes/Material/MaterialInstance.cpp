@@ -86,16 +86,7 @@ namespace Lumina
         
         return false;
     }
-
-    FRHIBindingSet* CMaterialInstance::GetBindingSet() const
-    {
-        return BindingSet;
-    }
-
-    FRHIBindingLayout* CMaterialInstance::GetBindingLayout() const
-    {
-        return Material->GetBindingLayout();
-    }
+    
 
     FRHIVertexShader* CMaterialInstance::GetVertexShader(EVertexFormat Format) const
     {
@@ -111,41 +102,6 @@ namespace Lumina
     {
         if (Material)
         {
-            MaterialUniforms = Material->MaterialUniforms;
-            Parameters = Material->Parameters;
-            
-            FRHIBufferDesc BufferDesc;
-            BufferDesc.Size = sizeof(FMaterialUniforms);
-            BufferDesc.DebugName = "Material Uniforms";
-            BufferDesc.InitialState = EResourceStates::ConstantBuffer;
-            BufferDesc.bKeepInitialState = true;
-            BufferDesc.Usage.SetFlag(BUF_UniformBuffer);
-            UniformBuffer = GRenderContext->CreateBuffer(BufferDesc);
-
-
-            FBindingSetDesc SetDesc;
-            SetDesc.AddItem(FBindingSetItem::BufferCBV(0, UniformBuffer));
-
-            for (size_t i = 0; i < Material->Textures.size(); ++i)
-            {
-                FRHIImageRef Image = Material->Textures[i]->GetRHIRef();
-                
-                SetDesc.AddItem(FBindingSetItem::TextureSRV((uint32)i, Image));
-            }
-
-            FRHICommandListRef CommandList = GRenderContext->CreateCommandList(FCommandListInfo::Graphics());
-            CommandList->Open();
-            
-            TSpan<const Byte> Bytes = AsBytes(MaterialUniforms);
-
-            CommandList->WriteBuffer(UniformBuffer, Bytes.data(), Bytes.size_bytes());
-
-            CommandList->Close();
-            
-            GRenderContext->ExecuteCommandList(CommandList);
-            
-            BindingSet = GRenderContext->CreateBindingSet(SetDesc, Material->BindingLayout);
-
         }
     }
 }
