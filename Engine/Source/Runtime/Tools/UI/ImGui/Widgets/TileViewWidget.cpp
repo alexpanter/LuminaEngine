@@ -88,14 +88,14 @@ namespace Lumina
 
         TVector<FTileViewItem*> CachedSelections = Selections;
         
-        ClearSelection();
+        ClearSelections();
         ClearTree();
 
         if (bKeepSelections)
         {
             for (FTileViewItem* Select : CachedSelections)
             {
-                SetSelection(Select, Context);
+                ToggleSelection(Select, Context);
             }
         }
         
@@ -112,16 +112,30 @@ namespace Lumina
         
         if (Context.DrawItemOverrideFunction)
         {
-            if (Context.DrawItemOverrideFunction(ItemToDraw))
+            FTileViewItem::EClickState ClickState = Context.DrawItemOverrideFunction(ItemToDraw);
+            if (ClickState == FTileViewItem::EClickState::SingleWithCtrl)
             {
-                SetSelection(ItemToDraw, Context);
+                ToggleSelection(ItemToDraw, Context);
+            }
+            else if (ClickState == FTileViewItem::EClickState::Single)
+            {
+                ClearSelections();
+                ToggleSelection(ItemToDraw, Context);
+            }
+            else if (ClickState == FTileViewItem::EClickState::Double)
+            {
+                if (Context.ItemDoubleClickedFunction)
+                {
+                    Context.ItemDoubleClickedFunction(ItemToDraw);
+                }
             }
         }
         else
         {
             if (ImGui::Button("##", DrawSize))
             {
-                SetSelection(ItemToDraw, Context);
+                ClearSelections();
+                ToggleSelection(ItemToDraw, Context);
             }
         }
         
@@ -166,7 +180,7 @@ namespace Lumina
         {
             if (Context.DragDropFunction)
             {
-                Context.DragDropFunction(ItemToDraw);
+                Context.DragDropFunction(ItemToDraw, Selections);
             }
             
             ImGui::EndDragDropTarget();
@@ -185,23 +199,28 @@ namespace Lumina
         }
     }
 
-    void FTileViewWidget::SetSelection(FTileViewItem* Item, const FTileViewContext& Context)
+    void FTileViewWidget::ToggleSelection(FTileViewItem* Item, const FTileViewContext& Context)
     {
         bool bWasSelected = Item->bSelected;
         
-        ClearSelection();
-        
         if (!bWasSelected)
         {
+            DEBUG_ASSERT(eastl::find(Selections.begin(), Selections.end(), Item) == Selections.end());
             Selections.push_back(Item);
+            Context.ItemSelectedFunction(Item);
             Item->bSelected = true;
         }
+        else
+        {
+            auto It = eastl::remove(Selections.begin(), Selections.end(), Item);
+            Selections.erase(It);
+            Item->bSelected = false;
+        }
 
-        Context.ItemSelectedFunction(Item);
         Item->OnSelectionStateChanged();
     }
 
-    void FTileViewWidget::ClearSelection()
+    void FTileViewWidget::ClearSelections()
     {
         for (FTileViewItem* Item : Selections)
         {

@@ -2,7 +2,6 @@
 #include "Package.h"
 #include <utility>
 #include "Assets/AssetRegistry/AssetRegistry.h"
-#include "Core/Engine/Engine.h"
 #include "Core/Object/Class.h"
 #include "Core/Object/ObjectIterator.h"
 #include "Core/Object/Archive/ObjectReferenceReplacerArchive.h"
@@ -19,6 +18,7 @@ namespace Lumina
 {
     IMPLEMENT_INTRINSIC_CLASS(CPackage, CObject, RUNTIME_API)
 
+    FPackageDestroyedDelegate CPackage::OnPackageDestroyed;
 
     FObjectExport::FObjectExport(CObject* InObject)
     {
@@ -158,7 +158,7 @@ namespace Lumina
             return false;
         }
         
-
+        OnPackageDestroyed.Broadcast(Path);
         FAssetRegistry::Get().AssetDeleted(Export->ObjectGUID);
         VFS::Remove(Path);
 
@@ -196,11 +196,13 @@ namespace Lumina
         PackageToDestroy->ExportTable.clear();
         PackageToDestroy->ImportTable.clear();
         
+        FName PackagePath = PackageToDestroy->GetPackagePath();
         PackageToDestroy->RemoveFromRoot();
         PackageToDestroy->ConditionalBeginDestroy();
 
         FAssetRegistry::Get().AssetDeleted(AssetGUID);
 
+        OnPackageDestroyed.Broadcast(PackagePath);
         VFS::Remove(PackageToDestroy->GetPackagePath());
         
         return true;

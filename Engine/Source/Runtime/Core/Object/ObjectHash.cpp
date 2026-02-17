@@ -24,7 +24,6 @@ namespace Lumina
         LUMINA_PROFILE_SCOPE();
         FWriteScopeLock Lock(Mutex);
 
-
         const FGuid& ObjectGUID = Object->GetGUID();
         auto It = ObjectGUIDHash.find(ObjectGUID);
         ASSERT(It != ObjectGUIDHash.end());

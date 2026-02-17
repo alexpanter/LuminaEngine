@@ -67,6 +67,8 @@ namespace Lumina
 
             void DrawTooltip() const override
             {
+                ImGuiX::Text("Virtual Path: {}", FileInfo.VirtualPath);
+                ImGuiX::Text("Full Path: {}", FileInfo.PathSource);
             }
             
             NODISCARD bool HasContextMenu() override { return true; }

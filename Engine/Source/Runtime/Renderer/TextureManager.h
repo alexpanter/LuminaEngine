@@ -22,6 +22,7 @@ namespace Lumina::RHI
 
     private:
         
+        FSharedMutex                Mutex;
         FDescriptorTableManager     DescriptorTableManager;
         FRHIBindingLayoutRef        Layout;
         THashMap<FRHIImage*, int32> TextureMap;

@@ -20,6 +20,8 @@ namespace Lumina::RHI
 	
     void FTextureManager::AddTexture(FRHIImage* InTexture)
     {
+    	FWriteScopeLock Lock(Mutex);
+    	
 		DEBUG_ASSERT(InTexture->GetTextureCacheIndex() == -1);
     	
     	FBindingSetItem Item = FBindingSetItem::TextureSRV(0, InTexture);
@@ -30,6 +32,8 @@ namespace Lumina::RHI
 
     void FTextureManager::RemoveTexture(const FRHIImage* InTexture)
     {
+    	FWriteScopeLock Lock(Mutex);
+
     	DescriptorTableManager.ReleaseDescriptor(InTexture->GetTextureCacheIndex());
     }
 }

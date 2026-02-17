@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Lumina.h"
+#include "Core/Delegates/Delegate.h"
 #include "Core/Object/Class.h"
 #include "Core/Object/Object.h"
 #include "Core/Object/ObjectHandleTyped.h"
@@ -19,6 +20,8 @@ namespace Lumina
 
 namespace Lumina
 {
+    DECLARE_MULTICAST_DELEGATE(FPackageDestroyedDelegate, FName);
+    
     struct FObjectExport
     {
         FObjectExport() = default;
@@ -299,6 +302,8 @@ namespace Lumina
         }
         
     public:
+        
+        RUNTIME_API static FPackageDestroyedDelegate OnPackageDestroyed;
 
         uint32                           bDirty:1 = false;
         

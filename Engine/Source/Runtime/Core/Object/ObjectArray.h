@@ -150,12 +150,11 @@ namespace Lumina
     {
     private:
         
-        FChunkedFixedCObjectArray ChunkedArray;
-        
-        TVector<int32> FreeIndices;
-        
-        bool bInitialized = false;
-        bool bShuttingDown = false;
+        FRecursiveMutex             Mutex;
+        FChunkedFixedCObjectArray   ChunkedArray;
+        TVector<int32>              FreeIndices;
+        bool                        bInitialized = false;
+        bool                        bShuttingDown = false;
     
     public:
         FCObjectArray() = default;

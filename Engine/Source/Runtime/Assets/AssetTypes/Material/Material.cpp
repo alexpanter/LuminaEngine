@@ -57,8 +57,11 @@ namespace Lumina
             uint32 Index = 0;
             for (CTexture* Binding : Textures)
             {
-                MaterialUniforms.Textures[Index] = Binding->GetRHIRef()->GetTextureCacheIndex();
-                Index++;
+                if (Binding != nullptr)
+                {
+                    MaterialUniforms.Textures[Index] = Binding->GetRHIRef()->GetTextureCacheIndex();
+                    Index++;   
+                }
             }
             
             if (GetMaterialIndex() == -1)

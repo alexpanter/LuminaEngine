@@ -21,6 +21,8 @@ namespace Lumina
 
     void CThumbnailManager::Initialize()
     {
+        (void)CPackage::OnPackageDestroyed.AddMember(this, &ThisClass::OnPackageDestroyed);
+        
         {
             TUniquePtr<FMeshResource> Resource = MakeUnique<FMeshResource>();
             PrimitiveMeshes::GenerateCube(Resource->Vertices.emplace<TVector<FVertex>>(), Resource->Indices);
@@ -176,5 +178,16 @@ namespace Lumina
     
         AsyncLoadThumbnailsForPackage(Package);
         return nullptr;
+    }
+
+    void CThumbnailManager::OnPackageDestroyed(FName Package)
+    {
+        FWriteScopeLock Lock(ThumbnailLock);
+
+        auto It = Thumbnails.find(Package);
+        if (It != Thumbnails.end())
+        {
+            Thumbnails.erase(It);
+        }
     }
 }

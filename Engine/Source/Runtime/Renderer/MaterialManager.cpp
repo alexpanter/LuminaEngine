@@ -11,8 +11,9 @@ namespace Lumina::RHI
     FMaterialManager::FMaterialManager()
     {
         FRHIBufferDesc Desc;
-        Desc.Size = sizeof(FMaterialUniforms) * 2000;
+        Desc.Size   = sizeof(FMaterialUniforms) * 2000;
         Desc.Stride = sizeof(FMaterialUniforms);
+        Desc.Usage.SetFlag(EBufferUsageFlags::StorageBuffer);
         Desc.DebugName = "Material Uniforms";
         Desc.InitialState = EResourceStates::UnorderedAccess;
         Desc.bKeepInitialState = true;
@@ -22,6 +23,8 @@ namespace Lumina::RHI
 
     void FMaterialManager::AddMaterial(CMaterialInterface* Material)
     {
+        FWriteScopeLock Lock(Mutex);
+
         DEBUG_ASSERT(Material != nullptr);
         DEBUG_ASSERT(Material->GetMaterialIndex() == -1);
         
@@ -33,27 +36,34 @@ namespace Lumina::RHI
 
     void FMaterialManager::RemoveMaterial(CMaterialInterface* Material)
     {
+        FWriteScopeLock Lock(Mutex);
+
         DEBUG_ASSERT(Material != nullptr);
         DEBUG_ASSERT(Material->GetMaterialIndex() != -1);
-    
+
         int32 MaterialIndex = Material->GetMaterialIndex();
         int32 LastMaterialIndex = MaterialUniforms.size() - 1;
-    
+
+        MaterialMap.erase(MaterialIndex);
+
         if (MaterialIndex != LastMaterialIndex)
         {
-            CMaterialInterface* LastMaterial = MaterialMap[LastMaterialIndex];
-        
-            MaterialUniforms[MaterialIndex] = MaterialUniforms[LastMaterialIndex];
-        
-            LastMaterial->SetMaterialIndex(MaterialIndex);
-        
-            MaterialMap[MaterialIndex] = LastMaterial;
+            CMaterialInterface* MovedMaterial = MaterialMap[LastMaterialIndex];
+
+            MaterialUniforms.erase_unsorted(MaterialUniforms.begin() + MaterialIndex);
+
+            MaterialMap.erase(LastMaterialIndex);
+            MaterialMap.insert_or_assign(MaterialIndex, MovedMaterial);
+
+            MovedMaterial->SetMaterialIndex(MaterialIndex);
+
+            UpdateMaterialUniforms(MovedMaterial);
         }
-    
-        MaterialUniforms.pop_back();
-    
-        MaterialMap.erase(MaterialIndex);
-        
+        else
+        {
+            MaterialUniforms.pop_back();
+        }
+
         Material->SetMaterialIndex(-1);
     }
 
@@ -64,7 +74,7 @@ namespace Lumina::RHI
         
         FRHICommandListRef CommandList = GRenderContext->CreateCommandList(FCommandListInfo::Graphics());
         CommandList->Open();
-        CommandList->WriteBuffer(MaterialBuffer, MaterialUniforms.data(), sizeof(FMaterialUniforms), Material->GetMaterialIndex() * sizeof(FMaterialUniforms));
+        CommandList->WriteBuffer(MaterialBuffer, MaterialUniforms.data(), MaterialUniforms.size() * sizeof(FMaterialUniforms));
         CommandList->Close();
         
         GRenderContext->ExecuteCommandList(CommandList);

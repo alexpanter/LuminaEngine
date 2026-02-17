@@ -26,6 +26,7 @@ namespace Lumina::RHI
     
     private:
         
+        FSharedMutex                            Mutex;
         THashMap<int32, CMaterialInterface*>    MaterialMap;
         TVector<FMaterialUniforms>              MaterialUniforms;
         FRHIBufferRef                           MaterialBuffer;

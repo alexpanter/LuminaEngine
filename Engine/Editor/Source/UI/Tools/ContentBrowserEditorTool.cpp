@@ -126,35 +126,48 @@ namespace Lumina
             DrawContentBrowser(bIsFocused, ImVec2(Right, 0));
         });
         
-        ContentBrowserTileViewContext.DragDropFunction = [this] (FTileViewItem* DropItem)
+        ContentBrowserTileViewContext.DragDropFunction = [this] (FTileViewItem* DropItem, const TVector<FTileViewItem*>& Selections)
         {
-            auto* TypedDroppedItem = (FContentBrowserTileViewItem*)DropItem;
-            if (!TypedDroppedItem->IsDirectory())
-            {
-                return;
-            }
-            
             const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(FContentBrowserTileViewItem::DragDropID, ImGuiDragDropFlags_AcceptBeforeDelivery);
             if (Payload && Payload->IsDelivery())
             {
-                uintptr_t ValuePtr = *static_cast<uintptr_t*>(Payload->Data);
-                auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
-
-                if (SourceItem == TypedDroppedItem)
+                auto* TypedDroppedItem = static_cast<FContentBrowserTileViewItem*>(DropItem);
+                if (!TypedDroppedItem->IsDirectory())
                 {
                     return;
                 }
+                
+                uintptr_t ValuePtr = *static_cast<uintptr_t*>(Payload->Data);
+                auto* PayloadItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
+                if (PayloadItem != TypedDroppedItem)
+                {
+                    HandleContentBrowserDragDrop(TypedDroppedItem->GetVirtualPath(), PayloadItem->GetVirtualPath());
+                }
 
-                HandleContentBrowserDragDrop(TypedDroppedItem->GetVirtualPath(), SourceItem->GetVirtualPath());
+                for (FTileViewItem* Item : Selections)
+                {
+                    auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(Item);
+                    
+                    if (PayloadItem == Item)
+                    {
+                        continue;
+                    }
+                    
+                    if (SourceItem == TypedDroppedItem)
+                    {
+                        continue;
+                    }
+
+                    HandleContentBrowserDragDrop(TypedDroppedItem->GetVirtualPath(), SourceItem->GetVirtualPath());
+                }
             }
         };
 
-        ContentBrowserTileViewContext.DrawItemOverrideFunction = [this] (FTileViewItem* Item) -> bool
+        ContentBrowserTileViewContext.DrawItemOverrideFunction = [this] (FTileViewItem* Item)
         {
             FContentBrowserTileViewItem* ContentItem = static_cast<FContentBrowserTileViewItem*>(Item);
             
             ImVec4 TintColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            
             
             ImTextureRef ImTexture;
             if (ContentItem->IsDirectory())
@@ -208,19 +221,41 @@ namespace Lumina
                     2.0f
                 );
             }
+            
+            if (Item->IsSelected())
+            {
+                DrawList->AddRect(
+                    Pos, 
+                    ImVec2(Pos.x + Size.x + 8, Pos.y + Size.y + 8), 
+                    ImGui::ColorConvertFloat4ToU32(ImVec4(0.6f, 0.6f, 0.1f, 0.9f)), 
+                    8.0f, 
+                    0, 
+                    2.5f
+                ); 
+            }
         
             ImGui::PopStyleVar(2);
             ImGui::PopStyleColor(3);
-        
+            
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+            {
+                if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+                {
+                    return FTileViewItem::EClickState::SingleWithCtrl;
+                }
+                
+                return FTileViewItem::EClickState::Single;
+            }
+            
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {
-                return true;
+                return FTileViewItem::EClickState::Double;
             }
         
-            return false;
+            return FTileViewItem::EClickState::None;
         };
         
-        ContentBrowserTileViewContext.ItemSelectedFunction = [this] (FTileViewItem* Item)
+        ContentBrowserTileViewContext.ItemDoubleClickedFunction = [this] (FTileViewItem* Item)
         {
             FContentBrowserTileViewItem* ContentItem = static_cast<FContentBrowserTileViewItem*>(Item);
             FFixedString Path {ContentItem->GetVirtualPath().data(), ContentItem->GetVirtualPath().size()};
@@ -241,6 +276,11 @@ namespace Lumina
             {
                 ToolContext->OpenScriptEditor(ContentItem->GetPathSource());
             }
+        };
+        
+        ContentBrowserTileViewContext.ItemSelectedFunction = [this] (FTileViewItem* Item)
+        {
+            
         };
         
         ContentBrowserTileViewContext.DrawItemContextMenuFunction = [this] (const TVector<FTileViewItem*>& Items)
@@ -336,9 +376,21 @@ namespace Lumina
             if (Payload && Payload->IsDelivery())
             {
                 uintptr_t ValuePtr = *static_cast<uintptr_t*>(Payload->Data);
-                auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
+                auto* PayloadItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
                 
-                HandleContentBrowserDragDrop(Data.Path, SourceItem->GetVirtualPath());
+                HandleContentBrowserDragDrop(Data.Path, PayloadItem->GetVirtualPath());
+
+                for (FTileViewItem* TileItem : ContentBrowserTileView.GetSelections())
+                {
+                    auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(TileItem);
+                    
+                    if (PayloadItem == TileItem)
+                    {
+                        continue;
+                    }
+
+                    HandleContentBrowserDragDrop(Data.Path, SourceItem->GetVirtualPath());
+                }
             }
         };
         
@@ -444,9 +496,12 @@ namespace Lumina
                 VFS::RemoveAll(Destroy.PendingDestroy);
                 ImGuiX::Notifications::NotifySuccess("Deleted Directory {0}", Destroy.PendingDestroy);
             }
-            else if (AliveObject)
+            else
             {
-                ToolContext->OnDestroyAsset(AliveObject);
+                if (AliveObject)
+                {
+                    ToolContext->OnDestroyAsset(AliveObject);
+                }
                 
                 if (CPackage::DestroyPackage(Destroy.PendingDestroy))
                 {
@@ -559,7 +614,7 @@ namespace Lumina
             }
             ActionRegistry.EnqueueAction<FPendingDestroy>(FPendingDestroy{ FFixedString(Item->GetVirtualPath().data(), Item->GetVirtualPath().size()) });
         }
-
+        
         if (Callback)
         {
             Callback(EYesNo::No);
@@ -897,6 +952,29 @@ namespace Lumina
         if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         {
             ImGui::OpenPopup("ContentContextMenu");
+        }
+        
+        if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            ContentBrowserTileView.ClearSelections();
+        }
+        
+        if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Delete) && !ContentBrowserTileView.GetSelections().empty())
+        {
+            if (Dialogs::Confirmation("Confirm Deletion", "Are you sure you want to delete these files/directories?\n This action cannot be undone."))
+            {
+                for (FTileViewItem* Selection : ContentBrowserTileView.GetSelections())
+                {
+                    FContentBrowserTileViewItem* ContentBrowserItem = static_cast<FContentBrowserTileViewItem*>(Selection);
+                    DEBUG_ASSERT(Selection->IsSelected());
+                    
+                    ActionRegistry.EnqueueAction<FPendingDestroy>(
+                    FPendingDestroy
+                    { 
+                        FFixedString(ContentBrowserItem->GetVirtualPath().data(), ContentBrowserItem->GetVirtualPath().size())
+                    });
+                }
+            }
         }
 
         ImGui::SetNextWindowSizeConstraints(ImVec2(200.0f, 100.0f), ImVec2(0.0f, 0.0f));
