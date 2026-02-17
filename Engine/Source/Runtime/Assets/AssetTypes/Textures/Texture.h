@@ -19,6 +19,7 @@ namespace Lumina
         void Serialize(FArchive& Ar) override;
         void PreLoad() override;
         void PostLoad() override;
+        void OnDestroy() override;
         bool IsAsset() const override { return true; }
 
 

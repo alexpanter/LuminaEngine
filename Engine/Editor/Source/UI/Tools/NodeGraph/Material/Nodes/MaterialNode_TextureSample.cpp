@@ -45,7 +45,6 @@ namespace Lumina
 
     uint32 CMaterialExpression_TextureSample::GenerateExpression(FMaterialCompiler& Compiler)
     {
-        Compiler.DefineTextureSample(FullName);
         return 0;
     }
 

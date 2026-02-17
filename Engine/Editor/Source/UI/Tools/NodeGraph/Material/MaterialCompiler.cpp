@@ -446,8 +446,7 @@ namespace Lumina
 
 	void FMaterialCompiler::DefineTextureSample(const FString& ID)
 	{
-		ShaderChunks.append("layout(set = 2, binding = " + eastl::to_string(BindingIndex) + ") uniform sampler2D " + ID + "_sample;\n");
-		BindingIndex++;
+		return;
 	}
 
 	void FMaterialCompiler::TextureSample(const FString& ID, CTexture* Texture, CMaterialInput* Input)
@@ -468,8 +467,9 @@ namespace Lumina
 		{
 			UVStr = "vec2(" + UVValue.Value + ")";
 		}
-
-		ShaderChunks.append("vec4 " + ID + " = texture(" + ID + "_sample, " + UVStr + ");\n");
+		
+		int32 Index = Texture->GetRHIRef()->GetTextureCacheIndex();
+		ShaderChunks.append("vec4 " + ID + " = texture(uGlobalTextures[" + eastl::to_string(Index) + "], " + UVStr + ");\n");
 		BoundImages.push_back(Texture);
 	}
 

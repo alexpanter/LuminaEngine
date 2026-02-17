@@ -31,18 +31,6 @@ vec3 WorldPosition  = (GetInverseCameraView() * vec4(inFragPos.xyz, 1.0)).xyz;
 vec2 UV0            = inUV;
 vec4 VertexColor    = inColor;
 
-struct SMaterialInputs
-{
-    vec3    Diffuse;
-    float   Metallic;
-    float   Roughness;
-    float   Specular;
-    vec3    Emissive;
-    float   AmbientOcclusion;
-    vec3    Normal;
-    float   Opacity;
-    vec3    WorldPositionOffset;
-};
 
 $MATERIAL_INPUTS
 
@@ -341,7 +329,7 @@ vec3 EvaluateLightContribution(FLight Light, vec3 Position, vec3 N, vec3 V, vec3
 
 void main()
 {
-    SMaterialInputs Material = GetMaterialInputs();
+    FMaterialInputs Material = GetMaterialInputs();
 
     vec3 Albedo     = Material.Diffuse;
     vec3 Normal     = Material.Normal;

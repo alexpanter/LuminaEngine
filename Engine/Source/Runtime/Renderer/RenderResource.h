@@ -823,13 +823,15 @@ namespace Lumina
 
 		RENDER_RESOURCE(RRT_Image)
 		
-		FORCEINLINE virtual const FRHIImageDesc& GetDescription() const = 0;
-		FORCEINLINE virtual const glm::uvec2& GetExtent() const = 0;
-		FORCEINLINE virtual uint32 GetSizeX() const = 0;
-		FORCEINLINE virtual uint32 GetSizeY() const = 0;
-		FORCEINLINE virtual EFormat GetFormat() const = 0;
-		FORCEINLINE virtual TBitFlags<EImageCreateFlags> GetFlags() const = 0;
-		FORCEINLINE virtual uint8 GetNumMips() const = 0;
+		virtual const FRHIImageDesc& GetDescription() const = 0;
+		virtual const glm::uvec2& GetExtent() const = 0;
+		virtual uint32 GetSizeX() const = 0;
+		virtual uint32 GetSizeY() const = 0;
+		virtual EFormat GetFormat() const = 0;
+		virtual TBitFlags<EImageCreateFlags> GetFlags() const = 0;
+		virtual uint8 GetNumMips() const = 0;
+		virtual int32 GetTextureCacheIndex() const = 0;
+		virtual void SetTextureCacheIndex(int32 InIndex) = 0;
 
 		virtual void* GetRHIView(EFormat Format, FTextureSubresourceSet Subresources, EImageDimension Dimension, bool bReadyOnlyDSV = false) = 0;
 	};

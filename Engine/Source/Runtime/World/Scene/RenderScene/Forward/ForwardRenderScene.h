@@ -118,8 +118,6 @@ namespace Lumina
         
         FRHIBindingSetRef                   SceneBindingSet;
         FRHIBindingLayoutRef                SceneBindingLayout;
-        FRHIBindingLayoutRef                SceneBindlessLayout;
-        FRHIDescriptorTableRef              SceneDescriptorTable;
         
         TVector<FSimpleElementVertex>       SimpleVertices;
         

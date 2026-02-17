@@ -26,7 +26,7 @@ namespace Lumina
         ImGuiRenderer = nullptr;
         #endif
 
-        
+        TextureManager = nullptr;
         GRenderContext->Deinitialize();
         Memory::Delete(GRenderContext);
         GRenderContext = nullptr;
@@ -36,12 +36,14 @@ namespace Lumina
     {
         GRenderContext = Memory::New<FVulkanRenderContext>();
         
-        GRenderContext->Initialize(FRenderContextDesc{false, true});
+        GRenderContext->Initialize(FRenderContextDesc{true, true});
         
         #if WITH_EDITOR
         ImGuiRenderer = Memory::New<FVulkanImGuiRender>();
         ImGuiRenderer->Initialize();
         #endif
+        
+        TextureManager = MakeUnique<RHI::FTextureManager>();
     }
 
     void FRenderManager::FrameStart(const FUpdateContext& UpdateContext)

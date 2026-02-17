@@ -319,8 +319,12 @@ namespace Lumina
         EFormat GetFormat() const override { return Description.Format; }
         TBitFlags<EImageCreateFlags> GetFlags() const override { return Description.Flags; }
         uint8 GetNumMips() const override { return Description.NumMips; }
+		int32 GetTextureCacheIndex() const override { return TextureCacheIndex; }
+		void SetTextureCacheIndex(int32 Index) override { TextureCacheIndex = Index; }
 
     private:
+
+		int32                   TextureCacheIndex = -1; 
         
         FRHIImageDesc           Description;
         SubresourceMap          SubresourceViews;

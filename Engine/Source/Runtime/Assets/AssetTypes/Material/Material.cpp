@@ -69,9 +69,8 @@ namespace Lumina
             CommandList->WriteBuffer(UniformBuffer, Bytes.data(), Bytes.size_bytes());
 
             FBindingSetDesc SetDesc;
-            SetDesc.AddItem(FBindingSetItem::BufferCBV(0, UniformBuffer));
 
-            uint32 Index = 1;
+            uint32 Index = 0;
             for (CTexture* Binding : Textures)
             {
                 FRHIImageRef Image = Binding->GetRHIRef();
@@ -220,8 +219,8 @@ namespace Lumina
 
         FString Replacement;
         
-        Replacement += "SMaterialInputs GetMaterialInputs()\n{\n";
-        Replacement += "\tSMaterialInputs Input;\n";
+        Replacement += "FMaterialInputs GetMaterialInputs()\n{\n";
+        Replacement += "\tFMaterialInputs Input;\n";
 
         Replacement += "Input.Diffuse = vec3(1.0);\n";
         Replacement += "Input.Metallic = 0.0;\n";

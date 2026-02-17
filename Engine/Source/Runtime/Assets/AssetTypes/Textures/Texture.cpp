@@ -2,6 +2,7 @@
 #include "Texture.h"
 #include "Core/Object/Class.h"
 #include "Renderer/RenderContext.h"
+#include "Renderer/RenderManager.h"
 #include "Renderer/RHIGlobals.h"
 
 namespace Lumina
@@ -41,6 +42,16 @@ namespace Lumina
         }
 
         TransferCommandList->Close();
-        GRenderContext->ExecuteCommandList(TransferCommandList, ECommandQueue::Compute);   
+        GRenderContext->ExecuteCommandList(TransferCommandList, ECommandQueue::Compute); 
+        
+        GRenderManager->GetTextureManager().AddTexture(TextureResource->RHIImage);
+    }
+
+    void CTexture::OnDestroy()
+    {
+        if (TextureResource && TextureResource->RHIImage)
+        {
+            GRenderManager->GetTextureManager().RemoveTexture(TextureResource->RHIImage);
+        }
     }
 }

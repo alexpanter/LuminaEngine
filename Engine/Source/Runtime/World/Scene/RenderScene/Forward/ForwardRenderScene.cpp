@@ -412,8 +412,6 @@ namespace Lumina
                 Instance.Position = TransformComponent.GetLocation();
                 Instance.Texture = BillboardComponent.Texture->GetRHIRef();
                 Instance.Size = BillboardComponent.Scale;
-                
-                GRenderContext->WriteDescriptorTable(SceneDescriptorTable, FBindingSetItem::TextureSRV(NumBillboards, Instance.Texture));
             });
         }
         
@@ -907,14 +905,14 @@ namespace Lumina
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
             PipelineDesc.AddBindingLayout(SceneBindingLayout);
-            PipelineDesc.AddBindingLayout(SceneBindlessLayout);
+            PipelineDesc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                     
             FRHIComputePipelineRef Pipeline = GRenderContext->CreateComputePipeline(PipelineDesc);
             
             FComputeState State;
             State.SetPipeline(Pipeline);
             State.AddBindingSet(SceneBindingSet);
-            State.AddBindingSet(SceneDescriptorTable);
+            State.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             CmdList.SetComputeState(State);
             
             uint32 Num = (uint32)InstanceData.size();
@@ -957,7 +955,7 @@ namespace Lumina
                 FGraphicsPipelineDesc Desc; Desc
                 .SetRenderState(RenderState)
                 .AddBindingLayout(SceneBindingLayout)
-                .AddBindingLayout(SceneBindlessLayout)
+                .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                 .SetVertexShader(VertexShader);
                 
                 FRHIGraphicsPipelineRef Pipeline = GRenderContext->CreateGraphicsPipeline(Desc, RenderPass);
@@ -967,7 +965,7 @@ namespace Lumina
                 GraphicsState.SetViewportState(SceneViewportState);
                 GraphicsState.SetPipeline(Pipeline);
                 GraphicsState.AddBindingSet(SceneBindingSet);
-                GraphicsState.AddBindingSet(SceneDescriptorTable);
+                GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
                 GraphicsState.SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                 
                 CmdList.SetGraphicsState(GraphicsState);
@@ -1073,14 +1071,14 @@ namespace Lumina
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
             PipelineDesc.AddBindingLayout(SceneBindingLayout);
-            PipelineDesc.AddBindingLayout(SceneBindlessLayout);
+            PipelineDesc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                     
             FRHIComputePipelineRef Pipeline = GRenderContext->CreateComputePipeline(PipelineDesc);
                 
             FComputeState State;
             State.SetPipeline(Pipeline);
             State.AddBindingSet(SceneBindingSet);
-            State.AddBindingSet(SceneDescriptorTable);
+            State.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             CmdList.SetComputeState(State);
 
             FLightClusterPC ClusterPC;
@@ -1113,14 +1111,14 @@ namespace Lumina
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
             PipelineDesc.AddBindingLayout(SceneBindingLayout);
-            PipelineDesc.AddBindingLayout(SceneBindlessLayout);
+            PipelineDesc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                     
             FRHIComputePipelineRef Pipeline = GRenderContext->CreateComputePipeline(PipelineDesc);
                 
             FComputeState State;
             State.SetPipeline(Pipeline);
             State.AddBindingSet(SceneBindingSet);
-            State.AddBindingSet(SceneDescriptorTable);
+            State.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             CmdList.SetComputeState(State);
                 
             glm::mat4 ViewProj = SceneViewport->GetViewVolume().GetViewMatrix();
@@ -1168,7 +1166,7 @@ namespace Lumina
             FGraphicsState GraphicsState; GraphicsState
                 .SetRenderPass(Move(RenderPass))
                 .AddBindingSet(SceneBindingSet)
-                .AddBindingSet(SceneDescriptorTable)
+                .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable())
                 .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                     
             
@@ -1212,7 +1210,7 @@ namespace Lumina
                         .SetDebugName("Point Light Shadow Pass")
                         .SetRenderState(RenderState)
                         .AddBindingLayout(SceneBindingLayout)
-                        .AddBindingLayout(SceneBindlessLayout)
+                        .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                         .SetVertexShader(VertexShader)
                         .SetPixelShader(PixelShader);
                     
@@ -1300,7 +1298,7 @@ namespace Lumina
                     .SetRenderPass(RenderPass)
                     .SetViewportState(ViewportState)
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable)
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable())
                     .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));                    
                 
                 
@@ -1310,7 +1308,7 @@ namespace Lumina
                         .SetDebugName("Spot Shadow Pass")
                         .SetRenderState(RenderState)
                         .AddBindingLayout(SceneBindingLayout)
-                        .AddBindingLayout(SceneBindlessLayout)
+                        .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                         .SetVertexShader(VertexShader)
                         .SetPixelShader(PixelShader);
                     
@@ -1367,7 +1365,7 @@ namespace Lumina
                     .SetDebugName("Cascaded Shadow Maps")
                     .SetRenderState(RenderState)
                     .AddBindingLayout(SceneBindingLayout)
-                    .AddBindingLayout(SceneBindlessLayout)
+                    .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                     .SetVertexShader(VertexShader);
                 
                 FRHIGraphicsPipelineRef Pipeline = GRenderContext->CreateGraphicsPipeline(Desc, RenderPass);
@@ -1377,7 +1375,7 @@ namespace Lumina
                     .SetViewportState(MakeViewportStateFromImage(GetNamedImage(ENamedImage::Cascade)))
                     .SetPipeline(Pipeline)
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable)
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable())
                     .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                 
                 CmdList.SetGraphicsState(GraphicsState);
@@ -1442,7 +1440,7 @@ namespace Lumina
                     .SetVertexShader(Batch.VertexShader)
                     .SetPixelShader(Batch.PixelShader)
                     .AddBindingLayout(SceneBindingLayout)
-                    .AddBindingLayout(SceneBindlessLayout);
+                    .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                 
                 FGraphicsState GraphicsState; GraphicsState
                     .SetRenderPass(RenderPass)
@@ -1450,7 +1448,7 @@ namespace Lumina
                     .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
                     .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect))
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable);
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
                 
                 CmdList.SetGraphicsState(GraphicsState);
                 CmdList.DrawIndirect(Batch.DrawCount, Batch.IndirectDrawOffset * sizeof(FDrawIndirectArguments));
@@ -1562,7 +1560,7 @@ namespace Lumina
             Desc.SetDebugName("Environment Pass");
             Desc.SetRenderState(RenderState);
             Desc.AddBindingLayout(SceneBindingLayout);
-            Desc.AddBindingLayout(SceneBindlessLayout);
+            Desc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             Desc.SetVertexShader(VertexShader);
             Desc.SetPixelShader(PixelShader);
         
@@ -1570,7 +1568,7 @@ namespace Lumina
         
             FGraphicsState GraphicsState;
             GraphicsState.AddBindingSet(SceneBindingSet);
-            GraphicsState.AddBindingSet(SceneDescriptorTable);
+            GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             GraphicsState.SetPipeline(Pipeline);
             GraphicsState.SetRenderPass(RenderPass);
             GraphicsState.SetViewportState(SceneViewportState);
@@ -1648,7 +1646,7 @@ namespace Lumina
                     .SetRenderState(RenderState)
                     .SetInputLayout(SimpleVertexLayoutInput)
                     .AddBindingLayout(SceneBindingLayout)
-                    .AddBindingLayout(SceneBindlessLayout)
+                    .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                     .SetVertexShader(VertexShader)
                     .SetPixelShader(PixelShader);
     
@@ -1658,7 +1656,7 @@ namespace Lumina
                     .SetViewportState(SceneViewportState)
                     .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable);
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
     
                 CmdList.SetGraphicsState(GraphicsState);
                 CmdList.Draw(Batch.VertexCount, 1, Batch.StartVertex, 0);
@@ -1707,7 +1705,7 @@ namespace Lumina
             Desc.SetDebugName("Selection Post Process Pass");
             Desc.SetRenderState(RenderState);
             Desc.AddBindingLayout(SceneBindingLayout);
-            Desc.AddBindingLayout(SceneBindlessLayout);
+            Desc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             Desc.SetVertexShader(VertexShader);
             Desc.SetPixelShader(PixelShader);
         
@@ -1716,7 +1714,7 @@ namespace Lumina
             FGraphicsState GraphicsState;
             GraphicsState.SetPipeline(Pipeline);
             GraphicsState.AddBindingSet(SceneBindingSet);
-            GraphicsState.AddBindingSet(SceneDescriptorTable);
+            GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             GraphicsState.SetRenderPass(RenderPass);               
             GraphicsState.SetViewportState(MakeViewportStateFromImage(GetNamedImage(ENamedImage::HDR)));
         
@@ -1777,7 +1775,7 @@ namespace Lumina
             Desc.SetDebugName("Tone Mapping Pass");
             Desc.SetRenderState(RenderState);
             Desc.AddBindingLayout(SceneBindingLayout);
-            Desc.AddBindingLayout(SceneBindlessLayout);
+            Desc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             Desc.SetVertexShader(VertexShader);
             Desc.SetPixelShader(PixelShader);
         
@@ -1786,7 +1784,7 @@ namespace Lumina
             FGraphicsState GraphicsState;
             GraphicsState.SetPipeline(Pipeline);
             GraphicsState.AddBindingSet(SceneBindingSet);
-            GraphicsState.AddBindingSet(SceneDescriptorTable);
+            GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             GraphicsState.SetRenderPass(RenderPass);               
             GraphicsState.SetViewportState(MakeViewportStateFromImage(GetRenderTarget()));
         
@@ -2097,17 +2095,6 @@ namespace Lumina
             TBitFlags<ERHIShaderType> Visibility;
             Visibility.SetMultipleFlags(ERHIShaderType::Vertex, ERHIShaderType::Fragment, ERHIShaderType::Compute);
             GRenderContext->CreateBindingSetAndLayout(Visibility, 0, BindingSetDesc, SceneBindingLayout, SceneBindingSet);
-        }
-        
-        {
-            FBindlessLayoutDesc BindlessLayoutDesc;
-            BindlessLayoutDesc.AddBinding(FBindingLayoutItem::Texture_SRV(0));
-            BindlessLayoutDesc.SetVisibility(ERHIShaderType::Fragment);
-            BindlessLayoutDesc.SetVisibility(ERHIShaderType::Vertex);
-            BindlessLayoutDesc.SetMaxCapacity(1024);
-            
-            SceneBindlessLayout = GRenderContext->CreateBindlessLayout(BindlessLayoutDesc);
-            SceneDescriptorTable = GRenderContext->CreateDescriptorTable(SceneBindlessLayout);
         }
     }
 

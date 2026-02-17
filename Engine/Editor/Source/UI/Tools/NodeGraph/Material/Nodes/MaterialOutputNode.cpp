@@ -63,7 +63,7 @@ namespace Lumina
         Output += "\n\n";
     
         Output += "FMaterialInputs GetMaterialInputs()\n{\n";
-        Output += "\tSMaterialInputs Input;\n";
+        Output += "\tFMaterialInputs Input;\n";
     
         auto EmitMaterialInput = [&](const FString& InputName, CEdNodeGraphPin* Pin, const FString& DefaultValue, int32 RequiredComponents)
         {
