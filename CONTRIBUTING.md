@@ -11,25 +11,28 @@
 
 ---
 
-## 🤝 Our Philosophy
+## Our Philosophy
 
 **Contributing is a right for everyone.** Lumina is a community-driven project built on the principle of shared knowledge. We believe that every contribution, no matter how small, helps advance our collective understanding of game engine architecture.
 
 ### We Welcome
 
-- 🐛 Bug fixes and stability improvements
-- ✨ New features and systems
-- 📚 Documentation and tutorials
-- 🎨 Editor improvements and tooling
-- 🔧 Performance optimizations
-- 💡 Architecture suggestions
-- ❓ Questions and discussions
+- Bug fixes and stability improvements
+- New features and systems
+- Documentation and tutorials
+- Editor improvements and tooling
+- Performance optimizations
+- Architecture suggestions
+- Questions and discussions
 
 **Any and all pull requests that benefit the engine will be seriously considered and merged.** We're here to learn together and build something amazing.
 
+
+
+
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Join the Community
 
@@ -54,9 +57,9 @@ Follow the [Quick Start guide](README.md#-quick-start) in the main README to get
 
 ```bash
 # Fork the repository on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/lumina.git
+git clone https://github.com/YOUR_USERNAME/luminaengine.git
 cd lumina
-git remote add upstream https://github.com/mrdrelliot/lumina.git
+git remote add upstream https://github.com/mrdrelliot/luminaengine.git
 
 # Create a feature branch
 git checkout -b feature/my-awesome-feature
@@ -64,7 +67,7 @@ git checkout -b feature/my-awesome-feature
 
 ---
 
-## 📋 Coding Standards
+## Coding Standards
 
 Lumina enforces strict coding standards to maintain consistency and readability across the codebase.
 
@@ -86,14 +89,14 @@ All types must use appropriate prefixes based on their purpose:
 #### Case Conventions
 
 ```cpp
-// ✅ CORRECT - PascalCase for everything
+// CORRECT: PascalCase for everything
 class FRenderer { };
 void UpdateTransform();
 int32 EntityCount;
 glm::vec3 Position;
 ETextureFormat Format;
 
-// ❌ INCORRECT - No snake_case or camelCase
+// INCORRECT: No snake_case or camelCase
 void update_transform();    // Wrong
 int entity_count;          // Wrong
 glm::vec3 m_position;        // Wrong (no Hungarian notation)
@@ -111,7 +114,7 @@ glm::vec3 m_position;        // Wrong (no Hungarian notation)
 #### Indentation & Formatting
 
 ```cpp
-// ✅ CORRECT - Tabs for indentation, braces on new lines
+// CORRECT: Tabs for indentation, braces on new lines
 void ProcessEntities()
 {
 	for (const auto& Entity : Entities)
@@ -123,7 +126,7 @@ void ProcessEntities()
 	}
 }
 
-// ❌ INCORRECT - Spaces and wrong brace placement
+// INCORRECT: Spaces and wrong brace placement
 void ProcessEntities() {
     for (const auto& Entity : Entities) {
         if (Entity.IsValid()) {
@@ -134,17 +137,17 @@ void ProcessEntities() {
 ```
 
 **Rules:**
-- ✅ Use **tabs** for indentation (not spaces)
-- ✅ Opening braces on **new lines**
-- ✅ One statement per line
-- ✅ Space after control flow keywords: `if (`, `for (`, `while (`
+- Use **tabs** for indentation (not spaces)
+- Opening braces on **new lines**
+- One statement per line
+- Space after control flow keywords: `if (`, `for (`, `while (`
 
 #### Function Design
 
 Functions should be **focused, minimal, and well-encapsulated**:
 
 ```cpp
-// ✅ CORRECT - Single responsibility, minimal parameters
+// CORRECT: Single responsibility, minimal parameters
 void UpdateEntityTransform(TObjectHandle<CTransform> Transform, const glm::vec3& NewPosition)
 {
 	if (!Transform.IsValid())
@@ -156,7 +159,7 @@ void UpdateEntityTransform(TObjectHandle<CTransform> Transform, const glm::vec3&
 	Transform->MarkDirty();
 }
 
-// ❌ INCORRECT - Too much responsibility, unclear purpose
+// INCORRECT: Too much responsibility, unclear purpose
 void DoStuff(CEntity* Entity, float X, float Y, float Z, bool Flag1, bool Flag2, int Mode)
 {
 	Entity->Transform->Position.X = X;
@@ -178,11 +181,11 @@ void DoStuff(CEntity* Entity, float X, float Y, float Z, bool Flag1, bool Flag2,
 ```
 
 **Principles:**
-- ✅ **Single Responsibility** - One function, one purpose
-- ✅ **Minimal Parameters** - Prefer 3 or fewer parameters
-- ✅ **Small Functions** - Keep functions under 50 lines when possible
-- ✅ **Early Returns** - Validate inputs first, return early on failure
-- ✅ **No Side Effects** - Functions should do what their name implies, nothing more
+- **Single Responsibility** - One function, one purpose
+- **Minimal Parameters** - Prefer 3 or fewer parameters
+- **Small Functions** - Keep functions under 50 lines when possible
+- **Early Returns** - Validate inputs first, return early on failure
+- **No Side Effects** - Functions should do what their name implies, nothing more
 
 ### Memory Management
 
@@ -191,7 +194,7 @@ void DoStuff(CEntity* Entity, float X, float Y, float Z, bool Flag1, bool Flag2,
 **Raw pointers to `CObject`-derived types are PROHIBITED.** Always use `TObjectHandle<T>`:
 
 ```cpp
-// ✅ CORRECT - Use TObjectHandle for safe weak references
+// CORRECT: Use TObjectHandle for safe weak references
 class CMyComponent
 {
 public:
@@ -213,7 +216,7 @@ private:
 	TObjectHandle<CEntity> Target;
 };
 
-// ❌ INCORRECT - Raw pointers are unsafe
+// INCORRECT: Raw pointers are unsafe
 class CMyComponent
 {
 public:
@@ -228,24 +231,24 @@ private:
 ```
 
 **Why TObjectHandle?**
-- ✅ Generational safety prevents use-after-free
-- ✅ Automatic invalidation on object destruction
-- ✅ Weak reference semantics
-- ✅ Serialization-friendly
-- ✅ Thread-safe validation
+- Generational safety prevents use-after-free
+- Automatic invalidation on object destruction
+- Weak reference semantics
+- Serialization-friendly
+- Thread-safe validation
 
 **Exceptions:**
 Raw pointers are allowed for:
-- ✅ Non-`CObject` types (e.g., `FRenderer*`, `FTexture*`)
-- ✅ Local function parameters (lifetime guaranteed by caller)
-- ✅ Platform/external APIs
+- Non-`CObject` types (e.g., `FRenderer*`, `FTexture*`)
+- Local function parameters (lifetime guaranteed by caller)
+- Platform/external APIs
 
 ### Data-Oriented Design
 
 **Prefer data-oriented programming over heavy OOP inheritance.**
 
 ```cpp
-// ✅ CORRECT - Data-oriented, cache-friendly
+// CORRECT: Data-oriented, cache-friendly
 struct STransformData
 {
 	glm::vec3 Position;
@@ -263,7 +266,7 @@ void UpdateTransforms(TArray<STransformData>& Transforms, float DeltaTime)
 	}
 }
 
-// ❌ AVOID - Heavy inheritance, poor cache performance
+// AVOID: Heavy inheritance, poor cache performance
 class CBaseTransform { virtual void Update() = 0; };
 class CDerivedTransform1 : public CBaseTransform { /* ... */ };
 class CDerivedTransform2 : public CBaseTransform { /* ... */ };
@@ -271,18 +274,18 @@ class CDerivedTransform2 : public CBaseTransform { /* ... */ };
 ```
 
 **Principles:**
-- ✅ Separate **data from behavior**
-- ✅ Use **plain structs** for data storage
-- ✅ Process data in **batches** when possible
-- ✅ Minimize **virtual function calls** in hot paths
-- ✅ Favor **composition over inheritance**
+- Separate **data from behavior**
+- Use **plain structs** for data storage
+- Process data in **batches** when possible
+- Minimize **virtual function calls** in hot paths
+- Favor **composition over inheritance**
 
 ### Metaprogramming
 
 **Template metaprogramming is allowed but MUST be constrained with C++20 concepts.**
 
 ```cpp
-// ✅ CORRECT - Concepts enforce constraints at compile-time
+// CORRECT: Concepts enforce constraints at compile-time
 template<typename T>
 concept Transformable = requires(T Object)
 {
@@ -296,7 +299,7 @@ void ApplyTranslation(T& Object, const glm::vec3& Translation)
 	Object.SetPosition(Object.GetPosition() + Translation);
 }
 
-// ❌ INCORRECT - Unconstrained template
+// INCORRECT: Unconstrained template
 template<typename T>
 void ApplyTranslation(T& Object, const glm::vec3& Translation)
 {
@@ -306,10 +309,10 @@ void ApplyTranslation(T& Object, const glm::vec3& Translation)
 ```
 
 **Requirements:**
-- ✅ **All templates** must use concepts or SFINAE
-- ✅ **Clear error messages** through concept constraints
-- ✅ **Document requirements** in comments
-- ✅ **Avoid** template metaprogramming for simple cases
+- **All templates** must use concepts or SFINAE
+- **Clear error messages** through concept constraints
+- **Document requirements** in comments
+- **Avoid** template metaprogramming for simple cases
 
 ### Documentation
 
@@ -329,7 +332,7 @@ void ApplyTranslation(T& Object, const glm::vec3& Translation)
  */
 bool RenderMesh(const FMesh& Mesh, const FMaterial& Material, const FMatrix& Transform);
 
-// ✅ Comment complex logic
+// Comment complex logic
 void CalculateClusterBounds()
 {
 	// Use conservative depth bounds to minimize false positives
@@ -342,25 +345,25 @@ void CalculateClusterBounds()
 	}
 }
 
-// ✅ Explain why, not what
+// Explain why, not what
 // Flush commands here to avoid synchronization issues with async compute
 CommandBuffer.Submit();
 
-// ❌ Useless comment
+// Useless comment
 // Increment i by 1
 ++i;
 ```
 
 **Documentation Guidelines:**
-- ✅ **Doxygen-style comments** for all public APIs
-- ✅ Explain **why** decisions were made, not just what the code does
-- ✅ Reference **papers/articles** for non-obvious algorithms
-- ✅ Document **thread-safety** and **performance characteristics**
-- ✅ Include **usage examples** for complex systems
+- **Doxygen-style comments** for all public APIs
+- Explain **why** decisions were made, not just what the code does
+- Reference **papers/articles** for non-obvious algorithms
+- Document **thread-safety** and **performance characteristics**
+- Include **usage examples** for complex systems
 
 ---
 
-## 🧪 Testing & Quality
+## Testing & Quality
 
 ### Code Quality Checklist
 
@@ -377,34 +380,34 @@ Before submitting a PR, ensure:
 
 
 **Test Requirements:**
-- ✅ Write tests for new features
-- ✅ Ensure existing tests pass
-- ✅ Test edge cases and error conditions
-- ✅ Verify no performance regressions
+- Write tests for new features
+- Ensure existing tests pass
+- Test edge cases and error conditions
+- Verify no performance regressions
 
 ---
 
-## 📦 Pull Request Process
+## Pull Request Process
 
 ### 1. Before Submitting
 
-- ✅ Discuss major changes on Discord or in an issue first
-- ✅ Ensure code follows all standards above
-- ✅ Update documentation as needed
-- ✅ Test thoroughly
-- ✅ Rebase on latest `main` branch
+- Discuss major changes on Discord or in an issue first
+- Ensure code follows all standards above
+- Update documentation as needed
+- Test thoroughly
+- Rebase on latest `main` branch
 
 ### 2. Commit Messages
 
 Write clear, descriptive commit messages:
 
 ```bash
-# ✅ GOOD - Clear, specific, imperative mood
+# GOOD. Clear, specific, imperative mood
 Add clustered lighting support to deferred renderer
 Fix crash when destroying entities during iteration
 Optimize mesh batching for static geometry
 
-# ❌ BAD - Vague, unclear, or too casual
+# BAD: Vague, unclear, or too casual
 Fixed stuff
 WIP
 Updated things
@@ -456,10 +459,10 @@ Related to #456
 
 ### 4. Review Process
 
-- 🔍 A maintainer will review your PR within a few days
-- 💬 Address feedback and requested changes
-- ✅ Once approved, your PR will be merged!
-- 🎉 You'll be credited in the release notes
+- A maintainer will review your PR within a few days
+- Address feedback and requested changes
+- Once approved, your PR will be merged!
+- You'll be credited in the release notes
 
 ---
 
@@ -468,25 +471,25 @@ Related to #456
 Areas where we especially welcome contributions:
 
 ### High Priority
-- 🔴 **Performance optimizations** - Profiling and bottleneck fixes
-- 🔴 **Platform support** - Linux/macOS ports
-- 🔴 **Documentation** - API docs, tutorials, examples
-- 🔴 **Bug fixes** - Stability improvements
+- **Performance optimizations** - Profiling and bottleneck fixes
+- **Platform support** - Linux/macOS ports
+- **Documentation** - API docs, tutorials, examples
+- **Bug fixes** - Stability improvements
 
 ### Medium Priority
-- 🟡 **Editor features** - Workflow improvements
-- 🟡 **Rendering features** - New techniques and effects
-- 🟡 **Asset pipeline** - Import/export improvements
-- 🟡 **Scripting** - Gameplay scripting support
+- **Editor features** - Workflow improvements
+- **Rendering features** - New techniques and effects
+- **Asset pipeline** - Import/export improvements
+- **Scripting** - Gameplay scripting support
 
 ### Nice to Have
-- 🟢 **Example projects** - Demos and samples
-- 🟢 **Tools** - External editor plugins
-- 🟢 **CI/CD** - Automated testing and builds
+- **Example projects** - Demos and samples
+- **Tools** - External editor plugins
+- **CI/CD** - Automated testing and builds
 
 ---
 
-## 📚 Resources
+## Resources
 
 ### Learning Materials
 - [Vulkan Tutorial](https://vulkan-tutorial.com/)
@@ -502,17 +505,17 @@ Areas where we especially welcome contributions:
 
 ---
 
-## 💡 Questions?
+## Questions?
 
 **Don't hesitate to ask!** We're here to help:
 
-- 💬 [Discord Server](https://discord.gg/xQSB7CRzQE) - Real-time chat
-- 🐛 [GitHub Issues](https://github.com/mrdrelliot/lumina/issues) - Bug reports and features
-- 📧 Contact maintainers directly for sensitive matters
+- [Discord Server](https://discord.gg/xQSB7CRzQE) - Real-time chat
+- [GitHub Issues](https://github.com/mrdrelliot/lumina/issues) - Bug reports and features
+- Contact maintainers directly for sensitive matters
 
 ---
 
-## 🏆 Contributors
+## Contributors
 
 Thank you to all our contributors! Every contribution, big or small, helps make Lumina better.
 
@@ -522,7 +525,7 @@ Thank you to all our contributors! Every contribution, big or small, helps make 
 
 ---
 
-## 📄 Code of Conduct
+## Code of Conduct
 
 ### Our Pledge
 
@@ -541,17 +544,17 @@ We are committed to providing a welcoming and inclusive environment for everyone
 ### Our Standards
 
 **Positive behavior includes:**
-- ✅ Using welcoming and inclusive language
-- ✅ Being respectful of differing viewpoints
-- ✅ Gracefully accepting constructive criticism
-- ✅ Focusing on what's best for the community
-- ✅ Showing empathy towards others
+- Using welcoming and inclusive language
+- Being respectful of differing viewpoints
+- Gracefully accepting constructive criticism
+- Focusing on what's best for the community
+- Showing empathy towards others
 
 **Unacceptable behavior includes:**
-- ❌ Harassment, trolling, or insulting comments
-- ❌ Personal or political attacks
-- ❌ Publishing others' private information
-- ❌ Any conduct inappropriate in a professional setting
+- Harassment, trolling, or insulting comments
+- Personal or political attacks
+- Publishing others' private information
+- Any conduct inappropriate in a professional setting
 
 ### Enforcement
 
@@ -561,7 +564,7 @@ Violations may result in temporary or permanent bans from the project. Report is
 
 <div align="center">
 
-## 🌟 Thank You!
+## Thank You!
 
 **Your contributions make Lumina possible.**
 
