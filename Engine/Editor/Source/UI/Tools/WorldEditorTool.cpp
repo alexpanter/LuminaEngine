@@ -162,11 +162,17 @@ namespace Lumina
         {
             if (Item == entt::null)
             {
-                World->GetEntityRegistry().clear<FSelectedInEditorComponent>();
+                ClearSelectedEntities();
                 return;
             }
             
             FEntityListViewItemData& Data = Tree.Get<FEntityListViewItemData>(Item);
+            
+            if (World->GetEntityRegistry().any_of<FSelectedInEditorComponent>(Data.Entity))
+            {
+                // Already selected.
+                return;
+            }
             
             ClearSelectedEntities();
             AddSelectedEntity(Data.Entity, false);
@@ -962,7 +968,6 @@ namespace Lumina
         {
             bool bComponentAdded = false;
     
-            // Modal header styling
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
             ImGui::TextUnformatted("Select a component to add to the entity");
             ImGui::PopStyleColor();
@@ -985,7 +990,6 @@ namespace Lumina
             
             ImGui::Spacing();
     
-            // Component list area
             float const tableHeight = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing() * 2;
             
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(12, 8));
@@ -1100,7 +1104,6 @@ namespace Lumina
             ImGui::Separator();
             ImGui::Spacing();
     
-            // Bottom buttons
             float buttonWidth = 120.0f;
             float availWidth = ImGui::GetContentRegionAvail().x;
             ImGui::SetCursorPosX((availWidth - buttonWidth) * 0.5f);

@@ -28,6 +28,7 @@ namespace Lumina
             Bone,
             Cluster,
             SimpleVertex,
+            Billboards,
             
             Num,
         };

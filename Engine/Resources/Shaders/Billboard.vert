@@ -3,9 +3,10 @@
 #pragma shader_stage(vertex)
 
 #include "Includes/SceneGlobals.glsl"
-#include "Includes/VertexInputs.glsl"
 
 layout(location = 0) out vec2 vUV;
+layout(location = 1) flat out uint TextureIndex;
+layout(location = 2) flat out uint EntityID;
 
 const vec2 Positions[6] = vec2[]
 (
@@ -33,16 +34,19 @@ void main()
 {
     vec2 QuadPos = Positions[gl_VertexIndex];
     vUV = UVs[gl_VertexIndex];
-
-    vec3 BillboardCenter    = vec3(1.0, 0.0, 0.0);//Billboard.Position;
-    float BillboardSize     = 1.0;//Billboard.Size;
+    
+    vec3 BillboardCenter    = Billboards[gl_InstanceIndex].Position;
+    float BillboardSize     = Billboards[gl_InstanceIndex].Size;
+    TextureIndex            = Billboards[gl_InstanceIndex].TextureIndex;
+    EntityID                = Billboards[gl_InstanceIndex].EntityID;
+    
 
     mat4 ViewMatrix         = GetCameraView();
 
-    vec3 CameraRight_WS =  vec3(ViewMatrix[0][0], ViewMatrix[1][0], ViewMatrix[2][0]);
-    vec3 CameraUp_WS    = -vec3(ViewMatrix[0][1], ViewMatrix[1][1], ViewMatrix[2][1]);
+    vec3 CameraRight_WS     =  vec3(ViewMatrix[0][0], ViewMatrix[1][0], ViewMatrix[2][0]);
+    vec3 CameraUp_WS        = -vec3(ViewMatrix[0][1], ViewMatrix[1][1], ViewMatrix[2][1]);
     
-    vec3 VertexPosition_WS = BillboardCenter 
+    vec3 VertexPosition_WS  = BillboardCenter 
     + CameraRight_WS    * QuadPos.x     * BillboardSize
     + CameraUp_WS       * QuadPos.y     * BillboardSize;
 

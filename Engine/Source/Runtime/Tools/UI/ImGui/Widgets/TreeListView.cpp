@@ -128,15 +128,6 @@ namespace Lumina
             Flags |= ImGuiTreeNodeFlags_Selected;
         }
         
-        
-        FFixedString DisplayName = Display.DisplayName.c_str();
-        if (bHasChildren)
-        {
-            DisplayName.append(" (");
-            DisplayName.append(eastl::to_string(TreeNode.Children.size()).c_str());
-            DisplayName.append(")");
-        }
-        
         ImVec4 TextColor = Display.DisplayColor;
         if (State.bDisabled)
         {
@@ -145,7 +136,11 @@ namespace Lumina
         
         ImGui::PushStyleColor(ImGuiCol_Text, TextColor);
         
-        State.bExpanded = ImGui::TreeNodeEx("##TreeNode", Flags, "%s", DisplayName.c_str());
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.22f, 0.52f, 0.22f, 0.40f));
+
+        State.bExpanded = ImGui::TreeNodeEx("##TreeNode", Flags, "%s", Display.DisplayName.c_str());
+        
+        ImGui::PopStyleColor();
         
         if (ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Left))
         {
@@ -173,7 +168,7 @@ namespace Lumina
                 Context.SetDragDropFunction(*this, Entity);
             }
             
-            ImGui::TextUnformatted(DisplayName.c_str());
+            ImGui::TextUnformatted(Display.DisplayName.c_str());
             ImGui::EndDragDropSource();
         }
 
@@ -215,6 +210,23 @@ namespace Lumina
             if (ImGui::SmallButton(Icon))
             {
                 State.bDisabled = !State.bDisabled;
+                
+                TVector<entt::entity> Stack(TreeNode.Children.begin(), TreeNode.Children.end());
+                while (!Stack.empty())
+                {
+                    entt::entity Current = Stack.back();
+                    Stack.pop_back();
+
+                    FTreeNodeState& ChildState = Registry.get<FTreeNodeState>(Current);
+                    ChildState.bDisabled = State.bDisabled;
+
+                    FTreeNode& ChildNode = Registry.get<FTreeNode>(Current);
+                    for (entt::entity Grandchild : ChildNode.Children)
+                    {
+                        Stack.push_back(Grandchild);
+                    }
+                }
+                
                 if (Context.VisibilityToggleFunction)
                 {
                     Context.VisibilityToggleFunction(*this, Entity);
@@ -249,16 +261,20 @@ namespace Lumina
         TreeNode.Hash = (Hash == 0) ? Hash::GetHash64(Name) : Hash;
         TreeNode.Parent = Parent;
         
+        bool bShouldBeDisabled = false;
         if (Parent != entt::null && Registry.valid(Parent))
         {
             FTreeNode& ParentNode = Registry.get<FTreeNode>(Parent);
+            FTreeNodeState& ParentState = Registry.get<FTreeNodeState>(Parent);
             ParentNode.Children.push_back(NewNode);
+            bShouldBeDisabled = ParentState.bDisabled;
         }
         
         FTreeNodeDisplay& Display = Registry.emplace<FTreeNodeDisplay>(NewNode);
         Display.DisplayName = Name;
         Display.TooltipText = Name;
-        Registry.emplace<FTreeNodeState>(NewNode);
+        FTreeNodeState& State = Registry.emplace<FTreeNodeState>(NewNode);
+        State.bDisabled = bShouldBeDisabled;
         
         if (Parent == entt::null)
         {

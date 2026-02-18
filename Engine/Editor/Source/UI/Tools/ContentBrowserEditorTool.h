@@ -51,8 +51,9 @@ namespace Lumina
         {
         public:
             
-            FContentBrowserTileViewItem(FTileViewItem* InParent, const VFS::FFileInfo& InInfo)
+            FContentBrowserTileViewItem(FTileViewItem* InParent, const VFS::FFileInfo& InInfo, bool bInProtected)
                 : FTileViewItem(InParent)
+                , bProtected(bInProtected)
                 , FileInfo(InInfo)
             {
             }
@@ -85,17 +86,18 @@ namespace Lumina
             NODISCARD bool IsDirectory() const { return FileInfo.IsDirectory(); }
             NODISCARD bool IsLuaScript() const { return FileInfo.IsLua(); }
             NODISCARD FString GetExtension() const { return FileInfo.GetExt(); }
+            NODISCARD bool IsProtected() const { return bProtected; }
             
         private:
             
-            VFS::FFileInfo FileInfo;
+            bool            bProtected = false;
+            VFS::FFileInfo  FileInfo;
         };
 
         LUMINA_SINGLETON_EDITOR_TOOL(FContentBrowserEditorTool)
 
         FContentBrowserEditorTool(IEditorToolContext* Context)
             : FEditorTool(Context, "Content Browser", nullptr)
-            , ContentBrowserTileView()
         {
         }
         

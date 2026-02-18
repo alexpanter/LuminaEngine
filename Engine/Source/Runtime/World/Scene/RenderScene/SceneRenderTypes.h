@@ -300,11 +300,12 @@ namespace Lumina
         FRHIImageRef AlbedoSpec;
     };
     
-    struct FBillboardInstance
+    struct alignas(16) FBillboardInstance
     {
         glm::vec3       Position;
         float           Size;
-        FRHIImageRef    Texture;
+        uint32          TextureIndex;
+        uint32          EntityID;
     };
     
     struct alignas(16) FCluster

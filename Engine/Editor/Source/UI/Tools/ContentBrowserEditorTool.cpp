@@ -343,7 +343,15 @@ namespace Lumina
             
             for (const VFS::FFileInfo& Info : SortedPaths)
             {
-                ContentBrowserTileView.AddItemToTree<FContentBrowserTileViewItem>(nullptr, Info);
+                if (Info.VirtualPath == "/Game/Content" || Info.VirtualPath == "/Game/Scripts")
+                {
+                    ContentBrowserTileView.AddItemToTree<FContentBrowserTileViewItem>(nullptr, Info, true);
+                }
+                else
+                {
+                    ContentBrowserTileView.AddItemToTree<FContentBrowserTileViewItem>(nullptr, Info, false);
+                }
+                
             }
         };
 
@@ -359,6 +367,12 @@ namespace Lumina
             if (Key == ImGuiKey_Delete)
             {
                 FContentBrowserTileViewItem* ContentItem = static_cast<FContentBrowserTileViewItem*>(&Item);
+                if (ContentItem->IsProtected())
+                {
+                    ImGuiX::Notifications::NotifyError("Cannot delete a core directory");
+                    return true;
+                }
+                
                 OpenDeletionWarningPopup(ContentItem);
                 return true;
             }
@@ -398,7 +412,6 @@ namespace Lumina
         
         DirectoryContext.RebuildTreeFunction = [this](FTreeListView& Tree)
         {
-            
             TFunction<void(entt::entity, FStringView)> AddChildrenRecursive;
             
             AddChildrenRecursive = [&](entt::entity ParentItem, FStringView CurrentPath)
@@ -423,7 +436,6 @@ namespace Lumina
                     }
             
                     AddChildrenRecursive(ItemEntity, Info.VirtualPath); 
-                    
                 });
             };
             
@@ -1082,9 +1094,12 @@ namespace Lumina
     {
         ImGui::Separator();
         
-        if (ImGui::MenuItem(LE_ICON_ARCHIVE_EDIT " Rename", "F2"))
+        if (!ContentItem->IsProtected())
         {
-            PushRenameModal(ContentItem);
+            if (ImGui::MenuItem(LE_ICON_ARCHIVE_EDIT " Rename", "F2"))
+            {
+                PushRenameModal(ContentItem);
+            }
         }
         
         if (ImGui::MenuItem(LE_ICON_FOLDER " Show in Explorer", nullptr, false))
@@ -1100,15 +1115,18 @@ namespace Lumina
             ImGuiX::Notifications::NotifyInfo("Path copied to clipboard");
         }
 
-        ImGui::Separator();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
-        bool bDeleteClicked = ImGui::MenuItem(LE_ICON_ALERT_OCTAGON " Delete", "Del");
-        ImGui::PopStyleColor();
-
-        if (bDeleteClicked)
+        if (!ContentItem->IsProtected())
         {
-            OpenDeletionWarningPopup(ContentItem);
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+            bool bDeleteClicked = ImGui::MenuItem(LE_ICON_ALERT_OCTAGON " Delete", "Del");
+            ImGui::PopStyleColor();
+
+            if (bDeleteClicked)
+            {
+                OpenDeletionWarningPopup(ContentItem);
+            }
         }
     }
 

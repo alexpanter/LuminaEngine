@@ -70,11 +70,16 @@ layout(set = 0, binding = 7) restrict buffer MaterialUniforms
     FMaterialUniforms Uniforms[];
 } uMaterialUniforms;
 
-layout(set = 0, binding = 8)        uniform sampler2DArray uShadowCascade;
-layout(set = 0, binding = 9)        uniform sampler2DArray uShadowAtlas;
-layout(set = 0, binding = 10)       uniform usampler2D uSelectionTexture;
-layout(set = 0, binding = 11)       uniform sampler2D uDepthPyramid;
-layout(set = 0, binding = 12)       uniform sampler2D uHDRSceneColor;
+layout(set = 0, binding = 8) restrict buffer BillboardInstances
+{
+    FBillboardInstance Billboards[];
+};
+
+layout(set = 0, binding = 9)        uniform sampler2DArray uShadowCascade;
+layout(set = 0, binding = 10)       uniform sampler2DArray uShadowAtlas;
+layout(set = 0, binding = 11)       uniform usampler2D uSelectionTexture;
+layout(set = 0, binding = 12)       uniform sampler2D uDepthPyramid;
+layout(set = 0, binding = 13)       uniform sampler2D uHDRSceneColor;
 
 
 //////////////////////////////////////////////////////////

@@ -54,6 +54,10 @@ namespace Lumina
         NamedImages[(int)ENamedImage::PointLightIcon]       = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/PointLight.png", true);  
         NamedImages[(int)ENamedImage::DirectionalLightIcon] = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/SkyLight.png", true);  
         NamedImages[(int)ENamedImage::SpotLightIcon]        = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/SpotLight.png", true);  
+        
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::PointLightIcon]);
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::DirectionalLightIcon]);
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::SpotLightIcon]);
         #endif
         
     }
@@ -400,20 +404,19 @@ namespace Lumina
         
         {
             LUMINA_PROFILE_SECTION("Process Billboard Primitives");
-
-            uint32 NumBillboards = 0;
             auto View = World->GetEntityRegistry().view<SBillboardComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([this, NumBillboards](const SBillboardComponent& BillboardComponent, const STransformComponent& TransformComponent)
+            View.each([this](entt::entity Entity, const SBillboardComponent& BillboardComponent, const STransformComponent& TransformComponent)
             {
                 if (!BillboardComponent.Texture.IsValid() || !BillboardComponent.Texture->GetRHIRef()->IsValid())
                 {
                     return;
                 }
                 
-                FBillboardInstance& Instance = BillboardInstances.emplace_back();
-                Instance.Position = TransformComponent.GetLocation();
-                Instance.Texture = BillboardComponent.Texture->GetRHIRef();
-                Instance.Size = BillboardComponent.Scale;
+                FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                Billboard.TextureIndex          = BillboardComponent.Texture->GetRHIRef()->GetTextureCacheIndex();
+                Billboard.Position              = TransformComponent.GetLocation();
+                Billboard.Size                  = BillboardComponent.Scale;
+                Billboard.EntityID              = entt::to_integral(Entity);
             });
         }
         
@@ -422,7 +425,7 @@ namespace Lumina
 
             LightData.bHasSun = false;
             auto View = World->GetEntityRegistry().view<SDirectionalLightComponent>(entt::exclude<SDisabledTag>);
-            View.each([this](const SDirectionalLightComponent& DirectionalLightComponent)
+            View.each([this](entt::entity Entity, const SDirectionalLightComponent& DirectionalLightComponent)
             {
                 LightData.bHasSun = true;
                 const FViewVolume& ViewVolume = SceneViewport->GetViewVolume();
@@ -430,7 +433,11 @@ namespace Lumina
                 #if USING(WITH_EDITOR)
                 if (!World->IsGameWorld())
                 {
-                    DrawBillboard(GetNamedImage(ENamedImage::DirectionalLightIcon), glm::vec3(0.0f), 0.35f);
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::DirectionalLightIcon)->GetTextureCacheIndex();
+                    Billboard.Position              = glm::vec3(0.0f);
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
                 }
                 #endif    
                 
@@ -510,7 +517,7 @@ namespace Lumina
             LUMINA_PROFILE_SECTION("Point Light Processing");
 
             auto View = World->GetEntityRegistry().view<SPointLightComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([&] (const SPointLightComponent& PointLightComponent, const STransformComponent& TransformComponent)
+            View.each([&] (entt::entity Entity, const SPointLightComponent& PointLightComponent, const STransformComponent& TransformComponent)
             {
                 FLight Light;
                 Light.Flags                 = LIGHT_TYPE_POINT;
@@ -523,7 +530,11 @@ namespace Lumina
                 #if USING(WITH_EDITOR)
                 if (!World->IsGameWorld())
                 {
-                    DrawBillboard(GetNamedImage(ENamedImage::PointLightIcon), TransformComponent.GetLocation(), 0.35f);
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::PointLightIcon)->GetTextureCacheIndex();
+                    Billboard.Position              = TransformComponent.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
                 }
                 #endif
                 
@@ -596,14 +607,18 @@ namespace Lumina
             LUMINA_PROFILE_SECTION("Spot Light Processing");
 
             auto View = World->GetEntityRegistry().view<SSpotLightComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([&] (SSpotLightComponent& SpotLightComponent, STransformComponent& TransformComponent)
+            View.each([&] (entt::entity Entity, SSpotLightComponent& SpotLightComponent, STransformComponent& TransformComponent)
             {
                 const FTransform& Transform = TransformComponent.WorldTransform;
                 
                 #if USING(WITH_EDITOR)
                 if (!World->IsGameWorld())
                 {
-                    DrawBillboard(GetNamedImage(ENamedImage::SpotLightIcon), TransformComponent.GetLocation(), 0.35f);
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::SpotLightIcon)->GetTextureCacheIndex();
+                    Billboard.Position              = TransformComponent.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
                 }
                 #endif                
         
@@ -806,6 +821,7 @@ namespace Lumina
                 const SIZE_T IndirectArgsSize   = IndirectDrawArguments.size() * sizeof(FDrawIndirectArguments);
                 const SIZE_T ActiveLightsSize   = LightData.NumLights * sizeof(FLight);
                 const SIZE_T LightUploadSize    = offsetof(FSceneLightData, Lights) + ActiveLightsSize;
+                const SIZE_T BillboardSize      = BillboardInstances.size() * sizeof(FBillboardInstance);
                 
                 bool bAnyBufferResized = false;
                 
@@ -839,6 +855,11 @@ namespace Lumina
                     bAnyBufferResized = true;
                 }
                 
+                if (RenderUtils::ResizeBufferIfNeeded(NamedBuffers[(int)ENamedBuffer::Billboards], (uint32)BillboardSize, 2))
+                {
+                    bAnyBufferResized = true;
+                }
+                
                 if (bAnyBufferResized)
                 {
                     CreateLayouts();
@@ -850,6 +871,7 @@ namespace Lumina
                 CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::Indirect), EResourceStates::CopyDest);
                 CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::SimpleVertex), EResourceStates::CopyDest);
                 CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::Light), EResourceStates::CopyDest);
+                CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::Billboards), EResourceStates::CopyDest);
                 CmdList.CommitBarriers();
                 
                 CmdList.DisableAutomaticBarriers();
@@ -859,6 +881,7 @@ namespace Lumina
                 CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::Indirect), IndirectDrawArguments.data(), IndirectArgsSize);
                 CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::SimpleVertex), SimpleVertices.data(), SimpleVertexSize);
                 CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::Light), &LightData, LightUploadSize);
+                CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::Billboards), BillboardInstances.data(), BillboardSize);
                 CmdList.EnableAutomaticBarriers();
             });
         }
@@ -866,10 +889,16 @@ namespace Lumina
 
     void FForwardRenderScene::DrawBillboard(FRHIImage* Image, const glm::vec3& Location, float Scale)
     {
-        FBillboardInstance& Billboard = BillboardInstances.emplace_back();
-        Billboard.Texture = Image;
-        Billboard.Position = Location;
-        Billboard.Size = Scale;
+        if (Image->GetTextureCacheIndex() == -1)
+        {
+            return;
+        }
+        
+        FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+        Billboard.TextureIndex          = Image->GetTextureCacheIndex();
+        Billboard.Position              = Location;
+        Billboard.Size                  = Scale;
+        Billboard.EntityID              = entt::null;
     }
 
     void FForwardRenderScene::ResetPass(FRenderGraph& RenderGraph)
@@ -1460,7 +1489,11 @@ namespace Lumina
 
     void FForwardRenderScene::BillboardPass(FRenderGraph& RenderGraph)
     {
-#if 0
+        if (BillboardInstances.empty())
+        {
+            return;
+        }
+        
         FRGPassDescriptor* Descriptor = RenderGraph.AllocDescriptor();
         RenderGraph.AddPass(RG_Raster, FRGEvent("Billboard Pass"), Descriptor, [&](ICommandList& CmdList)
         {
@@ -1470,25 +1503,25 @@ namespace Lumina
             FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Billboard.frag");
             
             FRenderPassDesc::FAttachment RenderTarget;
-            RenderTarget.SetImage(HDRRenderTarget);
+            RenderTarget.SetImage(GetNamedImage(ENamedImage::HDR));
             if (RenderSettings.bHasEnvironment)
             {
                 RenderTarget.SetLoadOp(ERenderLoadOp::Load);
             }
             
             FRenderPassDesc::FAttachment PickerImageAttachment; PickerImageAttachment
-                .SetImage(PickerImage)
+                .SetImage(GetNamedImage(ENamedImage::Picker))
                 .SetLoadOp(ERenderLoadOp::Load);
             
             FRenderPassDesc::FAttachment Depth; Depth
-                .SetImage(DepthAttachment)
+                .SetImage(GetNamedImage(ENamedImage::DepthAttachment))
                 .SetLoadOp(ERenderLoadOp::Load);
             
             FRenderPassDesc RenderPass; RenderPass
                 .AddColorAttachment(RenderTarget)
                 .AddColorAttachment(PickerImageAttachment)
                 .SetDepthAttachment(Depth)
-                .SetRenderArea(HDRRenderTarget->GetExtent());
+                .SetRenderArea(GetNamedImage(ENamedImage::HDR)->GetExtent());
         
             FDepthStencilState DepthState; DepthState
                 .DisableDepthWrite()
@@ -1496,29 +1529,25 @@ namespace Lumina
             
             FRenderState RenderState; RenderState
                 .SetDepthStencilState(DepthState);
-
-            for (const FBillboardInstance& Billboard : BillboardInstances)
-            {
-                FGraphicsPipelineDesc Desc; Desc
-                    .SetDebugName("Billboard Pass")
-                    .SetRenderState(RenderState)
-                    .SetVertexShader(VertexShader)
-                    .SetPixelShader(PixelShader)
-                    .AddBindingLayout(BindingLayout)
-                    .AddBindingLayout(BindlessLayout);
             
-                FGraphicsState GraphicsState; GraphicsState
-                    .SetRenderPass(RenderPass)
-                    .SetViewportState(MakeViewportStateFromImage(HDRRenderTarget))
-                    .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
-                    .AddBindingSet(BindingSet)
-                    .AddBindingSet(DescriptorTable);
+            FGraphicsPipelineDesc Desc; Desc
+                .SetDebugName("Billboard Pass")
+                .SetRenderState(RenderState)
+                .SetVertexShader(VertexShader)
+                .SetPixelShader(PixelShader)
+                .AddBindingLayout(SceneBindingLayout)
+                .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             
-                CmdList.SetGraphicsState(GraphicsState);
-                CmdList.Draw(6, 1, 0, 0);   
-            }
+            FGraphicsState GraphicsState; GraphicsState
+                .SetRenderPass(RenderPass)
+                .SetViewportState(MakeViewportStateFromImage(GetNamedImage(ENamedImage::HDR)))
+                .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
+                .AddBindingSet(SceneBindingSet)
+                .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
+            
+            CmdList.SetGraphicsState(GraphicsState);
+            CmdList.Draw(6, BillboardInstances.size(), 0, 0);   
         });
-#endif
     }
 
     void FForwardRenderScene::TransparentPass(FRenderGraph& RenderGraph)
@@ -1948,6 +1977,16 @@ namespace Lumina
             BufferDesc.DebugName = "Indirect Draw Buffer";
             NamedBuffers[(int)ENamedBuffer::Indirect] = GRenderContext->CreateBuffer(BufferDesc);
         }
+        
+        {
+            FRHIBufferDesc BufferDesc;
+            BufferDesc.Size = sizeof(FBillboardInstance);
+            BufferDesc.Usage.SetFlag(BUF_StorageBuffer);
+            BufferDesc.bKeepInitialState = true;
+            BufferDesc.InitialState = EResourceStates::UnorderedAccess;
+            BufferDesc.DebugName = "Billboard Data";
+            NamedBuffers[(int)ENamedBuffer::Billboards] = GRenderContext->CreateBuffer(BufferDesc);
+        }
     }
 
     static uint32 PreviousPow2(uint32 v)
@@ -2078,11 +2117,12 @@ namespace Lumina
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(5, GetNamedBuffer(ENamedBuffer::Bone)));
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(6, GetNamedBuffer(ENamedBuffer::Cluster)));
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(7, GRenderManager->GetMaterialManager().GetMaterialBuffer()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(8, GetNamedImage(ENamedImage::Cascade)));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(9, ShadowAtlas.GetImage()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(10, GetNamedImage(ENamedImage::Picker), TStaticRHISampler<false, false>::GetRHI()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(11, GetNamedImage(ENamedImage::DepthPyramid), TStaticRHISampler<false, false>::GetRHI()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(12, GetNamedImage(ENamedImage::HDR)));
+            BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(8, GetNamedBuffer(ENamedBuffer::Billboards)));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(9, GetNamedImage(ENamedImage::Cascade)));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(10, ShadowAtlas.GetImage()));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(11, GetNamedImage(ENamedImage::Picker), TStaticRHISampler<false, false>::GetRHI()));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(12, GetNamedImage(ENamedImage::DepthPyramid), TStaticRHISampler<false, false>::GetRHI()));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(13, GetNamedImage(ENamedImage::HDR)));
 
             TBitFlags<ERHIShaderType> Visibility;
             Visibility.SetMultipleFlags(ERHIShaderType::Vertex, ERHIShaderType::Fragment, ERHIShaderType::Compute);

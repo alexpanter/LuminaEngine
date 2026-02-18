@@ -238,6 +238,8 @@ struct FBillboardInstance
 {
     vec3    Position;
     float   Size;
+    uint    TextureIndex;
+    uint    EntityID;
 };
 
 struct FLight
