@@ -28,7 +28,8 @@
 **Any and all pull requests that benefit the engine will be seriously considered and merged.** We're here to learn together and build something amazing.
 
 
-
+> [!CAUTION]
+> Code or documentstion that includes AI generative content will not be accepted, we do not need low effort.
 
 ---
 
