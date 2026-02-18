@@ -48,7 +48,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.diffuse_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.diffuse_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -56,7 +56,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.bump_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.bump_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -64,7 +64,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.specular_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.specular_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -72,7 +72,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.ambient_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.ambient_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -80,7 +80,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.specular_highlight_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.specular_highlight_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -88,7 +88,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.metallic_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.metallic_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -96,7 +96,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.roughness_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.roughness_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }
@@ -104,7 +104,7 @@ namespace Lumina::Import::Mesh::OBJ
                 if (!Material.emissive_texname.empty())
                 {
                     FMeshImportImage Image;
-                    Image.ByteOffset = 0;
+                    //Image.ByteOffset = 0;
                     Image.RelativePath = Material.emissive_texname.c_str();
                     ImportData.Textures.emplace(Image);
                 }

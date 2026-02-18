@@ -19,24 +19,24 @@
 
 namespace Lumina
 {
-    bool CMeshFactory::DrawImportDialogue(const FFixedString& RawPath, const FFixedString& DestinationPath, eastl::any& ImportSettings, bool& bShouldClose)
+    bool CMeshFactory::DrawImportDialogue(const FFixedString& RawPath, const FFixedString& DestinationPath, TUniquePtr<Import::FImportSettings>& ImportSettings, bool& bShouldClose)
     {
         using namespace Import::Mesh;
         
         static FMeshImportOptions Options;
         
-        TSharedPtr<FMeshImportData> ImportedData;
+        FMeshImportData* ImportedData = nullptr;
         
-        if (ImportSettings.has_value())
+        if (ImportSettings.get())
         {
-            ImportedData = eastl::any_cast<TSharedPtr<FMeshImportData>>(ImportSettings);
+            ImportedData = static_cast<FMeshImportData*>(ImportSettings.get());
         }
         
         bool bShouldImport = false;
         auto Reimport = [&]()
         {
-            ImportedData = MakeShared<FMeshImportData>();
-            ImportSettings = ImportedData;
+            ImportSettings  = MakeUnique<FMeshImportData>();
+            ImportedData    = static_cast<FMeshImportData*>(ImportSettings.get());
             
             FName FileExtension = VFS::Extension(RawPath);
             TExpected<FMeshImportData, FString> Expected;
@@ -140,7 +140,7 @@ namespace Lumina
                 
                 ImGui::TableSetColumnIndex(1);
                 ImGui::PushItemWidth(-1);
-                if (ImGui::SliderFloat(("##" + FString(Label)).c_str(), &Value, Min, Max, Format))
+                if (ImGui::DragFloat(("##" + FString(Label)).c_str(), &Value, 0.001f, Min, Max, Format))
                 {
                     if (ImGui::IsItemDeactivatedAfterEdit())
                     {
@@ -323,12 +323,6 @@ namespace Lumina
                         for (int i = Clipper.DisplayStart; i < Clipper.DisplayEnd; i++)
                         {
                             const FMeshImportImage& Image = TextureVector[i];
-    
-                            FFixedString ImagePath = Paths::Combine(VFS::Parent(RawPath), Image.RelativePath);
-                            if (!Paths::Exists(ImagePath))
-                            {
-                                continue;
-                            }
                     
                             ImGui::TableNextRow();
                             ImGui::TableSetColumnIndex(0);
@@ -342,15 +336,20 @@ namespace Lumina
                         
                             ImGui::SetCursorScreenPos(ImVec2(CursorPos.x + 2, CursorPos.y + 2));
 
-                            ImGui::Image(ImGuiX::ToImTextureRef(ImagePath), ImageSize);
-
+                            if (Image.DisplayImage)
+                            {
+                                ImTextureRef Texture = ImGuiX::ToImTextureRef(Image.DisplayImage);
+                                ImGui::Image(Texture, ImageSize);
+                            }
+                            
                             ImGui::TableSetColumnIndex(1);
-                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
-                            ImGuiX::TextWrapped("{0}", VFS::FileName(ImagePath));
-                            ImGui::PopStyleColor();
-                            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
-                            ImGuiX::TextWrapped("{0}", ImagePath);
-                            ImGui::PopStyleColor();
+                            
+                            if (!Image.RelativePath.empty())
+                            {
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.7f, 0.7f, 1.0f));
+                                ImGuiX::TextWrapped("{0}", Image.RelativePath);
+                                ImGui::PopStyleColor();
+                            }
                         }
                     }
                     
@@ -551,8 +550,6 @@ namespace Lumina
         
         if (ImGui::Button("Import", ImVec2(buttonWidth, 0)))
         {
-            ImportSettings = Move(ImportedData);
-
             bShouldImport = true;
             bShouldClose = true;
         }
@@ -578,33 +575,29 @@ namespace Lumina
         return bShouldImport;
     }
     
-    void CMeshFactory::TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const eastl::any& ImportSettings)
+    void CMeshFactory::TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const Import::FImportSettings* Settings)
     {
         uint32 Counter = 0;
         
         using namespace Import::Mesh;
 
-        TSharedPtr<FMeshImportData> ImportData = eastl::any_cast<TSharedPtr<FMeshImportData>>(ImportSettings);
-        if (ImportData == nullptr)
-        {
-            return;
-        }
+        const FMeshImportData& ImportData = Settings->As<FMeshImportData>();
         
         TObjectPtr<CSkeleton> MaybeSkeleton;
         
-        if (!ImportData->Skeletons.empty())
+        if (!ImportData.Skeletons.empty())
         {
-            uint32 WorkSize = (uint32)ImportData->Skeletons.size();
+            uint32 WorkSize = (uint32)ImportData.Skeletons.size();
             Task::ParallelFor(WorkSize, [&](uint32 Index)
             {
-                TUniquePtr<FSkeletonResource>& Skeleton = ImportData->Skeletons[Index];
+                TUniquePtr<FSkeletonResource>& Skeleton = const_cast<TUniquePtr<FSkeletonResource>&>(ImportData.Skeletons[Index]);
                     
                 size_t Pos = DestinationPath.find_last_of('/');
                 FFixedString SkeletonPath = DestinationPath.substr(0, Pos + 1).append_convert(Skeleton->Name.ToString());
                 
                 CSkeleton* NewSkeleton = CreateNewOf<CSkeleton>(SkeletonPath);
                 NewSkeleton->SetFlag(OF_NeedsPostLoad);
-
+                
                 NewSkeleton->SkeletonResource = Move(Skeleton);
                     
                 CPackage* NewPackage = NewSkeleton->GetPackage();
@@ -614,12 +607,12 @@ namespace Lumina
             });
         }
         
-        if (!ImportData->Animations.empty())
+        if (!ImportData.Animations.empty())
         {
-            uint32 WorkSize = (uint32)ImportData->Animations.size();
+            uint32 WorkSize = (uint32)ImportData.Animations.size();
             Task::ParallelFor(WorkSize, [&](uint32 Index)
             {
-                TUniquePtr<FAnimationResource>& Clip = ImportData->Animations[Index];
+                TUniquePtr<FAnimationResource>& Clip = const_cast<TUniquePtr<FAnimationResource>&>(ImportData.Animations[Index]);
                     
                 size_t Pos = DestinationPath.find_last_of('/');
                 FFixedString AnimationPath = DestinationPath.substr(0, Pos + 1).append_convert(Clip->Name.ToString());
@@ -637,39 +630,50 @@ namespace Lumina
             });
         }
         
-        if (!ImportData->Textures.empty())
+        if (!ImportData.Textures.empty())
         {
-            TVector<FMeshImportImage> Images(ImportData->Textures.begin(), ImportData->Textures.end());
+            TVector<FMeshImportImage> Images(ImportData.Textures.begin(), ImportData.Textures.end());
             uint32 WorkSize = (uint32)Images.size();
             Task::ParallelFor(WorkSize, [&](uint32 Index)
             {
                 const FMeshImportImage& Texture = Images[Index];
-                
                 CTextureFactory* TextureFactory = CTextureFactory::StaticClass()->GetDefaultObject<CTextureFactory>();
                 
-                FStringView ParentPath = VFS::Parent(RawPath, true);
-                FFixedString TexturePath;
-                TexturePath.append_convert(ParentPath.data(), ParentPath.length()).append("/").append_convert(Texture.RelativePath);
-                FStringView TextureFileName = VFS::FileName(TexturePath, true);
-                
-                
-                size_t LastSlashPos = DestinationPath.find_last_of('/');
-                FFixedString QualifiedPath = DestinationPath.substr(0, LastSlashPos + 1).append_convert(TextureFileName.data(), TextureFileName.length());
-
-                if (!FindObject<CPackage>(QualifiedPath))
+                if (Texture.IsBytes())
                 {
-                    CPackage::AddPackageExt(QualifiedPath);
-                    TextureFactory->Import(TexturePath, QualifiedPath);
+                    FFixedString QualifiedPath = Paths::Combine(Paths::Parent(DestinationPath), Texture.RelativePath);
+                    if (!FindObject<CPackage>(QualifiedPath))
+                    {
+                        CPackage::AddPackageExt(QualifiedPath);
+                        TextureFactory->Import({}, QualifiedPath, &Texture);
+                    }
+                }
+                else
+                {
+                
+                    FStringView ParentPath = VFS::Parent(RawPath, true);
+                    FFixedString TexturePath;
+                    TexturePath.append_convert(ParentPath.data(), ParentPath.length()).append("/").append_convert(Texture.RelativePath);
+                    FStringView TextureFileName = VFS::FileName(TexturePath, true);
+                    
+                    size_t LastSlashPos = DestinationPath.find_last_of('/');
+                    FFixedString QualifiedPath = DestinationPath.substr(0, LastSlashPos + 1).append_convert(TextureFileName.data(), TextureFileName.length());
+                    
+                    if (!FindObject<CPackage>(QualifiedPath))
+                    {
+                        CPackage::AddPackageExt(QualifiedPath);
+                        TextureFactory->Import(TexturePath, QualifiedPath, nullptr);
+                    }   
                 }
             });
         }
         
-        if (!ImportData->Resources.empty())
+        if (!ImportData.Resources.empty())
         {
-            uint32 WorkSize = (uint32)ImportData->Resources.size();
+            uint32 WorkSize = (uint32)ImportData.Resources.size();
             Task::ParallelFor(WorkSize, [&](uint32 Index)
             {
-                TUniquePtr<FMeshResource>& MeshResource = ImportData->Resources[Index];
+                TUniquePtr<FMeshResource>& MeshResource = const_cast<TUniquePtr<FMeshResource>&>(ImportData.Resources[Index]);
                 size_t LastSlashPos = DestinationPath.find_last_of('/');
                 FFixedString QualifiedPath = DestinationPath.substr(0, LastSlashPos + 1).append_convert(MeshResource->Name.ToString());
                 

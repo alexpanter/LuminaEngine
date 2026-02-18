@@ -3,11 +3,16 @@
 #include "Core/Object/ObjectMacros.h"
 #include "Core/Object/Object.h"
 #include "Core/Object/Cast.h"
-#include "EASTL/any.h"
 #include "Factory.generated.h"
+#include "Memory/SmartPtr.h"
 
 namespace Lumina
 {
+    namespace Import
+    {
+        struct FImportSettings;
+    }
+
     class CFactory;
     
     REFLECT()
@@ -25,8 +30,6 @@ namespace Lumina
         // CDOs are always rooted.
         TVector<CFactory*> Factories;
     };
-    
-
     
     REFLECT()
     class RUNTIME_API CFactory : public CObject
@@ -60,10 +63,10 @@ namespace Lumina
         
         virtual CObject* CreateNew(const FName& Name, CPackage* Package) { return nullptr; }
 
-        void Import(const FFixedString& ImportFile, const FFixedString& DestinationPath, const eastl::any& ImportSettings = eastl::any());
+        void Import(const FFixedString& ImportFile, const FFixedString& DestinationPath, const Import::FImportSettings* Settings);
         
         virtual bool CanImport() { return false; }
-        virtual void TryImport(const FFixedString& ImportFilePath, const FFixedString& DestinationPath, const eastl::any& ImportSettings) { }
+        virtual void TryImport(const FFixedString& ImportFilePath, const FFixedString& DestinationPath, const Import::FImportSettings* Settings) { }
         
         virtual bool IsExtensionSupported(FStringView Ext) { return false; }
         
@@ -71,7 +74,7 @@ namespace Lumina
 
         virtual bool HasImportDialogue() const { return false; }
         virtual bool HasCreationDialogue() const { return false; }
-        virtual bool DrawImportDialogue(const FFixedString& RawPath, const FFixedString& DestinationPath, eastl::any& ImportSettings, bool& bShouldClose) { return true; }
+        virtual bool DrawImportDialogue(const FFixedString& RawPath, const FFixedString& DestinationPath, TUniquePtr<Import::FImportSettings>& ImportSettings, bool& bShouldClose) { return true; }
         
     protected:
         

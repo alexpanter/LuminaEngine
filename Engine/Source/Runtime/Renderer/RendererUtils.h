@@ -21,6 +21,8 @@ namespace Lumina::RenderUtils
      */
     RUNTIME_API bool ResizeBufferIfNeeded(FRHIBufferRef& Buffer, uint32 DesiredSize, int GrowthFactor);
     
+    RUNTIME_API FRHIImageRef CreateImageFromPixels(TSpan<uint8> PixelData, bool bFlipVertically = true, glm::uvec2 Size = {});
+    
     inline uint32 CalculateMipCount(uint32 Width, uint32 Height)
     {
         uint32 Levels = 1;

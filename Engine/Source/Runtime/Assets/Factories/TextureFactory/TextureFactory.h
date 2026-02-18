@@ -21,7 +21,7 @@ namespace Lumina
         bool IsExtensionSupported(FStringView Ext) override { return Ext == ".png" || Ext == ".jpg" || Ext == ".jpeg"; }
         bool CanImport() override { return true; }
         
-        void TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const eastl::any& ImportSettings) override;
+        void TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const Import::FImportSettings* Settings) override;
 
     private:
 

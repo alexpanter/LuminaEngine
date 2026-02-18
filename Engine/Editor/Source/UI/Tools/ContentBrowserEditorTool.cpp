@@ -46,6 +46,8 @@
 #include "Thumbnails/ThumbnailManager.h"
 #include <LuminaEditor.h>
 
+#include "Tools/Import/ImportHelpers.h"
+
 namespace Lumina
 {
 
@@ -382,7 +384,7 @@ namespace Lumina
 
                 for (FTileViewItem* TileItem : ContentBrowserTileView.GetSelections())
                 {
-                    auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(TileItem);
+                    auto* SourceItem = static_cast<FContentBrowserTileViewItem*>(TileItem);
                     
                     if (PayloadItem == TileItem)
                     {
@@ -706,7 +708,7 @@ namespace Lumina
             {
                 struct FModelState
                 {
-                    eastl::any ImportSettings;
+                    TUniquePtr<Import::FImportSettings> ImportSettings;
                     bool bShouldClose = false;
                 } State;
                 
@@ -718,7 +720,7 @@ namespace Lumina
                     {
                         Task::AsyncTask(1, 1, [Factory, Path, DestinationPath, ImportSettings = Move(SharedState->ImportSettings)](uint32, uint32, uint32)
                         {
-                            Factory->Import(Path, DestinationPath, ImportSettings);
+                            Factory->Import(Path, DestinationPath, ImportSettings.get());
                             
                             MainThread::Enqueue([Path = Move(Path)] ()
                             {
@@ -734,7 +736,7 @@ namespace Lumina
             {
                 Task::AsyncTask(1, 1, [this, Factory, Path = Move(Path), PathString = Move(DestinationPath)] (uint32, uint32, uint32)
                 {
-                    Factory->Import(Path, PathString);
+                    Factory->Import(Path, PathString, nullptr);
                     
                     MainThread::Enqueue([Path = Move(Path)] ()
                     {
@@ -952,7 +954,46 @@ namespace Lumina
         if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         {
             ImGui::OpenPopup("ContentContextMenu");
+            ImGui::SetNextWindowSizeConstraints(ImVec2(175.0f, 100.0f), ImVec2(0.0f, 0.0f));
         }
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,  ImVec2(6.0f, 6.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,    ImVec2(8.0f, 5.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding,  6.0f);
+
+        ImGui::PushStyleColor(ImGuiCol_PopupBg,      ImVec4(0.13f, 0.13f, 0.15f, 0.97f));
+        ImGui::PushStyleColor(ImGuiCol_Border,       ImVec4(0.30f, 0.30f, 0.35f, 1.00f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImVec4(0.22f, 0.45f, 0.75f, 0.50f));
+        ImGui::PushStyleColor(ImGuiCol_Header,       ImVec4(0.22f, 0.45f, 0.75f, 0.30f));
+        ImGui::PushStyleColor(ImGuiCol_Text,         ImVec4(0.90f, 0.90f, 0.92f, 1.00f));
+        
+        if (ImGui::BeginPopup("ContentContextMenu"))
+        {
+            const char* FolderIcon = LE_ICON_FOLDER;
+            FString MenuItemName = FString(FolderIcon) + " " + "New Folder";
+            if (ImGui::MenuItem(MenuItemName.c_str()))
+            {
+                FString PathString = FString(SelectedPath + "/NewFolder");
+            
+                VFS::CreateDir(PathString);
+                RefreshContentBrowser();
+            }
+            
+            if (SelectedPath.find("/Game/Scripts") != FString::npos)
+            {
+                DrawScriptsDirectoryContextMenu();
+            }
+            else
+            {
+                DrawContentDirectoryContextMenu();
+            }
+            
+            ImGui::EndPopup();
+        }
+        
+        ImGui::PopStyleColor(5);
+        ImGui::PopStyleVar(4);
         
         if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         {
@@ -975,31 +1016,6 @@ namespace Lumina
                     });
                 }
             }
-        }
-
-        ImGui::SetNextWindowSizeConstraints(ImVec2(200.0f, 100.0f), ImVec2(0.0f, 0.0f));
-        
-        if (ImGui::BeginPopup("ContentContextMenu"))
-        {
-            const char* FolderIcon = LE_ICON_FOLDER;
-            FString MenuItemName = FString(FolderIcon) + " " + "New Folder";
-            if (ImGui::MenuItem(MenuItemName.c_str()))
-            {
-                FString PathString = FString(SelectedPath + "/NewFolder");
-                VFS::CreateDir(PathString);
-                RefreshContentBrowser();
-            }
-
-            if (SelectedPath.find("/Game/Scripts") != FString::npos)
-            {
-                DrawScriptsDirectoryContextMenu();
-            }
-            else
-            {
-                DrawContentDirectoryContextMenu();
-            }
-            
-            ImGui::EndPopup();
         }
         
         ImGui::BeginHorizontal("Breadcrumbs");
@@ -1216,7 +1232,7 @@ namespace Lumina
                     continue;
                 }
                 
-                FString DisplayName = Factory->GetAssetName();
+                FString DisplayName = FString(LE_ICON_OPEN_IN_NEW) + " " + Factory->GetAssetName();
                 if (ImGui::MenuItem(DisplayName.c_str()))
                 {
                     FFixedString Path = Paths::Combine(SelectedPath, Factory->GetDefaultAssetCreationName());

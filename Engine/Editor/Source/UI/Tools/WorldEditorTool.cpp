@@ -2096,6 +2096,7 @@ namespace Lumina
                         else
                         {
                             CreateEntityWithComponent(Struct);
+                            ClearSelectedEntities();
                         }
                         
                         ImGui::CloseCurrentPopup();
@@ -2132,6 +2133,7 @@ namespace Lumina
                     if (ImGui::Button(LE_ICON_CUBE " Empty Entity", ImVec2(-1, 0.0f)))
                     {
                         CreateEntity();
+                        ClearSelectedEntities();
                         ImGui::CloseCurrentPopup();
                         AddEntityComponentFilter.Clear();
                     }

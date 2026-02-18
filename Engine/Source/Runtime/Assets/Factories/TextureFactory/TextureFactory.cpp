@@ -2,7 +2,6 @@
 #include "TextureFactory.h"
 #include "Assets/AssetRegistry/AssetRegistry.h"
 #include "Assets/AssetTypes/Textures/Texture.h"
-#include "Core/Engine/Engine.h"
 #include "Core/Object/Package/Package.h"
 #include "Core/Object/Package/Thumbnail/PackageThumbnail.h"
 #include "Paths/Paths.h"
@@ -89,7 +88,7 @@ namespace Lumina
                     const float Bottom  = Math::Lerp(static_cast<float>(P01[Channel]), static_cast<float>(P11[Channel]), FracX);
                     const float Result  = Math::Lerp(Top, Bottom, FracY);
     
-                    DestPixel[Channel] = static_cast<uint8>(Result + 0.5f);
+                    DestPixel[Channel] = static_cast<uint8>(std::lround(Result));
                 }
             }
         }
@@ -97,14 +96,30 @@ namespace Lumina
         GRenderContext->UnMapStagingTexture(StagingImage);
     }
     
-    void CTextureFactory::TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const eastl::any& ImportSettings)
+    void CTextureFactory::TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const Import::FImportSettings* Settings)
     {
         CTexture* NewTexture = TryCreateNew<CTexture>(DestinationPath);
         NewTexture->SetFlag(OF_NeedsPostLoad);
 
         NewTexture->TextureResource = MakeUnique<FTextureResource>();
-
-        TOptional<Import::Textures::FTextureImportResult> MaybeResult = Import::Textures::ImportTexture(RawPath, false);
+        
+        TOptional<Import::Textures::FTextureImportResult> MaybeResult;
+        
+        if (Settings)
+        {
+            const auto& ImageSettings = Settings->As<Import::Mesh::FMeshImportImage>();
+            if (ImageSettings.IsBytes())
+            {
+                MaybeResult = Import::Textures::ImportTexture(ImageSettings.Bytes, false);
+            }
+        }
+        else
+        {
+            MaybeResult = Import::Textures::ImportTexture(RawPath, false);
+        }
+        
+        
+        
         if (!MaybeResult.has_value())
         {
             NewTexture->ForceDestroyNow();
@@ -116,13 +131,13 @@ namespace Lumina
         TVector<uint8> Pixels = Result.Pixels;
         
         FRHIImageDesc ImageDescription;
-        ImageDescription.Format                                 = Result.Format;
-        ImageDescription.Extent                                 = Result.Dimensions;
-        ImageDescription.Flags                                  .SetMultipleFlags(EImageCreateFlags::ShaderResource, EImageCreateFlags::Storage);
-        ImageDescription.NumMips                                = (uint8)RenderUtils::CalculateMipCount(ImageDescription.Extent.x, ImageDescription.Extent.y);
-        ImageDescription.InitialState                           = EResourceStates::ShaderResource;
-        ImageDescription.bKeepInitialState                      = true;
-        NewTexture->TextureResource->ImageDescription           = ImageDescription;
+        ImageDescription.Format                         = Result.Format;
+        ImageDescription.Extent                         = Result.Dimensions;
+        ImageDescription.Flags                          .SetMultipleFlags(EImageCreateFlags::ShaderResource, EImageCreateFlags::Storage);
+        ImageDescription.NumMips                        = (uint8)RenderUtils::CalculateMipCount(ImageDescription.Extent.x, ImageDescription.Extent.y);
+        ImageDescription.InitialState                   = EResourceStates::ShaderResource;
+        ImageDescription.bKeepInitialState              = true;
+        NewTexture->TextureResource->ImageDescription   = ImageDescription;
 
         NewTexture->TextureResource->Mips.resize(ImageDescription.NumMips);
 
