@@ -2017,6 +2017,7 @@ namespace Lumina
             
             if (ImGui::IsWindowAppearing())
             {
+                AddEntityComponentFilter.Clear();
                 ImGui::SetKeyboardFocusHere(-1);
             }
             
