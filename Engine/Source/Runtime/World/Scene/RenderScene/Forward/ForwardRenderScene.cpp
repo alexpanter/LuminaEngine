@@ -430,17 +430,6 @@ namespace Lumina
                 LightData.bHasSun = true;
                 const FViewVolume& ViewVolume = SceneViewport->GetViewVolume();
                 
-                #if USING(WITH_EDITOR)
-                if (!World->IsGameWorld())
-                {
-                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
-                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::DirectionalLightIcon)->GetTextureCacheIndex();
-                    Billboard.Position              = glm::vec3(0.0f);
-                    Billboard.Size                  = 0.35f;
-                    Billboard.EntityID              = entt::to_integral(Entity);
-                }
-                #endif    
-                
                 float NearClip          = ViewVolume.GetNear();
 
                 FLight Light            = {};
@@ -596,8 +585,6 @@ namespace Lumina
                 }
                 
                 LightData.Lights[LightData.NumLights++] = Light;
-        
-                //World->DrawDebugSphere(Light.Position, 0.25f, glm::vec4(PointLightComponent.LightColor, 1.0));
             });
         }
         
@@ -667,12 +654,6 @@ namespace Lumina
                 }
         
                 LightData.Lights[LightData.NumLights++] = Light;
-                
-               //World->DrawViewVolume(ViewVolume, FColor::Red);
-        
-               //World->DrawDebugCone(SpotLight.Position, Forward, glm::radians(OuterDegrees), SpotLightComponent.Attenuation, glm::vec4(SpotLightComponent.LightColor, 1.0f));
-               //World->DrawDebugCone(SpotLight.Position, Forward, glm::radians(InnerDegrees), SpotLightComponent.Attenuation, glm::vec4(SpotLightComponent.LightColor, 1.0f));
-        
             });
         }
         
@@ -758,16 +739,16 @@ namespace Lumina
                     if (!LineBatcherComponent.Lines.empty())
                     {
                         FLineBatch CurrentBatch;
-                        CurrentBatch.StartVertex = 0;
-                        CurrentBatch.VertexCount = 2;
-                        CurrentBatch.Thickness = LineBatcherComponent.Lines[0].Thickness;
-                        CurrentBatch.bDepthTest = LineBatcherComponent.Lines[0].bDepthTest;
+                        CurrentBatch.StartVertex    = 0;
+                        CurrentBatch.VertexCount    = 2;
+                        CurrentBatch.Thickness      = LineBatcherComponent.Lines[0].Thickness;
+                        CurrentBatch.bDepthTest     = LineBatcherComponent.Lines[0].bDepthTest;
                 
                         for (size_t i = 1; i < LineBatcherComponent.Lines.size(); ++i)
                         {
                             const auto& Line = LineBatcherComponent.Lines[i];
                     
-                            if (Line.Thickness == CurrentBatch.Thickness && Line.bDepthTest == CurrentBatch.bDepthTest)
+                            if (glm::epsilonEqual(Line.Thickness, CurrentBatch.Thickness, LE_SMALL_NUMBER) && Line.bDepthTest == CurrentBatch.bDepthTest)
                             {
                                 CurrentBatch.VertexCount += 2;
                             }
@@ -775,10 +756,10 @@ namespace Lumina
                             {
                                 LineBatches.emplace_back(CurrentBatch);
                         
-                                CurrentBatch.StartVertex = Line.StartVertexIndex;
-                                CurrentBatch.VertexCount = 2;
-                                CurrentBatch.Thickness = Line.Thickness;
-                                CurrentBatch.bDepthTest = Line.bDepthTest;
+                                CurrentBatch.StartVertex    = Line.StartVertexIndex;
+                                CurrentBatch.VertexCount    = 2;
+                                CurrentBatch.Thickness      = Line.Thickness;
+                                CurrentBatch.bDepthTest     = Line.bDepthTest;
                             }
                         }
                 
@@ -787,7 +768,6 @@ namespace Lumina
                 }
             });
         }
-        
         
         //========================================================================================================================
         
@@ -1504,7 +1484,7 @@ namespace Lumina
             
             FRenderPassDesc::FAttachment RenderTarget;
             RenderTarget.SetImage(GetNamedImage(ENamedImage::HDR));
-            if (RenderSettings.bHasEnvironment)
+            if (RenderSettings.bHasEnvironment || !DrawCommands.empty())
             {
                 RenderTarget.SetLoadOp(ERenderLoadOp::Load);
             }
@@ -1632,7 +1612,7 @@ namespace Lumina
     
             FRenderPassDesc::FAttachment RenderTarget;
             RenderTarget.SetImage(GetNamedImage(ENamedImage::HDR));
-            if (!DrawCommands.empty())
+            if (!DrawCommands.empty() || RenderSettings.bHasEnvironment || !BillboardInstances.empty())
             {
                 RenderTarget.SetLoadOp(ERenderLoadOp::Load);
             }

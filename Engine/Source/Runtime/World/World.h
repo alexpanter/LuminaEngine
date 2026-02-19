@@ -140,9 +140,9 @@ namespace Lumina
         
         bool RegisterSystem(const FSystemVariant& NewSystem);
         void TickSystems(FSystemContext& Context);
-        FLineBatcherComponent& GetOrCreateLineBatcher();
     
     private:
+        
         
         FEntityRegistry                                     RegistryPending;
         FEntityRegistry                                     EntityRegistry;
@@ -156,6 +156,8 @@ namespace Lumina
         TUniquePtr<Physics::IPhysicsScene>                  PhysicsScene;
         
         TVector<FSystemVariant>                             SystemUpdateList[(int32)EUpdateStage::Max];
+        
+        FLineBatcherComponent*                              LineBatcherComponent;
         
         EWorldType                                          WorldType = EWorldType::None;
         

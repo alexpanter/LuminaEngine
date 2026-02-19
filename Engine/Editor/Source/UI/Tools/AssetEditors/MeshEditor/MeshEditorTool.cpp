@@ -342,7 +342,7 @@ namespace Lumina
         World->GetEntityRegistry().emplace<SStaticMeshComponent>(MeshEntity).StaticMesh = StaticMesh;
         STransformComponent& MeshTransform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
         
-        CreateFloorPlane(-StaticMesh->GetAABB().MaxScale() * 0.5f);
+        CreateFloorPlane(-StaticMesh->GetAABB().Max.y * 0.5f);
         
         STransformComponent& EditorTransform = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
 
@@ -354,12 +354,7 @@ namespace Lumina
     {
         FAssetEditorTool::Update(UpdateContext);
         
-        if (!World.IsValid())
-        {
-            return;
-        }
-
-        if (bShowAABB)
+        if (bShowAABB && World.IsValid())
         {
             SStaticMeshComponent& StaticMeshComponent = World->GetEntityRegistry().get<SStaticMeshComponent>(MeshEntity);
             FTransform Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity).GetTransform();

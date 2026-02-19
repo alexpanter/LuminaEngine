@@ -1,12 +1,8 @@
 ﻿#include "pch.h"
 #include "ComponentVisualizer.h"
-
 #include "Core/Math/Color.h"
-#include "Paths/Paths.h"
 #include "Renderer/PrimitiveDrawInterface.h"
-#include "Renderer/RenderResource.h"
 #include "Tools/Import/ImportHelpers.h"
-#include "Tools/UI/ImGui/ImGuiX.h"
 #include "World/Entity/Components/CharacterComponent.h"
 #include "world/entity/components/lightcomponent.h"
 #include "world/entity/components/physicscomponent.h"
@@ -64,6 +60,21 @@ namespace Lumina
         
         PDI->DrawSphere(Transform.GetLocation(), PointLight.Attenuation, 
             glm::vec4(PointLight.LightColor, 1.0f), 32, 1.0f, true, 0.0f);
+    }
+
+    CStruct* CComponentVisualizer_SpotLight::GetSupportedComponentType() const
+    {
+        return SSpotLightComponent::StaticStruct();
+    }
+
+    void CComponentVisualizer_SpotLight::Draw(IPrimitiveDrawInterface* PDI, entt::registry& Registry, entt::entity Entity)
+    {
+        const SSpotLightComponent& SpotLight    = Registry.get<SSpotLightComponent>(Entity);
+        const STransformComponent& Transform    = Registry.get<STransformComponent>(Entity);
+        glm::vec3 Forward                       = Transform.GetRotation() * FViewVolume::ForwardAxis;
+        
+        PDI->DrawCone(Transform.GetPosition(), -Forward, glm::radians(SpotLight.OuterConeAngle), SpotLight.Attenuation, glm::vec4(SpotLight.LightColor, 1.0f));
+        PDI->DrawCone(Transform.GetPosition(), -Forward, glm::radians(SpotLight.InnerConeAngle), SpotLight.Attenuation, glm::vec4(SpotLight.LightColor, 1.0f));
     }
 
     CStruct* CComponentVisualizer_SphereCollider::GetSupportedComponentType() const

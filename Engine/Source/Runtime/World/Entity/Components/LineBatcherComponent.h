@@ -5,6 +5,8 @@ namespace Lumina
 {   
     struct RUNTIME_API FLineBatcherComponent
     {
+        static constexpr auto in_place_delete = true;
+
         struct FLineInstance
         {
             uint32 StartVertexIndex;

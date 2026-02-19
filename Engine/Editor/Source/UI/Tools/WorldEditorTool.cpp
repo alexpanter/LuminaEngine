@@ -24,6 +24,7 @@
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "world/entity/components/entitytags.h"
+#include "World/Entity/Components/LineBatcherComponent.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
@@ -233,6 +234,9 @@ namespace Lumina
 
     void FWorldEditorTool::Update(const FUpdateContext& UpdateContext)
     {
+        DrawWorldGrid();
+
+        
         while (!ComponentDestroyRequests.empty())
         {
             FComponentDestroyRequest Request = ComponentDestroyRequests.back();
@@ -307,7 +311,6 @@ namespace Lumina
                 World->DrawBox(Transform.GetLocation(), MeshComponent->GetAABB().GetSize() * 0.5f * Transform.GetScale(), Transform.GetRotation(), FColor::Red, 5.0f);
             }
         });
-
         
         auto CopyView = World->GetEntityRegistry().view<FCopiedTag>();
         CopyView.each([&](entt::entity Entity)
@@ -316,6 +319,37 @@ namespace Lumina
             {
                 entt::entity New = entt::null;
                 CopyEntity(New, Entity);
+            }
+        });
+        
+        
+        auto LineView =  World->GetEntityRegistry().view<FLineBatcherComponent>();
+        
+        constexpr int HalfSize = 200;
+        constexpr float Spacing = 5.0f;
+
+        LineView.each([&] (FLineBatcherComponent& Batcher)
+        {
+            for (int i = -HalfSize; i <= HalfSize; ++i)
+            {
+                const float Coord = i * Spacing;
+
+                Batcher.DrawLine(
+                    glm::vec3(Coord, 0, -HalfSize * Spacing),
+                    glm::vec3(Coord, 0,  HalfSize * Spacing),
+                    glm::vec4(0.5f),
+                    1.0f,
+                    true,
+                    0.01f);
+                    
+
+                Batcher.DrawLine(
+                    glm::vec3(-HalfSize * Spacing, 0, Coord),
+                    glm::vec3( HalfSize * Spacing, 0, Coord),
+                    glm::vec4(0.5f),
+                    1.0f,
+                    true,
+                    0.01f);
             }
         });
     }

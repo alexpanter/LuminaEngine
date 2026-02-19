@@ -9,6 +9,7 @@
 #include "World/Entity/Components/CameraComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "World/Entity/Components/InputComponent.h"
+#include "World/Entity/Components/LineBatcherComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
 #include "World/Entity/Components/VelocityComponent.h"
 #include "World/Entity/Systems/EditorEntityMovementSystem.h"
@@ -344,6 +345,35 @@ namespace Lumina
         EditorTransform.SetRotation(Rotation);
     
         World->MarkTransformDirty(EditorEntity);
+    }
+
+    void FEditorTool::DrawWorldGrid(int Scale)
+    {
+        if (World && !World->IsGameWorld())
+        {
+            for (int i = -Scale; i <= Scale; ++i)
+            {
+                constexpr int Spacing = 5;
+                const float Coord = static_cast<float>(i * Spacing);
+
+                World->DrawLine(
+                    glm::vec3(Coord, 0, -Scale * Spacing),
+                    glm::vec3(Coord, 0,  Scale * Spacing),
+                    glm::vec4(0.5f),
+                    1.0f,
+                    true,
+                    0.02f);
+                
+
+                World->DrawLine(
+                    glm::vec3(-Scale * Spacing, 0, Coord),
+                    glm::vec3( Scale * Spacing, 0, Coord),
+                    glm::vec4(0.5f),
+                    1.0f,
+                    true,
+                    0.02f);
+            }
+        }
     }
 
     bool FEditorTool::BeginViewportToolbarGroup(char const* GroupID, ImVec2 GroupSize, const ImVec2& Padding)
