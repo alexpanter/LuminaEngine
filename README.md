@@ -144,6 +144,9 @@ Contributions to Lumina are recognized in several ways, including Steam keys for
 setx LUMINA_DIR "C:\path\to\lumina"
 ```
 
+> [!CAUTION]
+> Everytime you sync to the engine, you **must** delete your Intermediates and Binaries directories, and rerun `Scripts/GenerateProjectFiles.py`
+
 ---
 
 ## Supported Asset Formats
