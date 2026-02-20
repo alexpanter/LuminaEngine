@@ -158,6 +158,20 @@ namespace Lumina
         {
             RebuildSceneOutliner(Tree);
         };
+
+        OutlinerContext.RenameFunction = [this](FTreeListView& Tree, entt::entity Item, FStringView NewName)
+        {
+            FEntityListViewItemData& Data = Tree.Get<FEntityListViewItemData>(Item);
+
+            FFixedString Name;
+            Name.append(LE_ICON_CUBE).append(" ")
+                .append_convert(NewName.begin(), NewName.length()).append_convert(FString(" - (" + eastl::to_string(entt::to_integral(Data.Entity)) + ")"));
+
+			Tree.Get<FTreeNodeDisplay>(Item).DisplayName = Name;
+
+            SNameComponent& NameComponent = World->GetEntityRegistry().get<SNameComponent>(Data.Entity);
+            NameComponent.Name = NewName;
+		};
         
         OutlinerContext.ItemSelectedFunction = [this](FTreeListView& Tree, entt::entity Item)
         {
@@ -236,7 +250,6 @@ namespace Lumina
     {
         DrawWorldGrid();
 
-        
         while (!ComponentDestroyRequests.empty())
         {
             FComponentDestroyRequest Request = ComponentDestroyRequests.back();
@@ -319,37 +332,6 @@ namespace Lumina
             {
                 entt::entity New = entt::null;
                 CopyEntity(New, Entity);
-            }
-        });
-        
-        
-        auto LineView =  World->GetEntityRegistry().view<FLineBatcherComponent>();
-        
-        constexpr int HalfSize = 200;
-        constexpr float Spacing = 5.0f;
-
-        LineView.each([&] (FLineBatcherComponent& Batcher)
-        {
-            for (int i = -HalfSize; i <= HalfSize; ++i)
-            {
-                const float Coord = i * Spacing;
-
-                Batcher.DrawLine(
-                    glm::vec3(Coord, 0, -HalfSize * Spacing),
-                    glm::vec3(Coord, 0,  HalfSize * Spacing),
-                    glm::vec4(0.5f),
-                    1.0f,
-                    true,
-                    0.01f);
-                    
-
-                Batcher.DrawLine(
-                    glm::vec3(-HalfSize * Spacing, 0, Coord),
-                    glm::vec3( HalfSize * Spacing, 0, Coord),
-                    glm::vec4(0.5f),
-                    1.0f,
-                    true,
-                    0.01f);
             }
         });
     }
@@ -1460,19 +1442,10 @@ namespace Lumina
     {
         const ImVec2 BtnSize = ImVec2(ButtonSize, ButtonSize);
     
-        bool GridActive = false;
-        if (GridActive)
+		ImColor IconColor = bWorldGridEnabled ? ImVec4(0.2f, 0.6f, 1.0f, 1.0f) : ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+        if (ImGuiX::IconButton(LE_ICON_GRID, "##GridToggle", IconColor, BtnSize))
         {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 1.0f, 0.6f));
-        }
-        
-        if (ImGuiX::IconButton(LE_ICON_GRID, "##GridToggle", 0xFFFFFFFF, BtnSize))
-        {
-        }
-        
-        if (GridActive)
-        {
-            ImGui::PopStyleColor();
+            bWorldGridEnabled = !bWorldGridEnabled;
         }
         
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
@@ -2267,6 +2240,7 @@ namespace Lumina
             FTreeNodeDisplay& Display   = Tree.Get<FTreeNodeDisplay>(ItemEntity);
             Display.TooltipText         = FString("Entity: " + eastl::to_string(entt::to_integral(WorldEntity))).c_str();
             Display.bShowDisabledIcon   = true;
+			Display.bAllowRenaming      = true;
             
             Tree.EmplaceUserData<FEntityListViewItemData>(ItemEntity).Entity = WorldEntity;
 
@@ -2352,10 +2326,12 @@ namespace Lumina
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
             
             constexpr float ButtonWidth = 30.0f;
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.3f, 0.8f));
             if (ImGui::Button(LE_ICON_PLUS, ImVec2(ButtonWidth, 0.0f)))
             {
                 ImGui::OpenPopup("AddToEntityMenu");
             }
+            ImGui::PopStyleColor();
             
             if (ImGui::IsItemHovered())
             {

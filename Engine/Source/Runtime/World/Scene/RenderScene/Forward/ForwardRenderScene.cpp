@@ -417,6 +417,8 @@ namespace Lumina
                 Billboard.Position              = TransformComponent.GetLocation();
                 Billboard.Size                  = BillboardComponent.Scale;
                 Billboard.EntityID              = entt::to_integral(Entity);
+
+                RenderStats.NumVertices         += 6;
             });
         }
         
@@ -763,6 +765,7 @@ namespace Lumina
                             }
                         }
                 
+                        RenderStats.NumVertices += CurrentBatch.VertexCount;
                         LineBatches.emplace_back(CurrentBatch);
                     }
                 }
@@ -1618,8 +1621,16 @@ namespace Lumina
             }
     
             FRenderPassDesc::FAttachment Depth; Depth
-                .SetImage(GetNamedImage(ENamedImage::DepthAttachment))
-                .SetLoadOp(ERenderLoadOp::Load);
+                .SetImage(GetNamedImage(ENamedImage::DepthAttachment));
+
+            if (DrawCommands.empty())
+            {
+                RenderTarget.SetLoadOp(ERenderLoadOp::Clear);
+            }
+            else
+            {
+				RenderTarget.SetLoadOp(ERenderLoadOp::Load);
+            }
     
             FRenderPassDesc RenderPass; RenderPass
                 .AddColorAttachment(RenderTarget)

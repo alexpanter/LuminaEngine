@@ -39,7 +39,6 @@
 #include <Tools/UI/ImGui/ImGuiDesignIcons.h>
 #include <Tools/UI/ImGui/Widgets/TileViewWidget.h>
 #include <Tools/UI/ImGui/Widgets/TreeListView.h>
-#include <EASTL/any.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "Core/Object/Package/Thumbnail/PackageThumbnail.h"
@@ -118,7 +117,7 @@ namespace Lumina
         
         CreateToolWindow("Content", [&] (bool bIsFocused)
         {
-            float Left = 200.0f;
+            float Left = 225.0f;
             float Right = ImGui::GetContentRegionAvail().x - Left;
             
             DrawDirectoryBrowser(bIsFocused, ImVec2(Left, 0));
@@ -946,7 +945,7 @@ namespace Lumina
 
     void FContentBrowserEditorTool::DrawDirectoryBrowser(bool bIsFocused, ImVec2 Size)
     {
-        ImGui::BeginChild("Directories", Size);
+        ImGui::BeginChild("Directories", Size, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
 
         DirectoryListView.Draw(DirectoryContext);
         
@@ -955,7 +954,7 @@ namespace Lumina
 
     void FContentBrowserEditorTool::DrawContentBrowser(bool bIsFocused, ImVec2 Size)
     {
-        constexpr float Padding = 10.0f;
+        constexpr float Padding = 1.0f;
 
         ImVec2 AdjustedSize = ImVec2(Size.x - 2 * Padding, 0.0f);
 
@@ -986,9 +985,9 @@ namespace Lumina
             FString MenuItemName = FString(FolderIcon) + " " + "New Folder";
             if (ImGui::MenuItem(MenuItemName.c_str()))
             {
-                FString PathString = FString(SelectedPath + "/NewFolder");
+				FFixedString FinalPath = VFS::MakeUniqueFilePath(SelectedPath + "/NewFolder");
             
-                VFS::CreateDir(PathString);
+                VFS::CreateDir(FinalPath);
                 RefreshContentBrowser();
             }
             
@@ -1047,7 +1046,7 @@ namespace Lumina
         
                 ImGui::PushID(static_cast<int>(std::distance(RelativePath.begin(), it)));
                 {
-                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 2));
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3, 2));
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
             
                     if (ImGui::Button(it->string().c_str()))

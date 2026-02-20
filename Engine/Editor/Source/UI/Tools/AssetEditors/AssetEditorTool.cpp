@@ -1,6 +1,5 @@
 ﻿#include "AssetEditorTool.h"
 #include "Core/Object/Package/Package.h"
-#include "FileSystem/FileSystem.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
 
 namespace Lumina

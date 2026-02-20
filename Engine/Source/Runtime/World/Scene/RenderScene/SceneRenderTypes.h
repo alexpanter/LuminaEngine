@@ -413,6 +413,5 @@ namespace Lumina
         uint8 bFrustumCull:1            = true;
         uint8 bOcclusionCull:1          = true;
         uint8 bWireframe:1              = false;
-        uint8 bDrawGrid:1               = false;
     };
 }
