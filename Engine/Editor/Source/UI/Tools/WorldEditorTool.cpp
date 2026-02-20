@@ -1588,19 +1588,28 @@ namespace Lumina
                     ImGui::EndMenu();
                 }
                 
-                if (ImGui::MenuItem("Lit"))
+                bool bLit = RenderScene->GetSceneRenderSettings().bLit;
+                if (ImGui::MenuItem("Lit", nullptr, &bLit))
                 {
-                    
+                    RenderScene->GetSceneRenderSettings().bLit = bLit;
                 }
-                if (ImGui::MenuItem("Unlit"))
+                
+                bool bUnlit = RenderScene->GetSceneRenderSettings().bUnlit;
+                if (ImGui::MenuItem("Unlit", nullptr, &bUnlit))
                 {
-                    
+                    RenderScene->GetSceneRenderSettings().bUnlit = bUnlit;
                 }
                 
                 bool bValue = RenderScene->GetSceneRenderSettings().bWireframe;
                 if (ImGui::MenuItem("Wireframe", nullptr, &bValue))
                 {
                     RenderScene->GetSceneRenderSettings().bWireframe = bValue;
+                }
+                
+                bool bDrawBillboards = RenderScene->GetSceneRenderSettings().bDrawBillboards;
+                if (ImGui::MenuItem("Draw Billboards", nullptr, &bDrawBillboards))
+                {
+                    RenderScene->GetSceneRenderSettings().bDrawBillboards = bDrawBillboards;
                 }
                 
                 ImGui::EndMenu();

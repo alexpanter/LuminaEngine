@@ -97,6 +97,15 @@ namespace Lumina
         Num,
     };
     
+    enum class EGPUSceneSettingFlags : uint16
+    {
+        None    = 0,
+        Unlit   = BIT(0),
+        Lit     = BIT(1),
+    };
+    
+    ENUM_CLASS_FLAGS(EGPUSceneSettingFlags);
+    
     enum class EInstanceFlags : uint32
     {
         None            = 0,
@@ -253,7 +262,6 @@ namespace Lumina
 
     VERIFY_SSBO_ALIGNMENT(FLight)
     
-    
     struct FSkyLight
     {
         glm::vec4 Color;
@@ -276,10 +284,10 @@ namespace Lumina
     
     struct FLineBatch
     {
-        uint32 StartVertex;
-        uint32 VertexCount;
-        float Thickness;
-        bool bDepthTest;
+        uint32  StartVertex;
+        uint32  VertexCount;
+        float   Thickness;
+        bool    bDepthTest;
     };
     
     struct FSSAOSettings
@@ -364,6 +372,11 @@ namespace Lumina
         float PyramidHeight;
     };
     
+    
+    struct FGPUSceneSettings
+    {
+        EGPUSceneSettingFlags Flags;
+    };
 
     struct FSceneGlobalData
     {
@@ -413,5 +426,8 @@ namespace Lumina
         uint8 bFrustumCull:1            = true;
         uint8 bOcclusionCull:1          = true;
         uint8 bWireframe:1              = false;
+        uint8 bDrawBillboards:1         = true;
+        uint8 bUnlit:1                  = false;
+        uint8 bLit:1                    = false;
     };
 }

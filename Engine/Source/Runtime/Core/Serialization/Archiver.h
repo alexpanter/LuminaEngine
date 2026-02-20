@@ -257,8 +257,8 @@ namespace Lumina
                 if (IsReading())
                 {
                     Array.clear();
-                    Array.resize(SerializeNum);
                     Array.shrink_to_fit();
+                    Array.resize(SerializeNum);
                 }
             
                 Serialize(Array.data(), SerializeNum * sizeof(ValueType));
@@ -268,8 +268,8 @@ namespace Lumina
                 if (IsReading())
                 {
                     Array.clear();
-                    Array.resize(SerializeNum);
                     Array.shrink_to_fit();
+                    Array.resize(SerializeNum);
                 }
 
                 for (size_t i = 0; i < SerializeNum; i++)
@@ -333,19 +333,19 @@ namespace Lumina
     private:
     
         template<typename T>
+        requires(!TIsSigned<T>::Value)
         FArchive& ByteOrderSerialize(T& Value)
         {
-            static_assert(!TIsSigned<T>::Value, "To reduce the number of template instances, cast 'Value' to a uint16&, uint32& or uint64& prior to the call or use ByteOrderSerialize(void*, int32).");
-        
             Serialize(&Value, sizeof(T));
             return *this;
         }
     
     private:
 
-        TBitFlags<EArchiverFlags> Flags;
-        uint8 bHasError:1 = false;
-        size_t ArMaxSerializeSize = INT32_MAX;
+        size_t                      ArMaxSerializeSize = INT32_MAX;
+        
+        TBitFlags<EArchiverFlags>   Flags;
+        uint8                       bHasError:1 = false;
 
     };
 

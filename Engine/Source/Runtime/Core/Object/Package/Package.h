@@ -80,7 +80,6 @@ namespace Lumina
 
     struct FPackageHeader
     {
-
         /** Tag matching PACKAGE_FILE_TAG to make sure this file is a Lumina package */
         uint32 Tag;
         

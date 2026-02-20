@@ -143,7 +143,7 @@ namespace Lumina
         virtual void FocusViewportToEntity(entt::entity Entity);
         
         /** Draws an editor viewport grid if a world exists */
-        virtual void DrawWorldGrid(int Scale = 100);
+        virtual void DrawWorldGrid(int Scale = 100, int Spacing = 1);
 
         bool BeginViewportToolbarGroup(char const* GroupID, ImVec2 GroupSize, const ImVec2& Padding);
         void EndViewportToolbarGroup();

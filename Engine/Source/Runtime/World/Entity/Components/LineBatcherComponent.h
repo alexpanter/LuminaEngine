@@ -9,14 +9,15 @@ namespace Lumina
 
         struct FLineInstance
         {
-            uint32 StartVertexIndex;
-            float RemainingLifetime;
-            float Thickness;
-            bool bDepthTest;
+            uint32  StartVertexIndex;
+            float   RemainingLifetime;
+            float   Thickness;
+            uint8   bDepthTest:1;
+            uint8   bSingleFrame:1;
         };
 
-        TVector<FSimpleElementVertex> Vertices;
-        TVector<FLineInstance> Lines;
+        TVector<FSimpleElementVertex>   Vertices;
+        TVector<FLineInstance>          Lines;
 
         void DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness = 1.0f, bool bDepthTest = true, float Duration = -1.0f)
         {
@@ -43,10 +44,11 @@ namespace Lumina
 
             Lines.emplace_back(FLineInstance
             {
-                .StartVertexIndex  = StartVertexIndex,
-                .RemainingLifetime = Duration,
-                .Thickness = Thickness,
-                .bDepthTest = bDepthTest,
+                .StartVertexIndex   = StartVertexIndex,
+                .RemainingLifetime  = Duration,
+                .Thickness          = Thickness,
+                .bDepthTest         = bDepthTest,
+                .bSingleFrame       = Duration == -1.0f 
             });
         }
         

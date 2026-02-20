@@ -195,10 +195,6 @@ namespace Lumina
                     {
                         Flags |= EInstanceFlags::Selected;
                     }
-                    if (MeshComponent.bCastShadow)
-                    {
-                        Flags |= EInstanceFlags::CastShadow;
-                    }
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
@@ -211,6 +207,11 @@ namespace Lumina
                         if (!IsValid(Material) || !IsValid(Material->GetMaterial()) || !Material->IsReadyForRender())
                         {
                             Material = CMaterial::GetDefaultMaterial();
+                        }
+                        
+                        if (MeshComponent.bCastShadow && Material->DoesCastShadows())
+                        {
+                            Flags |= EInstanceFlags::CastShadow;
                         }
                         
                         auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(Material->GetMaterial(), DrawCommands.size());
@@ -293,10 +294,6 @@ namespace Lumina
                     {
                         Flags |= EInstanceFlags::Selected;
                     }
-                    if (MeshComponent.bCastShadow)
-                    {
-                        Flags |= EInstanceFlags::CastShadow;
-                    }
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
@@ -309,6 +306,11 @@ namespace Lumina
                         if (!IsValid(Material) || !IsValid(Material->GetMaterial()) || !Material->IsReadyForRender())
                         {
                             Material = CMaterial::GetDefaultMaterial();
+                        }
+                        
+                        if (MeshComponent.bCastShadow && Material->DoesCastShadows())
+                        {
+                            Flags |= EInstanceFlags::CastShadow;
                         }
                         
                         auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(Material->GetMaterial(), DrawCommands.size());
@@ -359,45 +361,49 @@ namespace Lumina
                 });
             }
             
-            
-            TVector<uint32> IndexRemap(IndirectDrawArguments.size());
-            TVector<FDrawIndirectArguments> ReorderedIndirectDrawArguments;
-            ReorderedIndirectDrawArguments.reserve(IndirectDrawArguments.size());
-
-            uint32 Counter = 0;
-            uint32 CumulativeInstanceCount = 0;
-            for (FMeshDrawCommand& DrawCommand : DrawCommands)
             {
-                DrawCommand.DrawCount           = (uint32)DrawCommand.DrawArgumentIndexMap.size();
-                DrawCommand.IndirectDrawOffset  = Counter;
                 
-                RenderStats.NumDraws            += DrawCommand.DrawCount;
+                LUMINA_PROFILE_SECTION("Reorder Instances and Draw Args");
 
-                for (auto& [Key, OldIndex] : DrawCommand.DrawArgumentIndexMap)
+                TVector<uint32> IndexRemap(IndirectDrawArguments.size());
+                TVector<FDrawIndirectArguments> ReorderedIndirectDrawArguments;
+                ReorderedIndirectDrawArguments.reserve(IndirectDrawArguments.size());
+
+                uint32 Counter = 0;
+                uint32 CumulativeInstanceCount = 0;
+                for (FMeshDrawCommand& DrawCommand : DrawCommands)
                 {
-                    IndexRemap[OldIndex] = Counter;
+                    DrawCommand.DrawCount           = (uint32)DrawCommand.DrawArgumentIndexMap.size();
+                    DrawCommand.IndirectDrawOffset  = Counter;
+                
+                    RenderStats.NumDraws            += DrawCommand.DrawCount;
+
+                    for (auto& [Key, OldIndex] : DrawCommand.DrawArgumentIndexMap)
+                    {
+                        IndexRemap[OldIndex] = Counter;
         
-                    FDrawIndirectArguments Args = IndirectDrawArguments[OldIndex];
-                    Args.StartInstanceLocation = CumulativeInstanceCount;
-                    CumulativeInstanceCount += Args.InstanceCount;
+                        FDrawIndirectArguments Args = IndirectDrawArguments[OldIndex];
+                        Args.StartInstanceLocation = CumulativeInstanceCount;
+                        CumulativeInstanceCount += Args.InstanceCount;
                     
-                    RenderStats.NumInstances += Args.InstanceCount;
+                        RenderStats.NumInstances += Args.InstanceCount;
                     
-                    Args.InstanceCount = 0;
+                        Args.InstanceCount = 0;
         
-                    ReorderedIndirectDrawArguments.push_back(Args);
-                    Counter++;
+                        ReorderedIndirectDrawArguments.push_back(Args);
+                        Counter++;
+                    }
                 }
-            }
 
-            IndirectDrawArguments = std::move(ReorderedIndirectDrawArguments);
+                IndirectDrawArguments = std::move(ReorderedIndirectDrawArguments);
 
-            for (FInstanceData& Instance : InstanceData)
-            {
-                Instance.BatchedDrawID = IndexRemap[Instance.BatchedDrawID];
-            }
+                for (FInstanceData& Instance : InstanceData)
+                {
+                    Instance.BatchedDrawID = IndexRemap[Instance.BatchedDrawID];
+                }
             
-            RenderStats.NumBatches = DrawCommands.size();
+                RenderStats.NumBatches = DrawCommands.size();
+            }
         }
         
         //========================================================================================================================
@@ -697,12 +703,12 @@ namespace Lumina
                 
                 for (const FLineBatcherComponent::FLineInstance& Line : LineBatcherComponent.Lines)
                 {
-                    if (Line.RemainingLifetime > 0.0f)
+                    if (Line.RemainingLifetime > 0.0f || Line.bSingleFrame)
                     {
                         FLineWithVertices LineData;
-                        LineData.Line = Line;
-                        LineData.Vertex0 = LineBatcherComponent.Vertices[Line.StartVertexIndex];
-                        LineData.Vertex1 = LineBatcherComponent.Vertices[Line.StartVertexIndex + 1];
+                        LineData.Line       = Line;
+                        LineData.Vertex0    = LineBatcherComponent.Vertices[Line.StartVertexIndex];
+                        LineData.Vertex1    = LineBatcherComponent.Vertices[Line.StartVertexIndex + 1];
                         AliveLinesWithVertices.emplace_back(LineData);
                     }
                 }
@@ -1437,9 +1443,10 @@ namespace Lumina
             FRasterState RasterState;
             RasterState.EnableDepthClip();
             RasterState.SetFillMode(RenderSettings.bWireframe ? ERasterFillMode::Wireframe : ERasterFillMode::Solid);
+            RasterState.SetLineWidth(5.0f);
         
             FDepthStencilState DepthState; DepthState
-                .SetDepthFunc(EComparisonFunc::Equal)
+                .SetDepthFunc(RenderSettings.bWireframe ? EComparisonFunc::GreaterOrEqual : EComparisonFunc::Equal)
                 .DisableDepthWrite();
             
             FRenderState RenderState;
@@ -1472,7 +1479,7 @@ namespace Lumina
 
     void FForwardRenderScene::BillboardPass(FRenderGraph& RenderGraph)
     {
-        if (BillboardInstances.empty())
+        if (BillboardInstances.empty() || !RenderSettings.bDrawBillboards)
         {
             return;
         }
@@ -1621,16 +1628,8 @@ namespace Lumina
             }
     
             FRenderPassDesc::FAttachment Depth; Depth
-                .SetImage(GetNamedImage(ENamedImage::DepthAttachment));
-
-            if (DrawCommands.empty())
-            {
-                RenderTarget.SetLoadOp(ERenderLoadOp::Clear);
-            }
-            else
-            {
-				RenderTarget.SetLoadOp(ERenderLoadOp::Load);
-            }
+            .SetImage(GetNamedImage(ENamedImage::DepthAttachment))
+            .SetLoadOp(ERenderLoadOp::Load);
     
             FRenderPassDesc RenderPass; RenderPass
                 .AddColorAttachment(RenderTarget)

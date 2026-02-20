@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "ReflectedProperty.h"
+#include "Reflector/Types/ReflectedType.h"
 
 namespace Lumina
 {
@@ -11,7 +12,9 @@ namespace Lumina
 
         void AppendDefinition(eastl::string& Stream) const override
         {
-            AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", "Lumina::EPropertyTypeFlags::String");
+            eastl::string PropertyFlagStr = PropertyFlagsToString(PropertyFlags);
+
+            AppendPropertyDef(Stream, PropertyFlagStr.c_str(), "Lumina::EPropertyTypeFlags::String");
         }
 
         bool GenerateLuaBinding(eastl::string& Stream) override;
@@ -28,7 +31,9 @@ namespace Lumina
 
         void AppendDefinition(eastl::string& Stream) const override
         {
-            AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", "Lumina::EPropertyTypeFlags::Name");
+            eastl::string PropertyFlagStr = PropertyFlagsToString(PropertyFlags);
+
+            AppendPropertyDef(Stream, PropertyFlagStr.c_str(), "Lumina::EPropertyTypeFlags::Name");
         }
 
         virtual const char* GetPropertyParamType() const override { return "FNamePropertyParams"; } \

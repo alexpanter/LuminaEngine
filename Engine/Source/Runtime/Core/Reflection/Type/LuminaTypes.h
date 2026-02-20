@@ -28,10 +28,11 @@ namespace Lumina
         FProperty(const FFieldOwner& InOwner, const FPropertyParams* Params)
             :FField(InOwner)
         {
-            Offset = Params->Offset;
-            Name = Params->Name;
-            Owner = InOwner;
-            TypeFlags = Params->TypeFlags;
+            Offset      = Params->Offset;
+            Name        = Params->Name;
+            Owner       = InOwner;
+            TypeFlags   = Params->TypeFlags;
+            Flags       = Params->PropertyFlags;
 
             TypeName = PropertyTypeToString(TypeFlags);
             Init();
@@ -103,9 +104,21 @@ namespace Lumina
         RUNTIME_API bool IsA(EPropertyTypeFlags Flag) const { return TypeFlags == Flag; }
         
         const FName& GetTypeName() const;
+        
+        NODISCARD bool IsReadOnly()     const       { return EnumHasAnyFlags(Flags, EPropertyFlags::ReadOnly); }
+        NODISCARD bool IsTransient()    const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Transient); }
+        NODISCARD bool IsEditable()     const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Editable); }
+        NODISCARD bool IsConst()        const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Const); }
+        NODISCARD bool IsInner()        const       { return EnumHasAnyFlags(Flags, EPropertyFlags::SubField); }
+        NODISCARD bool IsProtected()    const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Protected); }
+        NODISCARD bool IsPrivate()      const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Private); }
+        NODISCARD bool IsScript()       const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Script); }
+        NODISCARD bool IsVisible()      const       { return EnumHasAnyFlags(Flags, EPropertyFlags::ReadOnly | EPropertyFlags::Editable); }
+        NODISCARD bool IsTrivial()      const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Trivial); }
 
-        FName GetMetadata(const FName& Key) { return Metadata.GetMetadata(Key); }
-        bool HasMetadata(const FName& Key) { return Metadata.HasMetadata(Key); }
+        
+        FName GetMetadata(const FName& Key) const { return Metadata.GetMetadata(Key); }
+        bool HasMetadata(const FName& Key) const { return Metadata.HasMetadata(Key); }
 
         void OnMetadataFinalized();
         static FString MakeDisplayNameFromName(EPropertyTypeFlags TypeFlags, const FName& InName);

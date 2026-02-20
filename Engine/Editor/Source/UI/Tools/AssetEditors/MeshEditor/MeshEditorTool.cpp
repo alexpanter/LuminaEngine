@@ -30,7 +30,7 @@ namespace Lumina
                 return;
             }
     
-            const FMeshResource& Resource = StaticMesh->GetMeshResource();
+            FMeshResource& Resource = StaticMesh->GetMeshResource();
             const FAABB& BoundingBox = StaticMesh->GetAABB();
             
             ImGuiX::Font::PushFont(ImGuiX::Font::EFont::Large);
@@ -62,7 +62,6 @@ namespace Lumina
                     }
                 };
     
-                // Geometry counts
                 PropertyRow("Vertices", eastl::to_string(Resource.GetNumVertices()));
                 PropertyRow("Triangles", eastl::to_string(Resource.Indices.size() / 3));
                 PropertyRow("Indices", eastl::to_string(Resource.Indices.size()));
@@ -73,7 +72,6 @@ namespace Lumina
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Dummy(ImVec2(0, 4));
                 
-                // Memory usage
                 const float vertexSizeKB = (Resource.GetNumVertices() * Resource.GetVertexTypeSize()) / 1024.0f;
                 const float indexSizeKB = (Resource.Indices.size() * sizeof(uint32_t)) / 1024.0f;
                 const float totalSizeKB = vertexSizeKB + indexSizeKB;
@@ -88,7 +86,6 @@ namespace Lumina
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Dummy(ImVec2(0, 4));
                 
-                // Bounding box
                 PropertyRow("Bounds Min", glm::to_string(BoundingBox.Min).c_str());
                 PropertyRow("Bounds Max", glm::to_string(BoundingBox.Max).c_str());
                 
@@ -99,170 +96,296 @@ namespace Lumina
             }
     
             ImGui::Spacing();
+            ImGui::SeparatorText("Geometry Tools");
             ImGui::Spacing();
             
-                 ImGui::Spacing();
-                ImGui::Spacing();
-                
-                ImGuiX::Font::PushFont(ImGuiX::Font::EFont::Large);
-                ImGui::SeparatorText("Geometry Data");
-                ImGuiX::Font::PopFont();
-                
-                ImGui::Spacing();
-                
-                if (ImGui::BeginTabBar("##GeometryTabs"))
+            ImGui::TextDisabled("UV Tools");
+            ImGui::Spacing();
+            
+            if (ImGui::Button("Flip Vertical##UV", ImVec2(150, 0)))
+            {
+                Task::ParallelFor(Resource.GetNumVertices(), [&](uint32 Index)
                 {
-                    // Vertices Tab
-                    if (ImGui::BeginTabItem("Vertices"))
+                    glm::vec2 UV = Resource.GetUVAt(Index);
+                    UV.y = 1.0f - UV.y;
+                    Resource.SetUVAt(Index, UV);
+                });
+                StaticMesh->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            ImGuiX::ItemTooltip("Flip UVs along the vertical axis.");
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Flip Horizontal##UV", ImVec2(150, 0)))
+            {
+                Task::ParallelFor(Resource.GetNumVertices(), [&](uint32 Index)
+                {
+                    glm::vec2 UV = Resource.GetUVAt(Index);
+                    UV.x = 1.0f - UV.x;
+                    Resource.SetUVAt(Index, UV);
+                });
+                StaticMesh->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            ImGuiX::ItemTooltip("Flip UVs along the horizontal axis.");
+            
+            ImGui::Spacing();
+            ImGui::TextDisabled("Normal Tools");
+            ImGui::Spacing();
+            
+            if (ImGui::Button("Flip Normals##Normals", ImVec2(150, 0)))
+            {
+                Task::ParallelFor(Resource.GetNumVertices(), [&](uint32 Index)
+                {
+                    glm::vec3 Normal = UnpackNormal(Resource.GetNormalAt(Index));
+                    Resource.SetNormalAt(Index, PackNormal(-Normal));
+                });
+                StaticMesh->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            ImGuiX::ItemTooltip("Invert all vertex normals.");
+            
+            ImGui::Spacing();
+            ImGui::TextDisabled("Transform Tools");
+            ImGui::Spacing();
+            
+            if (ImGui::Button("Swap Y/Z##Transform", ImVec2(150, 0)))
+            {
+                Task::ParallelFor(Resource.GetNumVertices(), [&](uint32 Index)
+                {
+                    glm::vec3 Position = Resource.GetPositionAt(Index);
+                    std::swap(Position.y, Position.z);
+                    Resource.SetPositionAt(Index, Position);
+            
+                    glm::vec3 Normal = UnpackNormal(Resource.GetNormalAt(Index));
+                    std::swap(Normal.y, Normal.z);
+                    Resource.SetNormalAt(Index, PackNormal(Normal));
+                });
+                StaticMesh->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            ImGuiX::ItemTooltip("Swap Y and Z axes. Useful for correcting up-axis differences between tools.");
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Flip X Axis##Transform", ImVec2(150, 0)))
+            {
+                Task::ParallelFor(Resource.GetNumVertices(), [&](uint32 Index)
+                {
+                    glm::vec3 Position = Resource.GetPositionAt(Index);
+                    Position.x = -Position.x;
+                    Resource.SetPositionAt(Index, Position);
+            
+                    glm::vec3 Normal = UnpackNormal(Resource.GetNormalAt(Index));
+                    Normal.x = -Normal.x;
+                    Resource.SetNormalAt(Index, PackNormal(Normal));
+                });
+                StaticMesh->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            ImGuiX::ItemTooltip("Mirror the mesh along the X axis.");
+            
+            ImGui::Spacing();
+            
+            ImGui::Spacing();
+            ImGui::TextDisabled("Pivot Tools");
+            ImGui::Spacing();
+            
+            static float RotationAngles[3] = { 0.0f, 0.0f, 0.0f };
+            
+            ImGui::SetNextItemWidth(200.0f);
+            ImGui::DragFloat3("Rotation##Transform", RotationAngles, 1.0f, -360.0f, 360.0f, "%.1f");
+            
+            if (ImGui::Button("Apply Rotation##Transform", ImVec2(150, 0)))
+            {
+                glm::mat4 RotX = glm::rotate(glm::mat4(1.0f), glm::radians(RotationAngles[0]), glm::vec3(1, 0, 0));
+                glm::mat4 RotY = glm::rotate(glm::mat4(1.0f), glm::radians(RotationAngles[1]), glm::vec3(0, 1, 0));
+                glm::mat4 RotZ = glm::rotate(glm::mat4(1.0f), glm::radians(RotationAngles[2]), glm::vec3(0, 0, 1));
+                glm::mat4 Rotation = RotZ * RotY * RotX;
+                glm::mat3 NormalMatrix = glm::transpose(glm::inverse(glm::mat3(Rotation)));
+
+                Task::ParallelFor(Resource.GetNumVertices(), [&](uint32 Index)
+                {
+                    glm::vec3 Position = Resource.GetPositionAt(Index);
+                    Resource.SetPositionAt(Index, glm::vec3(Rotation * glm::vec4(Position, 1.0f)));
+
+                    glm::vec3 Normal = UnpackNormal(Resource.GetNormalAt(Index));
+                    Resource.SetNormalAt(Index, PackNormal(glm::normalize(NormalMatrix * Normal)));
+                });
+
+                RotationAngles[0] = RotationAngles[1] = RotationAngles[2] = 0.0f;
+
+                StaticMesh->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            
+            ImGuiX::ItemTooltip("Apply a rotation to all vertices and normals.");
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Reset##Rotation", ImVec2(60, 0)))
+            {
+                RotationAngles[0] = RotationAngles[1] = RotationAngles[2] = 0.0f;
+            }
+            ImGuiX::ItemTooltip("Reset rotation values to zero.");
+            
+            ImGui::SeparatorText("Geometry Data");
+            
+            ImGui::Spacing();
+            
+            if (ImGui::BeginTabBar("##GeometryTabs"))
+            {
+                if (ImGui::BeginTabItem("Vertices"))
+                {
+                    ImGui::Text("Total Vertices: %zu", Resource.GetNumVertices());
+                    ImGui::Spacing();
+                    
+                    if (ImGui::BeginTable("##Vertices", 5, 
+                        ImGuiTableFlags_Borders | 
+                        ImGuiTableFlags_RowBg | 
+                        ImGuiTableFlags_ScrollY | 
+                        ImGuiTableFlags_SizingFixedFit,
+                        ImVec2(0, 400)))
                     {
-                        ImGui::Text("Total Vertices: %zu", Resource.GetNumVertices());
-                        ImGui::Spacing();
+                        ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                        ImGui::TableSetupColumn("Position", ImGuiTableColumnFlags_WidthFixed, 250.0f);
+                        ImGui::TableSetupColumn("Normal", ImGuiTableColumnFlags_WidthFixed, 250.0f);
+                        ImGui::TableSetupColumn("UV", ImGuiTableColumnFlags_WidthFixed, 150.0f);
+                        ImGui::TableSetupColumn("Color", ImGuiTableColumnFlags_WidthFixed, 250.0f);
+                        ImGui::TableHeadersRow();
                         
-                        if (ImGui::BeginTable("##Vertices", 5, 
+                        ImGuiListClipper clipper;
+                        clipper.Begin(static_cast<int>(Resource.GetNumVertices()));
+                        
+                        while (clipper.Step())
+                        {
+                            for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                            {
+                                const glm::vec3& Position = Resource.GetPositionAt(i);
+                                glm::vec3 Normal = UnpackNormal(Resource.GetNormalAt(i));
+                                glm::vec2 UV = Resource.GetUVAt(i);
+                                glm::vec4 Color = UnpackColor(Resource.GetColorAt(i));
+                                
+                                ImGui::TableNextRow();
+                                ImGui::TableSetColumnIndex(0);
+                                ImGui::Text("%d", i);
+                                
+                                ImGui::TableSetColumnIndex(1);
+                                ImGui::Text("%.3f, %.3f, %.3f", Position.x, Position.y, Position.z);
+                                
+                                ImGui::TableSetColumnIndex(2);
+                                ImGui::Text("%.3f, %.3f, %.3f", Normal.x, Normal.y, Normal.z);
+                                
+                                ImGui::TableSetColumnIndex(3);
+                                ImGui::Text("%.3f, %.3f", UV.x, UV.y);
+                                
+                                ImGui::TableSetColumnIndex(4);
+                                ImGui::Text("%f, %f, %f", Color.x, Color.y, Color.z);  
+                            }
+                        }
+                        
+                        ImGui::EndTable();
+                    }
+                    
+                    ImGui::EndTabItem();
+                }
+                
+                if (ImGui::BeginTabItem("Indices"))
+                {
+                    ImGui::Text("Total Indices: %zu (Triangles: %zu)", 
+                        Resource.Indices.size(), Resource.Indices.size() / 3);
+                    ImGui::Spacing();
+                    
+                    static bool bShowAsTriangles = true;
+                    ImGui::Checkbox("Show as Triangles", &bShowAsTriangles);
+                    ImGui::Spacing();
+                    
+                    if (bShowAsTriangles)
+                    {
+                        if (ImGui::BeginTable("##Triangles", 4,
                             ImGuiTableFlags_Borders | 
                             ImGuiTableFlags_RowBg | 
                             ImGuiTableFlags_ScrollY | 
                             ImGuiTableFlags_SizingFixedFit,
                             ImVec2(0, 400)))
                         {
-                            ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-                            ImGui::TableSetupColumn("Position", ImGuiTableColumnFlags_WidthFixed, 250.0f);
-                            ImGui::TableSetupColumn("Normal", ImGuiTableColumnFlags_WidthFixed, 250.0f);
-                            ImGui::TableSetupColumn("UV", ImGuiTableColumnFlags_WidthFixed, 150.0f);
-                            ImGui::TableSetupColumn("Color", ImGuiTableColumnFlags_WidthFixed, 250.0f);
+                            ImGui::TableSetupColumn("Triangle", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                            ImGui::TableSetupColumn("Index 0", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                            ImGui::TableSetupColumn("Index 1", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                            ImGui::TableSetupColumn("Index 2", ImGuiTableColumnFlags_WidthFixed, 80.0f);
                             ImGui::TableHeadersRow();
                             
+                            const int triangleCount = static_cast<int>(Resource.Indices.size() / 3);
                             ImGuiListClipper clipper;
-                            clipper.Begin(static_cast<int>(Resource.GetNumVertices()));
+                            clipper.Begin(triangleCount);
                             
                             while (clipper.Step())
                             {
-                                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                                for (int tri = clipper.DisplayStart; tri < clipper.DisplayEnd; tri++)
                                 {
-                                    const glm::vec3& Position = Resource.GetPositionAt(i);
-                                    glm::vec3 Normal = UnpackNormal(Resource.GetNormalAt(i));
-                                    glm::u16vec2 UV = Resource.GetUVAt(i);
-                                    glm::vec4 Color = UnpackColor(Resource.GetColorAt(i));
+                                    const int baseIdx = tri * 3;
                                     
                                     ImGui::TableNextRow();
                                     ImGui::TableSetColumnIndex(0);
-                                    ImGui::Text("%d", i);
+                                    ImGui::Text("%d", tri);
                                     
                                     ImGui::TableSetColumnIndex(1);
-                                    ImGui::Text("%.3f, %.3f, %.3f", Position.x, Position.y, Position.z);
+                                    ImGui::Text("%u", Resource.Indices[baseIdx + 0]);
                                     
                                     ImGui::TableSetColumnIndex(2);
-                                    ImGui::Text("%.3f, %.3f, %.3f", Normal.x, Normal.y, Normal.z);
+                                    ImGui::Text("%u", Resource.Indices[baseIdx + 1]);
                                     
                                     ImGui::TableSetColumnIndex(3);
-                                    ImGui::Text("%.3hu, %.3hu", UV.x, UV.y);
-                                    
-                                    ImGui::TableSetColumnIndex(4);
-                                    ImGui::Text("%f, %f, %f", Color.x, Color.y, Color.z);  
+                                    ImGui::Text("%u", Resource.Indices[baseIdx + 2]);
                                 }
                             }
                             
                             ImGui::EndTable();
                         }
-                        
-                        ImGui::EndTabItem();
                     }
-                    
-                    if (ImGui::BeginTabItem("Indices"))
+                    else
                     {
-                        ImGui::Text("Total Indices: %zu (Triangles: %zu)", 
-                            Resource.Indices.size(), Resource.Indices.size() / 3);
-                        ImGui::Spacing();
-                        
-                        static bool bShowAsTriangles = true;
-                        ImGui::Checkbox("Show as Triangles", &bShowAsTriangles);
-                        ImGui::Spacing();
-                        
-                        if (bShowAsTriangles)
+                        // Show raw index list
+                        if (ImGui::BeginTable("##IndicesList", 2,
+                            ImGuiTableFlags_Borders | 
+                            ImGuiTableFlags_RowBg | 
+                            ImGuiTableFlags_ScrollY | 
+                            ImGuiTableFlags_SizingFixedFit,
+                            ImVec2(0, 400)))
                         {
-                            if (ImGui::BeginTable("##Triangles", 4,
-                                ImGuiTableFlags_Borders | 
-                                ImGuiTableFlags_RowBg | 
-                                ImGuiTableFlags_ScrollY | 
-                                ImGuiTableFlags_SizingFixedFit,
-                                ImVec2(0, 400)))
+                            ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                            ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+                            ImGui::TableHeadersRow();
+                            
+                            ImGuiListClipper clipper;
+                            clipper.Begin(static_cast<int>(Resource.Indices.size()));
+                            
+                            while (clipper.Step())
                             {
-                                ImGui::TableSetupColumn("Triangle", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                                ImGui::TableSetupColumn("Index 0", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                                ImGui::TableSetupColumn("Index 1", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                                ImGui::TableSetupColumn("Index 2", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                                ImGui::TableHeadersRow();
-                                
-                                const int triangleCount = static_cast<int>(Resource.Indices.size() / 3);
-                                ImGuiListClipper clipper;
-                                clipper.Begin(triangleCount);
-                                
-                                while (clipper.Step())
+                                for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                                 {
-                                    for (int tri = clipper.DisplayStart; tri < clipper.DisplayEnd; tri++)
-                                    {
-                                        const int baseIdx = tri * 3;
-                                        
-                                        ImGui::TableNextRow();
-                                        ImGui::TableSetColumnIndex(0);
-                                        ImGui::Text("%d", tri);
-                                        
-                                        ImGui::TableSetColumnIndex(1);
-                                        ImGui::Text("%u", Resource.Indices[baseIdx + 0]);
-                                        
-                                        ImGui::TableSetColumnIndex(2);
-                                        ImGui::Text("%u", Resource.Indices[baseIdx + 1]);
-                                        
-                                        ImGui::TableSetColumnIndex(3);
-                                        ImGui::Text("%u", Resource.Indices[baseIdx + 2]);
-                                    }
+                                    ImGui::TableNextRow();
+                                    ImGui::TableSetColumnIndex(0);
+                                    ImGui::Text("%d", i);
+                                    
+                                    ImGui::TableSetColumnIndex(1);
+                                    ImGui::Text("%u", Resource.Indices[i]);
                                 }
-                                
-                                ImGui::EndTable();
                             }
+                            
+                            ImGui::EndTable();
                         }
-                        else
-                        {
-                            // Show raw index list
-                            if (ImGui::BeginTable("##IndicesList", 2,
-                                ImGuiTableFlags_Borders | 
-                                ImGuiTableFlags_RowBg | 
-                                ImGuiTableFlags_ScrollY | 
-                                ImGuiTableFlags_SizingFixedFit,
-                                ImVec2(0, 400)))
-                            {
-                                ImGui::TableSetupColumn("Index", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                                ImGui::TableSetupColumn("Value", ImGuiTableColumnFlags_WidthFixed, 80.0f);
-                                ImGui::TableHeadersRow();
-                                
-                                ImGuiListClipper clipper;
-                                clipper.Begin(static_cast<int>(Resource.Indices.size()));
-                                
-                                while (clipper.Step())
-                                {
-                                    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-                                    {
-                                        ImGui::TableNextRow();
-                                        ImGui::TableSetColumnIndex(0);
-                                        ImGui::Text("%d", i);
-                                        
-                                        ImGui::TableSetColumnIndex(1);
-                                        ImGui::Text("%u", Resource.Indices[i]);
-                                    }
-                                }
-                                
-                                ImGui::EndTable();
-                            }
-                        }
-                        
-                        ImGui::EndTabItem();
                     }
                     
-                    ImGui::EndTabBar();
+                    ImGui::EndTabItem();
                 }
                 
-                ImGui::Spacing();
-                ImGui::Spacing();
+                ImGui::EndTabBar();
+            }
+            
+            ImGui::Spacing();
+            ImGui::Spacing();
     
             ImGuiX::Font::PushFont(ImGuiX::Font::EFont::Large);
             ImGui::SeparatorText("Geometry Surfaces");

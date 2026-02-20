@@ -1,16 +1,13 @@
 #pragma once
-
-#include <clang-c/Index.h>
-#include "xxhash.h"
-#include <string.h>
-#include <cstdint>
+#include <clang/AST/Decl.h>
+#include <clang/AST/Type.h>
 #include <clang-c/CXFile.h>
 #include <clang-c/CXSourceLocation.h>
 #include <clang-c/CXString.h>
-#include <clang/AST/Decl.h>
-#include <clang/AST/Type.h>
+#include <clang-c/Index.h>
 #include <EASTL/algorithm.h>
 #include <EASTL/string.h>
+#include "xxhash.h"
 
 
 namespace Lumina::ClangUtils
@@ -130,7 +127,6 @@ namespace Lumina::ClangUtils
         else if (pType->isBuiltinType())
         {
             const clang::BuiltinType* pBT = pType->getAs<clang::BuiltinType>();
-            
             switch (pBT->getKind())
             {
                 case clang::BuiltinType::Char_S:

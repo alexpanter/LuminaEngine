@@ -19,7 +19,6 @@
 #include <Memory/SmartPtr.h>
 #include <imgui_internal.h>
 #include <LuminaEditor.h>
-
 #include "Core/Object/Package/Package.h"
 #include "thumbnails/thumbnailmanager.h"
 
@@ -192,13 +191,13 @@ namespace Lumina
     void FCObjectPropertyCustomization::UpdatePropertyValue(TSharedPtr<FPropertyHandle> Property)
     {
         TObjectPtr<CObject> Value = Object.Lock();
-        Property->Property->SetValue(Property->ContainerPtr, Value, Property->Index);
+        Property->Property->SetValue(Property->ContainerPtr, Value, 0);
     }
 
     void FCObjectPropertyCustomization::HandleExternalUpdate(TSharedPtr<FPropertyHandle> Property)
     {
         TObjectPtr<CObject> Value;
-        Property->Property->GetValue(Property->ContainerPtr, &Value, Property->Index);
+        Property->Property->GetValue(Property->ContainerPtr, &Value, 0);
         Object = Value;
     }
 }

@@ -35,7 +35,6 @@ namespace Lumina
         ObjectGUID      = InObject->GetGUID();
         Object          = InObject;
     }
-
     
     struct FObjectLoadScopeGuard
     {

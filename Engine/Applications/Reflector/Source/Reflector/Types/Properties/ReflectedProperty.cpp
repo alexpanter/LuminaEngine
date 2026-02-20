@@ -7,12 +7,12 @@
 
 namespace Lumina
 {
-    void FReflectedProperty::AppendPropertyDef(eastl::string& Stream, const char* PropertyFlags, const char* TypeFlags, const eastl::string& CustomData) const
+    void FReflectedProperty::AppendPropertyDef(eastl::string& Stream, const char* PropertyFlagsStr, const char* TypeFlags, const eastl::string& CustomData) const
     {
         eastl::string GetterFunctionName = GetterFunc.empty() ? "nullptr" : Outer + "::" + GetterFunc + "_WrapperImpl";
         eastl::string SetterFunctionName = SetterFunc.empty() ? "nullptr" : Outer + + "::" + SetterFunc + "_WrapperImpl";
 
-        Stream += "{ \"" + Name + "\", " + PropertyFlags + ", " + TypeFlags + ", " + SetterFunctionName + ", " + GetterFunctionName + ", ";
+        Stream += "{ \"" + Name + "\", " + PropertyFlagsStr + ", " + TypeFlags + ", " + SetterFunctionName + ", " + GetterFunctionName + ", ";
 
         if (bInner)
         {
@@ -48,6 +48,27 @@ namespace Lumina
 
         for (const FMetadataPair& MetadataPair : Metadata)
         {
+            if (MetadataPair.Key == "ReadOnly")
+            {
+                PropertyFlags |= EPropertyFlags::ReadOnly;
+            }
+            
+            if (MetadataPair.Key == "Transient")
+            {
+                PropertyFlags |= EPropertyFlags::Transient;
+            }
+            
+            if (MetadataPair.Key == "Editable")
+            {
+                PropertyFlags |= EPropertyFlags::Editable;
+            }
+            
+            if (MetadataPair.Key == "Script")
+            {
+                PropertyFlags |= EPropertyFlags::Script;
+            }
+            
+            
             if (MetadataPair.Key == "Getter")
             {
                 if (MetadataPair.Value.empty())

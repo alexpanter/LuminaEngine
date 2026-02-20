@@ -38,7 +38,7 @@ namespace Lumina
         void SetMaterialAtSlot(size_t Slot, CMaterialInterface* NewMaterial);
         
         FORCEINLINE const FGeometrySurface& GetSurface(size_t Slot) const { return MeshResources->GeometrySurfaces[Slot]; }
-        FORCEINLINE const FMeshResource& GetMeshResource() const { return *MeshResources.get(); }
+        FORCEINLINE FMeshResource& GetMeshResource() const { return *MeshResources.get(); }
 
         void SetMeshResource(TUniquePtr<FMeshResource>&& NewResource);
         

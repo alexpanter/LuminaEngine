@@ -24,7 +24,7 @@ namespace Lumina
 
 
         FORCEINLINE FRHIImage* GetRHIRef() const { return TextureResource.get() ? TextureResource->RHIImage : nullptr; }
-        FTextureResource* GetTextureResource() const { return TextureResource.get(); }
+        FTextureResource& GetTextureResource() const { return *TextureResource.get(); }
         uint8 GetNumMips() const { return TextureResource.get() ? TextureResource->Mips.size() : 0u; }
         
         TUniquePtr<FTextureResource> TextureResource;

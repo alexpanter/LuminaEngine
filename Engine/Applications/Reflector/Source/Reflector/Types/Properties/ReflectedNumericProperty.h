@@ -11,7 +11,8 @@ namespace Lumina
         virtual ~ClassName() = default; \
         void AppendDefinition(eastl::string& Stream) const override \
         { \
-            AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", #TypeFlag); \
+            eastl::string PropertyFlagStr = PropertyFlagsToString(PropertyFlags); \
+            AppendPropertyDef(Stream, PropertyFlagStr.c_str(), #TypeFlag); \
         } \
         const char* GetTypeName() override { return TypeNameStr; } \
         virtual const char* GetPropertyParamType() const override { return "FNumericPropertyParams"; } \

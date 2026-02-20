@@ -7,6 +7,16 @@ namespace Lumina
     {
         SIZE_T ElementCount = GetNum(Value);
         Ar << ElementCount;
+        
+        size_t InnerElementSize = Inner->GetElementSize();
+        Ar << InnerElementSize;
+        
+        if (InnerElementSize != Inner->GetElementSize())
+        {
+            LOG_ERROR("Inner array size changed, cannot safely serialize: Current Size: ({}) | Serialized Size: ({})", ElementSize, InnerElementSize);
+            return;
+        }
+        
         if (ElementCount > eastl::numeric_limits<uint32>::max())
         {
             LOG_ERROR("Array Property tried to serialize {} elements. Aborted", ElementCount);
@@ -15,17 +25,32 @@ namespace Lumina
 
         if (Ar.IsWriting())
         {
-            for (SIZE_T i = 0; i < ElementCount; i++)
+            if (Inner->IsTrivial() && ElementCount)
             {
-                Inner->Serialize(Ar, GetAt(Value, i));
+                Ar.Serialize(GetAt(Value, 0), static_cast<int64>(ElementCount * InnerElementSize));
+            }
+            else
+            {
+                for (SIZE_T i = 0; i < ElementCount; i++)
+                {
+                    Inner->Serialize(Ar, GetAt(Value, i));
+                }   
             }
         }
         else
         {
-            for (SIZE_T i = 0; i < ElementCount; ++i)
+            if (Inner->IsTrivial() && ElementCount)
             {
-                PushBack(Value, nullptr);
-                Inner->Serialize(Ar, GetAt(Value, i));
+                Resize(Value, ElementCount);
+                Ar.Serialize(GetAt(Value, 0), static_cast<int64>(ElementCount * InnerElementSize));
+            }
+            else
+            {
+                Resize(Value, ElementCount);
+                for (SIZE_T i = 0; i < ElementCount; ++i)
+                {
+                    Inner->Serialize(Ar, GetAt(Value, i));
+                }
             }
         }
     }

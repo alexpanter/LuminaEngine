@@ -13,11 +13,7 @@ namespace Lumina
             return "Struct";
         }
         
-        void AppendDefinition(eastl::string& Stream) const override
-        {
-            eastl::string CustomData = "Construct_CStruct_" + ClangUtils::MakeCodeFriendlyNamespace(TypeName);
-            AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", "Lumina::EPropertyTypeFlags::Struct", CustomData);
-        }
+        void AppendDefinition(eastl::string& Stream) const override;
 
         const char* GetPropertyParamType() const override { return "FStructPropertyParams"; }
 

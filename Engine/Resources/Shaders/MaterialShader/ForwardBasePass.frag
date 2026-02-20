@@ -409,6 +409,6 @@ void main()
 
 
     // ---- Final Outputs ----
-    outColor    = vec4(Color, Material.Opacity);
+    outColor    = vec4(Color, Alpha);
     outPicker   = uvec2(inEntityID, inSelected);
 }

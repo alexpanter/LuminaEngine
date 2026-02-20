@@ -5,6 +5,8 @@
 #include "Reflector/Types/StructReflectItem.h"
 #include "Reflector/Utils/MetadataUtils.h"
 
+enum class EPropertyFlags : uint16_t;
+
 namespace Lumina::Reflection
 {
     class FReflectedType;
@@ -17,7 +19,7 @@ namespace Lumina
     public:
 
         virtual void AppendDefinition(eastl::string& Stream) const = 0;
-        void AppendPropertyDef(eastl::string& Stream, const char* PropertyFlags, const char* TypeFlags, const eastl::string& CustomData = "") const;
+        void AppendPropertyDef(eastl::string& Stream, const char* PropertyFlagsStr, const char* TypeFlags, const eastl::string& CustomData = "") const;
         
         virtual const char* GetPropertyParamType() const { return "FPropertyParams"; }
 
@@ -35,6 +37,7 @@ namespace Lumina
         virtual bool DefineAccessors(eastl::string& Stream, Reflection::FReflectedType* ReflectedType);
 
         eastl::vector<FMetadataPair>    Metadata;
+        EPropertyFlags                  PropertyFlags;
         eastl::string                   RawTypeName;
         eastl::string                   TypeName;
         eastl::string                   Namespace;

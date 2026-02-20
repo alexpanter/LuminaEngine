@@ -9,7 +9,6 @@
 #include "World/Entity/Components/CameraComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "World/Entity/Components/InputComponent.h"
-#include "World/Entity/Components/LineBatcherComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
 #include "World/Entity/Components/VelocityComponent.h"
 #include "World/Entity/Systems/EditorEntityMovementSystem.h"
@@ -347,34 +346,37 @@ namespace Lumina
         World->MarkTransformDirty(EditorEntity);
     }
 
-    void FEditorTool::DrawWorldGrid(int Scale)
+    void FEditorTool::DrawWorldGrid(int Scale, int Spacing)
     {
-        return;
-
         if (World && !World->IsGameWorld() && bWorldGridEnabled)
         {
             for (int i = -Scale; i <= Scale; ++i)
             {
-                constexpr int Spacing = 1;
                 const float Coord = static_cast<float>(i * Spacing);
+                
+                const glm::vec4 ZAxisColor  = (i == 0) ? glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) : glm::vec4(0.05f);
+                const glm::vec4 XAxisColor  = (i == 0) ? glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) : glm::vec4(0.05f);
+                const float AxisThickness   = (i == 0) ? 8.0f : 3.5f;
 
                 World->DrawLine(
                     glm::vec3(Coord, 0, -Scale * Spacing),
                     glm::vec3(Coord, 0,  Scale * Spacing),
-                    glm::vec4(0.5f),
-                    2.0f,
-                    true,
-                    0.025f);
+                    ZAxisColor,
+                    AxisThickness);
                 
 
                 World->DrawLine(
                     glm::vec3(-Scale * Spacing, 0, Coord),
                     glm::vec3( Scale * Spacing, 0, Coord),
-                    glm::vec4(0.5f),
-                    2.0f,
-                    true,
-                    0.025f);
+                    XAxisColor,
+                    AxisThickness);
             }
+            
+            World->DrawLine(
+            glm::vec3(0, -Scale, 0),
+            glm::vec3(0,  Scale, 0),
+            glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+            8.0f);
         }
     }
 

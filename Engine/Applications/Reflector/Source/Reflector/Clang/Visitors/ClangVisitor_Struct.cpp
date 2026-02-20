@@ -1,4 +1,14 @@
-﻿#include "ClangVisitor.h"
+﻿#include <clang/AST/Decl.h>
+#include <clang/AST/Type.h>
+#include <clang-c/CXFile.h>
+#include <clang-c/CXSourceLocation.h>
+#include <clang-c/CXString.h>
+#include <clang-c/Index.h>
+#include <EASTL/optional.h>
+#include <EASTL/string.h>
+#include <Reflector/Types/ReflectedType.h>
+#include <spdlog/spdlog.h>
+#include "ClangVisitor.h"
 #include "Reflector/Clang/ClangParserContext.h"
 #include "Reflector/Clang/Utils.h"
 #include "Reflector/ReflectionCore/ReflectionMacro.h"
@@ -10,13 +20,6 @@
 #include "Reflector/Types/Properties/ReflectedObjectProperty.h"
 #include "Reflector/Types/Properties/ReflectedStringProperty.h"
 #include "Reflector/Types/Properties/ReflectedStructProperty.h"
-#include <EASTL/optional.h>
-#include <EASTL/string.h>
-#include <Reflector/Types/ReflectedType.h>
-#include <clang-c/CXString.h>
-#include <clang-c/Index.h>
-#include <clang/AST/Type.h>
-#include <spdlog/spdlog.h>
 
 namespace Lumina::Reflection::Visitor
 {
@@ -36,7 +39,8 @@ namespace Lumina::Reflection::Visitor
 		eastl::string TypeSpelling;
 		ClangUtils::GetQualifiedNameForType(FieldQualType, TypeSpelling);
 		EPropertyTypeFlags PropFlags = GetCoreTypeFromName(TypeSpelling.c_str());
-
+		
+		
 		// Is not a core type.
 		if (PropFlags == EPropertyTypeFlags::None)
 		{
@@ -54,13 +58,31 @@ namespace Lumina::Reflection::Visitor
 				return eastl::nullopt;
 			}
 		}
-
+		
 		FFieldInfo Info;
-		Info.Flags = PropFlags;
-		Info.Type = FieldType;
-		Info.Name = CursorName;
-		Info.TypeName = TypeSpelling;
-		Info.RawFieldType = FieldQualType.getAsString().c_str();
+		
+		if (clang_isConstQualifiedType(FieldType))
+		{
+			Info.PropertyFlags |= EPropertyFlags::Const;
+		}
+
+		switch (clang_getCXXAccessSpecifier(Cursor))
+		{
+			case CX_CXXPrivate:   Info.PropertyFlags |= EPropertyFlags::Private;   break;
+			case CX_CXXProtected: Info.PropertyFlags |= EPropertyFlags::Protected; break;
+			default: break;
+		}
+		
+		if (clang_isPODType(FieldType))
+		{
+			Info.PropertyFlags |= EPropertyFlags::Trivial;
+		}
+		
+		Info.Flags			= PropFlags;
+		Info.Type			= FieldType;
+		Info.Name			= CursorName;
+		Info.TypeName		= TypeSpelling;
+		Info.RawFieldType	= FieldQualType.getAsString().c_str();
 
 		return Info;
 	}
@@ -98,20 +120,32 @@ namespace Lumina::Reflection::Visitor
 		}
 
 		FFieldInfo Info;
-		Info.Flags = PropFlags;
-		Info.Type = FieldType;
-		Info.TypeName = FieldName;
-		Info.RawFieldType = ParentField.RawFieldType;
+		
+		if (clang_isConstQualifiedType(FieldType))
+		{
+			Info.PropertyFlags |= EPropertyFlags::Const;
+		}
+		
+		if (clang_isPODType(FieldType))
+		{
+			Info.PropertyFlags |= EPropertyFlags::Trivial;
+		}
+		
+		Info.Flags			= PropFlags;
+		Info.Type			= FieldType;
+		Info.TypeName		= FieldName;
+		Info.RawFieldType	= ParentField.RawFieldType;
 		return Info;
 	}
 
-	template<typename T>
-	eastl::unique_ptr<T> CreateProperty(const FFieldInfo& Info)
+	template<std::derived_from<FReflectedProperty> T>
+	static eastl::unique_ptr<T> CreateProperty(const FFieldInfo& Info)
 	{
 		eastl::unique_ptr<T> New = eastl::make_unique<T>();
-		New->Name = Info.Name;
-		New->TypeName = Info.TypeName;
-		New->RawTypeName = Info.RawFieldType;
+		New->Name			= Info.Name;
+		New->TypeName		= Info.TypeName;
+		New->RawTypeName	= Info.RawFieldType;
+		New->PropertyFlags	= Info.PropertyFlags;
 		return New;
 	}
 
@@ -207,7 +241,7 @@ namespace Lumina::Reflection::Visitor
 				}
 
 				SubType->Name = FieldInfo.Name + "_Inner";
-				SubType->PropertyFlags.emplace_back("PF_SubField");
+				SubType->PropertyFlags |= EPropertyFlags::SubField;
 
 				FReflectedProperty* FieldProperty;
 				CreatePropertyForType(Context, Struct, FieldProperty, SubType.value());
@@ -241,7 +275,7 @@ namespace Lumina::Reflection::Visitor
 			}
 
 			ParamFieldInfo->Name = FieldInfo.Name + "_Inner";
-			ParamFieldInfo->PropertyFlags.emplace_back("PF_SubField");
+			ParamFieldInfo->PropertyFlags |= EPropertyFlags::SubField;
 
 			FReflectedProperty* FieldProperty;
 			CreatePropertyForType(Context, Struct, FieldProperty, ParamFieldInfo.value());

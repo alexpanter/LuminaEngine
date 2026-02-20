@@ -13,11 +13,7 @@ namespace Lumina
             return "Object";
         }
         
-        void AppendDefinition(eastl::string& Stream) const override
-        {
-            eastl::string CustomData = "Construct_CClass_" + ClangUtils::MakeCodeFriendlyNamespace(TypeName);
-            AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", "Lumina::EPropertyTypeFlags::Object", CustomData);
-        }
+        void AppendDefinition(eastl::string& Stream) const override;
 
         const char* GetPropertyParamType() const override { return "FObjectPropertyParams"; }
         bool GenerateLuaBinding(eastl::string& Stream) override;

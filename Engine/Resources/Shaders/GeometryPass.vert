@@ -52,7 +52,7 @@ void main()
     vec3 NormalVS       = normalize(mat3(View) * NormalWS);
 
     // Outputs
-    outUV               = vec2(VertexData.UV.x, 1.0 - VertexData.UV.y);
+    outUV               = VertexData.UV;//vec2(VertexData.UV.x, 1.0 - VertexData.UV.y);
     outFragPos          = ViewPos;
     outNormal           = vec4(NormalVS, 1.0);
     outNormalWS         = vec4(NormalWS, 1.0);
