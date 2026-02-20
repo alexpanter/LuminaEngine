@@ -487,9 +487,9 @@ namespace Lumina
 		ShaderChunks.append("vec3 " + ID + " = WorldNormal.xyz;\n");
 	}
 
-	void FMaterialCompiler::TexCoords(const FString& ID)
+	void FMaterialCompiler::TexCoords(const FString& ID, uint32 Index, float UTiling, float VTiling)
 	{
-		ShaderChunks.append("vec2 " + ID + " = UV0;\n");
+		ShaderChunks.append("vec2 " + ID + " = UV0 * vec2(" + eastl::to_string(UTiling) + ", " + eastl::to_string(VTiling) + ");\n");
 	}
 
 	void FMaterialCompiler::WorldPos(const FString& ID)

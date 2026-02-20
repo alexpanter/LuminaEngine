@@ -81,7 +81,7 @@ namespace Lumina
 
         // Built-in inputs
         void VertexNormal(const FString& ID);
-        void TexCoords(const FString& ID);
+        void TexCoords(const FString& ID, uint32 Index, float UTiling, float VTiling);
         void WorldPos(const FString& ID);
         void CameraPos(const FString& ID);
         void EntityID(const FString& ID);

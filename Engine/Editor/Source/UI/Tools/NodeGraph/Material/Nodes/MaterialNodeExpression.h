@@ -645,6 +645,15 @@ namespace Lumina
         void* GetNodeDefaultValue() override { return nullptr; }
         uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
+        
+        PROPERTY(Editable)
+        uint32 TextureIndex = 0;
+        
+        PROPERTY(Editable)
+        float UTiling = 1.0f;
+        
+        PROPERTY(Editable)
+        float VTiling = 1.0f;
     };
 
     //============================================================================================

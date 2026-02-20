@@ -310,7 +310,7 @@ namespace Lumina
 
     void CMaterialExpression_TexCoords::GenerateDefinition(FMaterialCompiler& Compiler)
     {
-        Compiler.TexCoords(FullName);
+        Compiler.TexCoords(FullName, TextureIndex, UTiling, VTiling);
     }
 
     void CMaterialExpression_Constant::DrawContextMenu()
