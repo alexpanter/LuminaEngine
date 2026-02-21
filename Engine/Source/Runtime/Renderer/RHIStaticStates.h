@@ -20,7 +20,8 @@ namespace Lumina
     };
     
 
-    template<bool Filter            = true,
+    template<
+    bool Filter                     = true,
     bool MipFilter                  = true,
     ESamplerAddressMode AddressU    = ESamplerAddressMode::Wrap,
     ESamplerAddressMode AddressV    = ESamplerAddressMode::Wrap,

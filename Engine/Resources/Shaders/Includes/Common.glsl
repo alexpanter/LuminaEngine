@@ -52,6 +52,8 @@ const uint LIGHT_FLAG_CASTSHADOW       = BIT(3);
 #define INSTANCE_FLAG_SELECTED          BIT(2)
 #define INSTANCE_FLAG_CAST_SHADOW       BIT(3)
 #define INSTANCE_FLAG_RECEIVE_SHADOW    BIT(4)
+#define INSTANCE_FLAG_OCCLUDER          BIT(5)
+#define INSTANCE_FLAG_NO_CULL           BIT(6)
 
 //////////////////////////////////////////////////////////
 

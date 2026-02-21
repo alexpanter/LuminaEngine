@@ -108,12 +108,14 @@ namespace Lumina
     
     enum class EInstanceFlags : uint32
     {
-        None            = 0,
-        Billboard       = BIT(0),
-        Skinned         = BIT(1),
-        Selected        = BIT(2),
-        CastShadow      = BIT(3),
-        ReceiveShadow   = BIT(4),
+        None                    = 0,
+        Billboard               = BIT(0),
+        Skinned                 = BIT(1),
+        Selected                = BIT(2),
+        CastShadow              = BIT(3),
+        ReceiveShadow           = BIT(4),
+		Occluder                = BIT(5),
+        IgnoreOcclusionCulling  = BIT(6),
     };
     
     ENUM_CLASS_FLAGS(EInstanceFlags);

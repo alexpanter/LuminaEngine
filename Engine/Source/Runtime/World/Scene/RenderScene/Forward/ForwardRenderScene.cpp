@@ -189,6 +189,14 @@ namespace Lumina
                     glm::vec3 Extents       = BoundingBox.Max - Center;
                     float Radius            = glm::length(Extents);
                     glm::vec4 SphereBounds  = glm::vec4(Center, Radius);
+
+                    float DistSq = glm::dot(Center - glm::vec3(SceneGlobalData.CameraData.Location), Center - glm::vec3(SceneGlobalData.CameraData.Location));
+                    float CullDist = Radius + MeshComponent.MaxDrawDistance;
+
+                    if (MeshComponent.MaxDrawDistance > 0.0f && DistSq > CullDist * CullDist)
+                    {
+                        return;
+                    }
                     
                     EInstanceFlags Flags = EInstanceFlags::None;
                     if (World->IsSelected(Entity))
@@ -198,6 +206,10 @@ namespace Lumina
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
+                    }
+                    if (MeshComponent.bIgnoreOcclusionCulling)
+                    {
+						Flags |= EInstanceFlags::IgnoreOcclusionCulling;
                     }
                     
                     for (const FGeometrySurface& Surface : Resource.GeometrySurfaces)
@@ -1058,10 +1070,8 @@ namespace Lumina
                 LevelWidth = std::max(LevelWidth, 1u);
                 LevelHeight = std::max(LevelHeight, 1u);
                 
-
-                glm::vec2 Data = glm::vec2(LevelWidth,LevelHeight);
-                TSpan<const Byte> Bytes = AsBytes(Data);
-                CmdList.SetPushConstants(Bytes.data(), Bytes.size_bytes());
+                glm::vec2 Data(LevelWidth,LevelHeight);
+                CmdList.SetPushConstants(&Data, sizeof(glm::vec2));
 
                 uint32 GroupsX = RenderUtils::GetGroupCount(LevelWidth, 32);
                 uint32 GroupsY = RenderUtils::GetGroupCount(LevelHeight, 32);

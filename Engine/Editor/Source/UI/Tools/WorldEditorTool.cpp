@@ -581,12 +581,10 @@ namespace Lumina
             
             if (!bOverImGuizmo)
             {
-                // Check LEFT mouse button drag for selection box
                 ImVec2 LeftDragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
                 float LeftDragDistance = sqrtf(LeftDragDelta.x * LeftDragDelta.x + LeftDragDelta.y * LeftDragDelta.y);
                 bool bLeftDragging = LeftDragDistance >= 15.0f;
     
-                // Check RIGHT mouse button drag for context menu
                 ImVec2 RightDragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
                 float RightDragDistance = sqrtf(RightDragDelta.x * RightDragDelta.x + RightDragDelta.y * RightDragDelta.y);
                 bool bRightDragging = RightDragDistance < 15.0f;
@@ -649,6 +647,7 @@ namespace Lumina
                     }
                     else
                     {
+#if 0
                         uint32 MinTexX = static_cast<uint32>(glm::min(Start.x, End.x) * ScaleX);
                         uint32 MinTexY = static_cast<uint32>(glm::min(Start.y, End.y) * ScaleY);
                         uint32 MaxTexX = static_cast<uint32>(glm::max(Start.x, End.x) * ScaleX);
@@ -658,6 +657,8 @@ namespace Lumina
                         {
                             AddSelectedEntity(Entity, true);
                         }
+#endif
+						ImGuiX::Notifications::NotifyInfo("{}", "This functionality is temporarily disabled as the current implementation is too slow. We are working on a more efficient solution that should be available in a future update.");
                     } 
     
                     SelectionBox.bActive = false;
