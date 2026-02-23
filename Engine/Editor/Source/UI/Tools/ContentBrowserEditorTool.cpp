@@ -200,7 +200,7 @@ namespace Lumina
         
             ImDrawList* DrawList = ImGui::GetWindowDrawList();
             ImVec2 Pos = ImGui::GetCursorScreenPos();
-            ImVec2 Size = ImVec2(120.0f, 120.0f);
+            ImVec2 Size = ImVec2(ContentBrowserTileView.GetTileSize(), ContentBrowserTileView.GetTileSize());
             
             DrawList->AddRectFilled(
                 ImVec2(Pos.x + 3, Pos.y + 3),
@@ -594,6 +594,18 @@ namespace Lumina
             }
 
             ImGui::PopStyleVar(2);
+            ImGui::EndMenu();
+        }
+
+		if (ImGui::BeginMenu(LE_ICON_COGS " View Options"))
+        {
+            ImGui::SetNextItemWidth(128.0f);
+            float TileSize = ContentBrowserTileView.GetTileSize();
+            if (ImGui::SliderFloat("##Zoom", &TileSize, 46.0f, 256.0f, "Tile: %.1fx"))
+            {
+                ContentBrowserTileView.SetTileSize(TileSize);
+            }
+            
             ImGui::EndMenu();
         }
     }

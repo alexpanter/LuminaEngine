@@ -77,18 +77,20 @@ void main()
             bVisible = IsInFrustum(gID);
         }
 
-        if(bVisible && uSceneData.CullData.bOcclusionCull != 0)
+        bool bSkipCull = HasFlag(InstanceData.Instances[gID].Flags, INSTANCE_FLAG_NO_CULL);
+
+        if(!bSkipCull && bVisible && uSceneData.CullData.bOcclusionCull != 0)
         {
-            vec4 SphereBounds = InstanceData.Instances[gID].SphereBounds;
-            uint Entity = InstanceData.Instances[gID].EntityID;
-            vec3 Center = SphereBounds.xyz;
-            Center = (uSceneData.CullData.View * vec4(Center, 1.0f)).xyz;
-            float Radius = SphereBounds.w;
+            vec4 SphereBounds   = InstanceData.Instances[gID].SphereBounds;
+            uint Entity         = InstanceData.Instances[gID].EntityID;
+            vec3 Center         = SphereBounds.xyz;
+            Center              = (uSceneData.CullData.View * vec4(Center, 1.0f)).xyz;
+            float Radius        = SphereBounds.w;
 
-            float Dist = length(Center);
-            Radius += (Dist * 0.1f);
+            float Dist          = length(Center);
+            Radius              += (Dist * 0.05f);
 
-            Center.y *= -1.0;
+            Center.y            *= -1.0;
             
             vec4 AABB;
             if(ProjectSphere(Center, Radius, zNear, uSceneData.CullData.P00, uSceneData.CullData.P11, /*out*/AABB))
@@ -96,21 +98,16 @@ void main()
                 float Width = (AABB.z - AABB.x) * uSceneData.CullData.PyramidWidth;
                 float Height = (AABB.w - AABB.y) * uSceneData.CullData.PyramidHeight;
 
-                float ProjectedSize = max(Width, Height);
-                
-                if(ProjectedSize > 32.0f)
-                {
-                    float Level = floor(log2(max(Width, Height)));
+                float Level = floor(log2(max(Width, Height)));
 
-                    vec2 UV = vec2(AABB.x, AABB.y);
-                    vec2 UV2 = vec2(AABB.z, AABB.w);
+                vec2 UV     = vec2(AABB.x, AABB.y);
+                vec2 UV2    = vec2(AABB.z, AABB.w);
 
-                    float Depth = textureLod(uDepthPyramid, (UV + UV2) * 0.5, Level).x;
+                float Depth = textureLod(uDepthPyramid, (UV + UV2) * 0.5, Level).x;
 
-                    float DepthSphere = zNear / (Center.z - Radius);
+                float DepthSphere = zNear / (Center.z - Radius);
 
-                    bVisible = DepthSphere >= Depth;
-                }
+                bVisible = bVisible && DepthSphere >= Depth;
             }
         }
 

@@ -80,6 +80,7 @@ namespace Lumina
 
         /** Called when a key is pressed while hovering the tile item, return true to absorb. */
         TFunction<bool(FTileViewItem&, ImGuiKey)>               KeyPressedFunction;
+
     };
 
     class RUNTIME_API FTileViewWidget
@@ -104,6 +105,9 @@ namespace Lumina
         
         const TVector<FTileViewItem*>& GetSelections() const { return Selections; }
 
+		float GetTileSize() const { return TileSize; }
+		void SetTileSize(float Size) { TileSize = Size; }
+
     private:
 
         bool HandleKeyPressed(const FTileViewContext& Context, FTileViewItem& Item, ImGuiKey Key);
@@ -124,6 +128,8 @@ namespace Lumina
         /** Root nodes */
         TVector<FTileViewItem*>                 ListItems;
         
+		float                                   TileSize = 84.0f;
+
         uint8                                   bDirty:1 = false;
     };
 

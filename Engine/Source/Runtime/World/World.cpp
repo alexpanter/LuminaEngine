@@ -12,14 +12,11 @@
 #include "Entity/Components/DirtyComponent.h"
 #include "Entity/Components/EditorComponent.h"
 #include "entity/components/entitytags.h"
-#include "Entity/Components/InterpolatingMovementComponent.h"
 #include "Entity/Components/LineBatcherComponent.h"
 #include "Entity/Components/NameComponent.h"
 #include "Entity/Components/ScriptComponent.h"
 #include "Entity/Components/SingletonEntityComponent.h"
 #include "entity/components/tagcomponent.h"
-#include "Events/KeyCodes.h"
-#include "glm/gtx/matrix_decompose.hpp"
 #include "Physics/Physics.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
@@ -525,8 +522,7 @@ namespace Lumina
 
     void CWorld::DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness, bool bDepthTest, float Duration)
     {
-        float ActualDuration = eastl::max<float>(static_cast<float>(GetWorldDeltaTime()) + LE_KINDA_SORTA_SMALL_NUMBER, Duration);
-        LineBatcherComponent->DrawLine(Start, End, Color, Thickness, bDepthTest, ActualDuration);
+        LineBatcherComponent->DrawLine(Start, End, Color, Thickness, bDepthTest, Duration);
     }
     
     TOptional<FRayResult> CWorld::CastRay(const FRayCastSettings& Settings)

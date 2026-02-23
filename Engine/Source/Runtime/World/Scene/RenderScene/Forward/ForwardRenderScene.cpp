@@ -162,7 +162,7 @@ namespace Lumina
             IndirectDrawArguments.reserve(EstimatedProxies * 2);
 			DrawCommands.reserve(EstimatedProxies);
             
-            TFixedHashMap<CMaterial*, uint64, 4> BatchedDraws;
+            TFixedHashMap<FDrawBatchKey, uint64, 4> BatchedDraws;
             
             {
                 LUMINA_PROFILE_SECTION("Process Static Mesh Primitives");
@@ -189,6 +189,14 @@ namespace Lumina
                     glm::vec3 Extents       = BoundingBox.Max - Center;
                     float Radius            = glm::length(Extents);
                     glm::vec4 SphereBounds  = glm::vec4(Center, Radius);
+
+                    float DistSq = glm::dot(Center - glm::vec3(SceneGlobalData.CameraData.Location), Center - glm::vec3(SceneGlobalData.CameraData.Location));
+                    float CullDist = Radius + MeshComponent.MaxDrawDistance;
+
+                    if (MeshComponent.MaxDrawDistance > 0.0f && DistSq > CullDist * CullDist)
+                    {
+                        return;
+                    }
                     
                     EInstanceFlags Flags = EInstanceFlags::None;
                     if (World->IsSelected(Entity))
@@ -198,6 +206,10 @@ namespace Lumina
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
+                    }
+                    if (MeshComponent.bIgnoreOcclusionCulling)
+                    {
+						Flags |= EInstanceFlags::IgnoreOcclusionCulling;
                     }
                     
                     for (const FGeometrySurface& Surface : Resource.GeometrySurfaces)
@@ -213,8 +225,16 @@ namespace Lumina
                         {
                             Flags |= EInstanceFlags::CastShadow;
                         }
+
+						bool bDrawInDepthPass = MeshComponent.bUseAsOccluder;
                         
-                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(Material->GetMaterial(), DrawCommands.size());
+                        FDrawBatchKey BatchKey
+                        {
+                            .MaterialID         = (uintptr_t)Material->GetMaterial(),
+							.bDrawInDepthPass   = bDrawInDepthPass,
+						};
+
+                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(BatchKey, DrawCommands.size());
                         uint64 DrawID = BatchIt->second;
                         
                         if (bBatchInserted)
@@ -226,6 +246,7 @@ namespace Lumina
                                 .IndirectDrawOffset     = 0,
                                 .DrawArgumentIndexMap   = {},
                                 .DrawCount              = 0,
+								.bDrawInDepthPass       = bDrawInDepthPass,
                             });
                         }
                         
@@ -311,7 +332,15 @@ namespace Lumina
                             Flags |= EInstanceFlags::CastShadow;
                         }
                         
-                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(Material->GetMaterial(), DrawCommands.size());
+                        bool bDrawInDepthPass = MeshComponent.bUseAsOccluder;
+
+                        FDrawBatchKey BatchKey
+                        {
+                            .MaterialID = (uintptr_t)Material->GetMaterial(),
+                            .bDrawInDepthPass = bDrawInDepthPass,
+                        };
+
+                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(BatchKey, DrawCommands.size());
                         uint64 DrawID = BatchIt->second;
                         
                         if (bBatchInserted)
@@ -323,6 +352,7 @@ namespace Lumina
                                 .IndirectDrawOffset     = 0,
                                 .DrawArgumentIndexMap   = {},
                                 .DrawCount              = 0,
+								.bDrawInDepthPass       = bDrawInDepthPass,
                             });
                         }
                         
@@ -667,7 +697,7 @@ namespace Lumina
         //========================================================================================================================
         {
             LUMINA_PROFILE_SECTION("Batched Line Processing");
-        
+
             auto View = World->GetEntityRegistry().view<FLineBatcherComponent>();
             View.each([&](FLineBatcherComponent& LineBatcherComponent)
             {
@@ -675,43 +705,39 @@ namespace Lumina
                 {
                     return;
                 }
-        
+
                 for (FLineBatcherComponent::FLineInstance& Line : LineBatcherComponent.Lines)
                 {
-                    if (Line.RemainingLifetime >= 0.0f)
+                    if (!Line.bSingleFrame && Line.RemainingLifetime >= 0.0f)
                     {
                         Line.RemainingLifetime -= SceneGlobalData.DeltaTime;
                     }
                 }
-        
-                TVector<FLineBatcherComponent::FLineInstance> NewLines;
-                TVector<FSimpleElementVertex> NewVertices;
-                
-                NewLines.reserve(LineBatcherComponent.Lines.size());
-                NewVertices.reserve(LineBatcherComponent.Vertices.size());
-        
+
                 struct FLineWithVertices
                 {
                     FLineBatcherComponent::FLineInstance Line;
                     FSimpleElementVertex Vertex0;
                     FSimpleElementVertex Vertex1;
                 };
-                
+
                 TVector<FLineWithVertices> AliveLinesWithVertices;
                 AliveLinesWithVertices.reserve(LineBatcherComponent.Lines.size());
-                
+
+                TVector<FLineBatcherComponent::FLineInstance> NewLines;
+                TVector<FSimpleElementVertex> NewVertices;
+                NewLines.reserve(LineBatcherComponent.Lines.size());
+                NewVertices.reserve(LineBatcherComponent.Vertices.size());
+
                 for (const FLineBatcherComponent::FLineInstance& Line : LineBatcherComponent.Lines)
                 {
-                    if (Line.RemainingLifetime > 0.0f || Line.bSingleFrame)
-                    {
-                        FLineWithVertices LineData;
-                        LineData.Line       = Line;
-                        LineData.Vertex0    = LineBatcherComponent.Vertices[Line.StartVertexIndex];
-                        LineData.Vertex1    = LineBatcherComponent.Vertices[Line.StartVertexIndex + 1];
-                        AliveLinesWithVertices.emplace_back(LineData);
-                    }
+                    FLineWithVertices LineData;
+                    LineData.Line = Line;
+                    LineData.Vertex0 = LineBatcherComponent.Vertices[Line.StartVertexIndex];
+                    LineData.Vertex1 = LineBatcherComponent.Vertices[Line.StartVertexIndex + 1];
+                    AliveLinesWithVertices.emplace_back(LineData);
                 }
-                
+
                 eastl::sort(AliveLinesWithVertices.begin(), AliveLinesWithVertices.end(), [](const FLineWithVertices& A, const FLineWithVertices& B)
                 {
                     if (A.Line.bDepthTest != B.Line.bDepthTest)
@@ -720,59 +746,66 @@ namespace Lumina
                     }
                     return A.Line.Thickness < B.Line.Thickness;
                 });
-                
+
                 uint32 CurrentVertexIndex = 0;
                 for (const FLineWithVertices& LineData : AliveLinesWithVertices)
                 {
                     FLineBatcherComponent::FLineInstance NewLine = LineData.Line;
                     NewLine.StartVertexIndex = CurrentVertexIndex;
-                    NewLines.emplace_back(NewLine);
-        
-                    NewVertices.emplace_back(LineData.Vertex0);
-                    NewVertices.emplace_back(LineData.Vertex1);
-                    
-                    CurrentVertexIndex += 2;
-                }
-        
-                LineBatcherComponent.Lines      = std::move(NewLines);
-                LineBatcherComponent.Vertices   = std::move(NewVertices);
-                
-                if (!LineBatcherComponent.Vertices.empty())
-                {
-                    SimpleVertices = LineBatcherComponent.Vertices;
-            
-                    LineBatches.clear();
-            
-                    if (!LineBatcherComponent.Lines.empty())
+
+                    if (!LineData.Line.bSingleFrame && LineData.Line.RemainingLifetime > 0.0f)
                     {
-                        FLineBatch CurrentBatch;
-                        CurrentBatch.StartVertex    = 0;
-                        CurrentBatch.VertexCount    = 2;
-                        CurrentBatch.Thickness      = LineBatcherComponent.Lines[0].Thickness;
-                        CurrentBatch.bDepthTest     = LineBatcherComponent.Lines[0].bDepthTest;
-                
-                        for (size_t i = 1; i < LineBatcherComponent.Lines.size(); ++i)
-                        {
-                            const auto& Line = LineBatcherComponent.Lines[i];
-                    
-                            if (glm::epsilonEqual(Line.Thickness, CurrentBatch.Thickness, LE_SMALL_NUMBER) && Line.bDepthTest == CurrentBatch.bDepthTest)
-                            {
-                                CurrentBatch.VertexCount += 2;
-                            }
-                            else
-                            {
-                                LineBatches.emplace_back(CurrentBatch);
-                        
-                                CurrentBatch.StartVertex    = Line.StartVertexIndex;
-                                CurrentBatch.VertexCount    = 2;
-                                CurrentBatch.Thickness      = Line.Thickness;
-                                CurrentBatch.bDepthTest     = Line.bDepthTest;
-                            }
-                        }
-                
-                        RenderStats.NumVertices += CurrentBatch.VertexCount;
-                        LineBatches.emplace_back(CurrentBatch);
+                        NewLines.emplace_back(NewLine);
+                        NewVertices.emplace_back(LineData.Vertex0);
+                        NewVertices.emplace_back(LineData.Vertex1);
+                        CurrentVertexIndex += 2;
                     }
+                }
+
+                LineBatcherComponent.Lines = std::move(NewLines);
+                LineBatcherComponent.Vertices = std::move(NewVertices);
+
+                if (!AliveLinesWithVertices.empty())
+                {
+                    SimpleVertices.clear();
+                    SimpleVertices.reserve(AliveLinesWithVertices.size() * 2);
+                    for (const FLineWithVertices& LineData : AliveLinesWithVertices)
+                    {
+                        SimpleVertices.emplace_back(LineData.Vertex0);
+                        SimpleVertices.emplace_back(LineData.Vertex1);
+                    }
+
+                    LineBatches.clear();
+
+                    FLineBatch CurrentBatch;
+                    CurrentBatch.StartVertex = 0;
+                    CurrentBatch.VertexCount = 2;
+                    CurrentBatch.Thickness = AliveLinesWithVertices[0].Line.Thickness;
+                    CurrentBatch.bDepthTest = AliveLinesWithVertices[0].Line.bDepthTest;
+
+                    for (size_t i = 1; i < AliveLinesWithVertices.size(); ++i)
+                    {
+                        const auto& LineData = AliveLinesWithVertices[i];
+
+                        if (glm::epsilonEqual(LineData.Line.Thickness, CurrentBatch.Thickness, LE_SMALL_NUMBER) &&
+                            LineData.Line.bDepthTest == CurrentBatch.bDepthTest)
+                        {
+                            CurrentBatch.VertexCount += 2;
+                        }
+                        else
+                        {
+                            RenderStats.NumVertices += CurrentBatch.VertexCount;
+                            LineBatches.emplace_back(CurrentBatch);
+
+                            CurrentBatch.StartVertex = (uint32)SimpleVertices.size() - (uint32)AliveLinesWithVertices.size() * 2 + (uint32)(i * 2);
+                            CurrentBatch.VertexCount = 2;
+                            CurrentBatch.Thickness = LineData.Line.Thickness;
+                            CurrentBatch.bDepthTest = LineData.Line.bDepthTest;
+                        }
+                    }
+
+                    RenderStats.NumVertices += CurrentBatch.VertexCount;
+                    LineBatches.emplace_back(CurrentBatch);
                 }
             });
         }
@@ -966,11 +999,10 @@ namespace Lumina
                 .SetDepthStencilState(FDepthStencilState().SetDepthFunc(EComparisonFunc::Greater))
                 .SetRasterState(FRasterState().EnableDepthClip());
             
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("DepthPrePass.vert");
             
             for (const FMeshDrawCommand& Batch : DrawCommands)
             {
-                FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("DepthPrePass.vert");
-                
                 FGraphicsPipelineDesc Desc; Desc
                 .SetRenderState(RenderState)
                 .AddBindingLayout(SceneBindingLayout)
@@ -988,7 +1020,6 @@ namespace Lumina
                 GraphicsState.SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                 
                 CmdList.SetGraphicsState(GraphicsState);
-                
                 CmdList.DrawIndirect(Batch.DrawCount, Batch.IndirectDrawOffset * sizeof(FDrawIndirectArguments));
             }
         });
@@ -1057,10 +1088,8 @@ namespace Lumina
                 LevelWidth = std::max(LevelWidth, 1u);
                 LevelHeight = std::max(LevelHeight, 1u);
                 
-
-                glm::vec2 Data = glm::vec2(LevelWidth,LevelHeight);
-                TSpan<const Byte> Bytes = AsBytes(Data);
-                CmdList.SetPushConstants(Bytes.data(), Bytes.size_bytes());
+                glm::vec2 Data(LevelWidth,LevelHeight);
+                CmdList.SetPushConstants(&Data, sizeof(glm::vec2));
 
                 uint32 GroupsX = RenderUtils::GetGroupCount(LevelWidth, 32);
                 uint32 GroupsY = RenderUtils::GetGroupCount(LevelHeight, 32);

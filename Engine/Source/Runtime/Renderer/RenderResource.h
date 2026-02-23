@@ -638,11 +638,11 @@ namespace Lumina
 		MirrorOnce = 4,
 
 		// Vulkan names
-		ClampToEdge = Clamp,
-		Repeat = Wrap,
-		ClampToBorder = Border,
-		MirroredRepeat = Mirror,
-		MirrorClampToEdge = MirrorOnce
+		ClampToEdge			= Clamp,
+		Repeat				= Wrap,
+		ClampToBorder		= Border,
+		MirroredRepeat		= Mirror,
+		MirrorClampToEdge	= MirrorOnce
 	};
 
 	#define AM_Clamp ESamplerAddressMode::Clamp
@@ -781,9 +781,10 @@ namespace Lumina
 
 	struct RUNTIME_API FSamplerDesc
 	{
-		FColor BorderColor = 1.0f;
+		FString DebugName;
+		FColor BorderColor	= 1.0f;
 		float MaxAnisotropy = 1.0f;
-		float MipBias = 0.0f;
+		float MipBias		= 0.0f;
 
 		bool MinFilter = true;
 		bool MagFilter = true;
@@ -792,7 +793,6 @@ namespace Lumina
 		ESamplerAddressMode AddressV 		= ESamplerAddressMode::Clamp;
 		ESamplerAddressMode AddressW 		= ESamplerAddressMode::Clamp;
 		ESamplerReductionType ReductionType = ESamplerReductionType::Standard;
-		FString DebugName;
 
 		FSamplerDesc& SetBorderColor(const FColor& color) { BorderColor = color; return *this; }
 		FSamplerDesc& SetMaxAnisotropy(float value) { MaxAnisotropy = value; return *this; }

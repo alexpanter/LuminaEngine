@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "TileViewWidget.h"
-#include "Tools/UI/ImGui/ImGuiX.h"
 
 namespace Lumina
 {
@@ -13,11 +12,10 @@ namespace Lumina
         }
     
         float PaneWidth = ImGui::GetContentRegionAvail().x;
-        constexpr float ThumbnailSize = 120.0f;
         constexpr float TileSpacing = 5.0f;
         constexpr float TextHeight = 36.0f;
-        float CellSize = ThumbnailSize + TileSpacing;
-        int ItemsPerRow = std::max(1, int(PaneWidth / CellSize));
+        float CellSize = TileSize + TileSpacing;
+        int ItemsPerRow = std::max(1, int(PaneWidth / CellSize) - 1);
     
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(TileSpacing, TileSpacing));
     
@@ -34,15 +32,15 @@ namespace Lumina
             ImGui::PushID(Item);
             ImGui::BeginGroup();
     
-            DrawItem(Item, Context, ImVec2(ThumbnailSize, ThumbnailSize));
+            DrawItem(Item, Context, ImVec2(TileSize, TileSize));
     
             ImFont* Font = ImGui::GetIO().Fonts->Fonts[3];
             ImGui::PushFont(Font);
     
-            float WrapWidth = ThumbnailSize;
+            float WrapWidth = TileSize;
             ImVec2 TextSize = ImGui::CalcTextSize(DisplayName, nullptr, false, WrapWidth);
             
-            float TextPosX = (ThumbnailSize - std::min(TextSize.x, WrapWidth)) * 0.5f;
+            float TextPosX = (TileSize - std::min(TextSize.x, WrapWidth)) * 0.5f;
             
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + TextPosX);
             ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 4.0f);
