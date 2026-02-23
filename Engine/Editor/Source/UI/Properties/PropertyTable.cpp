@@ -295,7 +295,7 @@ namespace Lumina
                     ArrayRow->RebuildChildren();
                 }
                 
-                ImGuiX::ItemTooltip("Move the element up the array (lower index)");
+                ImGuiX::TextTooltip("Move the element up the array (lower index)");
             }
             
             
@@ -307,7 +307,7 @@ namespace Lumina
                     ArrayRow->RebuildChildren();
                 }
                 
-                ImGuiX::ItemTooltip("Move the element down the array (higher index)");
+                ImGuiX::TextTooltip("Move the element down the array (higher index)");
 
             }
 
@@ -317,12 +317,12 @@ namespace Lumina
                 ArrayRow->RebuildChildren();
             }
             
-            ImGuiX::ItemTooltip("Remove the element.");
+            ImGuiX::TextTooltip("Remove the element.");
 
             ImGui::EndPopup();
         }
 
-        ImGuiX::ItemTooltip("Array Element Options");
+        ImGuiX::TextTooltip("Array Element Options");
     }
 
     FArrayPropertyRow::FArrayPropertyRow(const TSharedPtr<FPropertyHandle>& InPropHandle, FPropertyRow* InParentRow, const FPropertyChangedEventCallbacks& InCallbacks)
@@ -388,7 +388,7 @@ namespace Lumina
             RebuildChildren();
         }
         ImGui::PopStyleVar();
-        ImGuiX::ItemTooltip("Add array element");
+        ImGuiX::TextTooltip("Add array element");
 
         ImGui::SameLine();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 4));
@@ -399,7 +399,7 @@ namespace Lumina
             
         }
         ImGui::PopStyleVar();
-        ImGuiX::ItemTooltip("Remove all array elements");
+        ImGuiX::TextTooltip("Remove all array elements");
 
     }
 

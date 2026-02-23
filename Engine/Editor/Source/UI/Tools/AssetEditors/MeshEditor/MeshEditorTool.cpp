@@ -113,7 +113,7 @@ namespace Lumina
                 StaticMesh->PostLoad();
                 Asset->GetPackage()->MarkDirty();
             }
-            ImGuiX::ItemTooltip("Flip UVs along the vertical axis.");
+            ImGuiX::TextTooltip("Flip UVs along the vertical axis.");
             
             ImGui::SameLine();
             
@@ -128,7 +128,7 @@ namespace Lumina
                 StaticMesh->PostLoad();
                 Asset->GetPackage()->MarkDirty();
             }
-            ImGuiX::ItemTooltip("Flip UVs along the horizontal axis.");
+            ImGuiX::TextTooltip("Flip UVs along the horizontal axis.");
             
             ImGui::Spacing();
             ImGui::TextDisabled("Normal Tools");
@@ -144,7 +144,7 @@ namespace Lumina
                 StaticMesh->PostLoad();
                 Asset->GetPackage()->MarkDirty();
             }
-            ImGuiX::ItemTooltip("Invert all vertex normals.");
+            ImGuiX::TextTooltip("Invert all vertex normals.");
             
             ImGui::Spacing();
             ImGui::TextDisabled("Transform Tools");
@@ -165,7 +165,7 @@ namespace Lumina
                 StaticMesh->PostLoad();
                 Asset->GetPackage()->MarkDirty();
             }
-            ImGuiX::ItemTooltip("Swap Y and Z axes. Useful for correcting up-axis differences between tools.");
+            ImGuiX::TextTooltip("Swap Y and Z axes. Useful for correcting up-axis differences between tools.");
             
             ImGui::SameLine();
             
@@ -184,7 +184,7 @@ namespace Lumina
                 StaticMesh->PostLoad();
                 Asset->GetPackage()->MarkDirty();
             }
-            ImGuiX::ItemTooltip("Mirror the mesh along the X axis.");
+            ImGuiX::TextTooltip("Mirror the mesh along the X axis.");
             
             ImGui::Spacing();
             
@@ -220,7 +220,7 @@ namespace Lumina
                 Asset->GetPackage()->MarkDirty();
             }
             
-            ImGuiX::ItemTooltip("Apply a rotation to all vertices and normals.");
+            ImGuiX::TextTooltip("Apply a rotation to all vertices and normals.");
             
             ImGui::SameLine();
             
@@ -228,7 +228,7 @@ namespace Lumina
             {
                 RotationAngles[0] = RotationAngles[1] = RotationAngles[2] = 0.0f;
             }
-            ImGuiX::ItemTooltip("Reset rotation values to zero.");
+            ImGuiX::TextTooltip("Reset rotation values to zero.");
             
             ImGui::SeparatorText("Geometry Data");
             
@@ -465,7 +465,8 @@ namespace Lumina
         World->GetEntityRegistry().emplace<SStaticMeshComponent>(MeshEntity).StaticMesh = StaticMesh;
         STransformComponent& MeshTransform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
         
-        CreateFloorPlane(-StaticMesh->GetAABB().Max.y * 0.5f);
+        float FloorY = MeshTransform.GetLocation().y + StaticMesh->GetAABB().Min.y;
+        CreateFloorPlane(-FloorY);
         
         STransformComponent& EditorTransform = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
 

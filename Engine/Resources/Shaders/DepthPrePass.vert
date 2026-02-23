@@ -13,11 +13,12 @@ precise invariant gl_Position;
 void main()
 {
     FInstanceData InstanceData  = GetInstanceData(gl_InstanceIndex);
+    uint InstanceFlags          = GetInstanceDataFlags(InstanceData);
     
     FVertexData VertexData;
-    if(HasFlag(InstanceData.Flags, INSTANCE_FLAG_SKINNED))
+    if(HasFlag(InstanceFlags, INSTANCE_FLAG_SKINNED))
     {
-        VertexData = LoadSkinnedVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex, InstanceData.BoneOffset);
+        VertexData = LoadSkinnedVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex, GetInstanceDataBoneIndex(InstanceData));
     }
     else
     {
@@ -29,8 +30,8 @@ void main()
     mat4 View           = GetCameraView();
     mat4 Projection     = GetCameraProjection();
 
-    vec4 WorldPos   = ModelMatrix * vec4(VertexData.Position, 1.0);
-    vec4 ViewPos    = View * WorldPos;
-    
-    gl_Position     = Projection * ViewPos;
+    vec4 WorldPos       = ModelMatrix * vec4(VertexData.Position, 1.0);
+    vec4 ViewPos        = View * WorldPos;
+                        
+    gl_Position         = Projection * ViewPos;
 }

@@ -27,10 +27,12 @@ void main()
 {
     FInstanceData InstanceData  = GetInstanceData(gl_InstanceIndex);
     
+    uint InstanceDataFlags      = GetInstanceDataFlags(InstanceData);
+    
     FVertexData VertexData;
-    if(HasFlag(InstanceData.Flags, INSTANCE_FLAG_SKINNED))
+    if(HasFlag(InstanceDataFlags, INSTANCE_FLAG_SKINNED))
     {
-        VertexData = LoadSkinnedVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex, InstanceData.BoneOffset);
+        VertexData = LoadSkinnedVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex, GetInstanceDataBoneIndex(InstanceData));
     }
     else
     {
@@ -58,8 +60,8 @@ void main()
     outNormalWS         = vec4(NormalWS, 1.0);
     outFragColor        = VertexData.Color;
     outEntityID         = InstanceData.EntityID;
-    outReceiveShadow    = uint(HasFlag(InstanceData.Flags, INSTANCE_FLAG_RECEIVE_SHADOW));
-    outSelected         = uint(HasFlag(InstanceData.Flags, INSTANCE_FLAG_SELECTED));
-    outMatIndex         = InstanceData.MaterialIndex;
+    outReceiveShadow    = uint(HasFlag(InstanceDataFlags, INSTANCE_FLAG_RECEIVE_SHADOW));
+    outSelected         = uint(HasFlag(InstanceDataFlags, INSTANCE_FLAG_SELECTED));
+    outMatIndex         = GetInstanceDataMaterialIndex(InstanceData);
     gl_Position         = Projection * ViewPos;
 }

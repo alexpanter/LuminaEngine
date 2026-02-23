@@ -224,7 +224,7 @@ namespace Lumina
             ImGui::EndDragDropTarget();
         }
         
-        ImGuiX::ItemTooltip("{}", Display.TooltipText);
+        ImGuiX::TextTooltip("{}", Display.TooltipText);
         
 
         if (Context.ItemContextMenuFunction)

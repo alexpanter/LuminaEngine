@@ -1,10 +1,8 @@
 #include "LuminaEditor.h"
-
 #include <fstream>
 #include <Core/Engine/Engine.h>
 #include <Memory/Memory.h>
 #include <Tools/UI/DevelopmentToolUI.h>
-
 #include "Config/Config.h"
 #include "FileSystem/FileSystem.h"
 #include "Paths/Paths.h"

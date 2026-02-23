@@ -14,9 +14,9 @@
 
 namespace Lumina::ImGuiX
 {
-    void ItemTooltip_Internal(FStringView String)
+    void TextTooltip_Internal(FStringView String)
     {
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 4, 4 ) );
+        ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2(4, 4));
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
         {
         	if (!ImGui::BeginTooltipEx(ImGuiTooltipFlags_OverridePrevious, ImGuiWindowFlags_None))

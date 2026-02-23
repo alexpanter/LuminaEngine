@@ -17,12 +17,14 @@ layout(push_constant) uniform PushConstants
 
 void main()
 {
-    FInstanceData InstanceData = GetInstanceData(gl_InstanceIndex);
+    FInstanceData InstanceData  = GetInstanceData(gl_InstanceIndex);
+
+    uint InstanceDataFlags      = GetInstanceDataFlags(InstanceData);
 
     FVertexData VertexData;
-    if(HasFlag(InstanceData.Flags, INSTANCE_FLAG_SKINNED))
+    if(HasFlag(InstanceDataFlags, INSTANCE_FLAG_SKINNED))
     {
-        VertexData = LoadSkinnedVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex, InstanceData.BoneOffset);
+        VertexData = LoadSkinnedVertex(InstanceData.VertexBufferAddress, InstanceData.IndexBufferAddress, gl_VertexIndex, GetInstanceDataBoneIndex(InstanceData));
     }
     else
     {

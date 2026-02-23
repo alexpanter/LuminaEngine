@@ -210,18 +210,15 @@ struct FSSAOSettings
 
 struct FInstanceData
 {
-    mat4        ModelMatrix;
+    mat3x4      ModelMatrix;
     vec4        SphereBounds;
-                
-    uint        EntityID;
-    uint        BatchedDrawID;
-    uint        Flags;          // (INSTANCE_FLAG_XXX)
-    uint        BoneOffset;
-    
+
     uvec2       VertexBufferAddress;
     uvec2       IndexBufferAddress;
     
-    uint        MaterialIndex;
+    uint        EntityID;
+    uint        DrawIDAndFlags;
+    uint        BoneOffsetAndMaterialIndex;
 };
 
 struct FLightShadow

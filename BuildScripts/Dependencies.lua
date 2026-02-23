@@ -150,6 +150,7 @@ LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/Th
 LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/stb_image"))
 LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/meshoptimizer/src"))
 LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/vulkan"))
+LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/basis_universal"))
 LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/shaderc"))
 LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/volk"))
 LuminaConfig.AddPublicIncludeDirectory(LuminaConfig.EnginePath("Engine/Source/ThirdParty/EnkiTS/src"))

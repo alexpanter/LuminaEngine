@@ -87,7 +87,7 @@ namespace Lumina
         
             ImGui::InputText("##ObjectPathText", PathString.data(), PathString.max_size(), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_ReadOnly);
         
-            ImGuiX::ItemTooltip("{}", PathString);
+            ImGuiX::TextTooltip("{}", PathString);
         
             ImGui::PopStyleColor();
 
@@ -99,9 +99,6 @@ namespace Lumina
 
             if (bComboOpen)
             {
-                const float CursorPosYPostFilter = ImGui::GetCursorPosY();
-                const float FilterHeight = CursorPosYPostFilter;
-
                 SearchFilter.Draw("##Search", ComboDropDownSize.x - 30.0f);
                 if (!SearchFilter.IsActive())
                 {
@@ -125,23 +122,55 @@ namespace Lumina
                         return DataClass->IsChildOf(PropertyClass);
                     });
                     
-                    for (const FAssetData* Asset : Assets)
+                    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(4, 4));
+                    if (ImGui::BeginTable("##AssetTable", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersInner))
                     {
-                        if (!SearchFilter.PassFilter(Asset->AssetName.c_str()))
+                        ImGui::TableSetupColumn("##Thumb", ImGuiTableColumnFlags_WidthFixed, 42.0f);
+                        ImGui::TableSetupColumn("##Name",  ImGuiTableColumnFlags_WidthStretch);
+                        
+                        for (const FAssetData* Asset : Assets)
                         {
-                            continue;
+                            if (!SearchFilter.PassFilter(Asset->AssetName.c_str()))
+                            {
+                                continue;
+                            }
+                        
+                            ImGui::PushID(Asset);
+                            ImGui::TableNextRow(ImGuiTableRowFlags_None, 42.0f);
+                            ImGui::TableSetColumnIndex(0);
+                            
+                            bool bSelected = ImGui::Selectable("##sel", false, 
+                                ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap, ImVec2(0, 42.0f));
+                            
+                            ImGuiX::TextTooltip("{}", Asset->Path);
+                            
+                            ImGui::SameLine();
+                            
+                            if (FPackageThumbnail* Thumbnail = CThumbnailManager::Get().GetThumbnailForPackage(Asset->Path))
+                            {
+                                ImGui::Image(ImGuiX::ToImTextureRef(Thumbnail->LoadedImage), ImVec2(42, 42));
+                            }
+                            else
+                            {
+                                ImGui::Image(ImGuiX::ToImTextureRef(Paths::GetEngineResourceDirectory() + "/Textures/File.png"), ImVec2(42, 42));
+                            }
+                            
+                            ImGui::TableSetColumnIndex(1);
+                            ImGui::TextUnformatted(Asset->AssetName.c_str());
+
+                            if (bSelected)
+                            {
+                                Object = LoadObject<CObject>(Asset->AssetGUID);
+                                ImGui::CloseCurrentPopup();
+                                bWasChanged = true;
+                            }
+                        
+                            ImGui::PopID();
                         }
                         
-                        FFixedString SelectableLabel;
-                        SelectableLabel.append(LE_ICON_FILE).append(" ").append(Asset->AssetName.c_str());
-                        if (ImGui::Selectable(SelectableLabel.c_str()))
-                        {
-                            Object = LoadObject<CObject>(Asset->AssetGUID);
-                            ImGui::CloseCurrentPopup();
-                        
-                            bWasChanged = true;
-                        }
+                        ImGui::EndTable();
                     }
+                    ImGui::PopStyleVar();
                 }
                 
                 ImGui::EndChild();

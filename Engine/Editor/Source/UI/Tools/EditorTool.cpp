@@ -224,7 +224,7 @@ namespace Lumina
         {
             OnUndo();
         }
-        ImGuiX::ItemTooltip("Undo");
+        ImGuiX::TextTooltip("Undo");
 
         //-------------------------------------------------------------------------
         
@@ -232,7 +232,7 @@ namespace Lumina
         {
             
         }
-        ImGuiX::ItemTooltip("Redo");
+        ImGuiX::TextTooltip("Redo");
         ImGui::EndDisabled();
 
         if (ImGui::BeginMenu(LE_ICON_HELP_CIRCLE_OUTLINE" Help"))

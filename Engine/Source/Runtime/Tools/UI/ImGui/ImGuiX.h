@@ -33,15 +33,15 @@ namespace Lumina::ImGuiX
     // Generic draw helpers...
     //--------------------------------------------------------------
 
-    RUNTIME_API void ItemTooltip_Internal(FStringView String);
+    RUNTIME_API void TextTooltip_Internal(FStringView String);
     RUNTIME_API void TextColoredUnformatted(const ImVec4& Color, const FFixedString& String);
     
     template<typename... TArgs>
-    void ItemTooltip(std::format_string<TArgs...> Fmt, TArgs&&... Args)
+    void TextTooltip(std::format_string<TArgs...> Fmt, TArgs&&... Args)
     {
         FFixedString Buffer;
         std::format_to(std::back_inserter(Buffer), Fmt, Args...);
-        ItemTooltip_Internal(Buffer);
+        TextTooltip_Internal(Buffer);
     }
 
     template <typename... TArgs>

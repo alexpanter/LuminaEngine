@@ -112,7 +112,7 @@ namespace Lumina
         
             ImGui::InputText("##ScriptPathText", PathString.data(), PathString.max_size(), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_ReadOnly);
         
-            ImGuiX::ItemTooltip("{}", PathString);
+            ImGuiX::TextTooltip("{}", PathString);
         
             ImGui::PopStyleColor();
 
@@ -179,7 +179,7 @@ namespace Lumina
                 VFS::PlatformOpen(Value.ScriptPath.Path);
             }
             
-            ImGuiX::ItemTooltip("Open the script in your native editor");
+            ImGuiX::TextTooltip("Open the script in your native editor");
             
             ImGui::SameLine();
             
@@ -188,7 +188,7 @@ namespace Lumina
                 ImGui::SetClipboardText(Value.ScriptPath.Path.c_str());
             }
             
-            ImGuiX::ItemTooltip("Copy the script-path to your native clipboard");
+            ImGuiX::TextTooltip("Copy the script-path to your native clipboard");
 
             ImGui::SameLine();
             
@@ -201,7 +201,7 @@ namespace Lumina
                 bWasChanged = true;
             }
             
-            ImGuiX::ItemTooltip("Reload the script, will attempt to keep any matching values");
+            ImGuiX::TextTooltip("Reload the script, will attempt to keep any matching values");
 
             ImGui::SameLine();
         
@@ -215,7 +215,7 @@ namespace Lumina
                 bWasChanged = true;
             }
             
-            ImGuiX::ItemTooltip("Clears the script from this component");
+            ImGuiX::TextTooltip("Clears the script from this component");
             
             ImGui::Separator();
             

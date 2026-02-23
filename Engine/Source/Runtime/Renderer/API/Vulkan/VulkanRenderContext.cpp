@@ -494,6 +494,7 @@ namespace Lumina
             Builder.request_validation_layers();
             Builder.use_default_debug_messenger();
             Builder.set_debug_callback(VkDebugCallback);
+            
         }
         
         if (Description.bDebugUtils)

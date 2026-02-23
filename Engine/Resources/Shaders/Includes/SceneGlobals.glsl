@@ -161,6 +161,28 @@ FInstanceData GetInstanceData(uint Index)
     return InstanceData.Instances[DrawIDToInstanceID(Index)];
 }
 
+uint GetInstanceDataDrawID(FInstanceData Data)
+{
+    uint PackedValue = Data.DrawIDAndFlags;
+    return PackedValue & 0x00FFFFFFu;
+}
+
+uint GetInstanceDataFlags(FInstanceData Data)
+{
+    uint PackedValue = Data.DrawIDAndFlags;
+    return (PackedValue >> 24) & 0xFFu;
+}
+
+uint GetInstanceDataBoneIndex(FInstanceData Data)
+{
+    return Data.BoneOffsetAndMaterialIndex & 0x0000FFFFu;
+}
+
+uint GetInstanceDataMaterialIndex(FInstanceData Data)
+{
+    return (Data.BoneOffsetAndMaterialIndex >> 16) & 0x0000FFFFu;
+}
+
 vec3 GetSunDirection()
 {
     return LightData.SunDirection.xyz;
@@ -238,7 +260,14 @@ mat4 GetInverseCameraProjection()
 
 mat4 GetModelMatrix(uint Index)
 {
-    return InstanceData.Instances[DrawIDToInstanceID(Index)].ModelMatrix;
+    mat3x4 m = InstanceData.Instances[DrawIDToInstanceID(Index)].ModelMatrix;
+    
+    return mat4(
+    m[0],
+    m[1],
+    m[2],
+    vec4(0.0, 0.0, 0.0, 1.0)
+    );
 }
 
 vec3 GetModelLocation(uint Index)

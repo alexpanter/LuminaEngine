@@ -539,7 +539,7 @@ namespace Lumina
                 Asset->PostLoad();
                 Asset->GetPackage()->MarkDirty();
             }
-            ImGuiX::ItemTooltip("Flip the texture along the vertical axis.");
+            ImGuiX::TextTooltip("Flip the texture along the vertical axis.");
             
             ImGui::SameLine();
             
@@ -571,19 +571,19 @@ namespace Lumina
                 Asset->GetPackage()->MarkDirty();
             }
             
-            ImGuiX::ItemTooltip("Flip the texture along the horizontal axis.");
+            ImGuiX::TextTooltip("Flip the texture along the horizontal axis.");
 
             if (ImGui::Button("Export to File...", ImVec2(-1, 0)))
             {
                 // TODO: Implement export
             }
-            ImGuiX::ItemTooltip("Export the texture to disk.");
+            ImGuiX::TextTooltip("Export the texture to disk.");
             
             if (ImGui::Button("Analyze Color Distribution", ImVec2(-1, 0)))
             {
                 // TODO: Implement analysis
             }
-            ImGuiX::ItemTooltip("Analyze the color distribution across all pixels.");
+            ImGuiX::TextTooltip("Analyze the color distribution across all pixels.");
         });
     }
 

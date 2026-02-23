@@ -87,6 +87,7 @@ project "Runtime"
         "SPIRV-Reflect",
         "FastGLTF",
         "OpenFBX",
+        "BasicUniversal",
         "shaderc_combined",
         "GFSDK_Aftermath_Lib.lib",
         "GFSDK_Aftermath_Lib.x64.dll",

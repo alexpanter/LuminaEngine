@@ -189,7 +189,6 @@ namespace Lumina
 
         auto DstRegion = Destination->GetSliceRegion(ResolvedDstSlice.MipLevel, ResolvedDstSlice.ArraySlice, ResolvedDstSlice.Z);
         ASSERT((DstRegion.Offset & 0x3) == 0); // per vulkan spec
-
         
         FTextureSubresourceSet SrcSubresource = FTextureSubresourceSet(ResolvedSrcSlice.MipLevel, 1, ResolvedSrcSlice.ArraySlice, 1);
 

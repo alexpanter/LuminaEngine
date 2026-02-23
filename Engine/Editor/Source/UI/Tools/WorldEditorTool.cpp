@@ -2883,7 +2883,7 @@ namespace Lumina
                     ComponentDestroyRequests.push(FComponentDestroyRequest{Table->GetType(), Entity});
                 }
             
-                ImGuiX::ItemTooltip("{}", "Remove Component");
+                ImGuiX::TextTooltip("{}", "Remove Component");
             
                 ImGui::PopStyleVar();
                 ImGui::PopStyleColor(4);

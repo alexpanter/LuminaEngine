@@ -248,15 +248,13 @@ namespace Lumina
                         
                         InstanceData.emplace_back(FInstanceData
                         {
-                            .Transform              = TransformMatrix,
-                            .SphereBounds           = SphereBounds,
-                            .EntityID               = entt::to_integral(Entity),
-                            .BatchedDrawID          = DrawIt->second,
-                            .Flags                  = Flags,
-                            .BoneOffset             = 0,
-                            .VertexBufferAddress    = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
-                            .IndexBufferAddress     = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
-                            .MaterialIndex          = (uint32)Material->GetMaterialIndex(),
+                            .Transform                  = TransformMatrix,
+                            .SphereBounds               = SphereBounds,
+                            .VertexBufferAddress        = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
+                            .IndexBufferAddress         = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .EntityID                   = entt::to_integral(Entity),
+                            .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
+                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(0, (uint16)Material->GetMaterialIndex())
                         });
                     }
                 });
@@ -345,17 +343,16 @@ namespace Lumina
 
                         IndirectDrawArguments[DrawIt->second].InstanceCount++;
                         
+                        
                         InstanceData.emplace_back(FInstanceData
                         {
-                            .Transform              = TransformMatrix,
-                            .SphereBounds           = SphereBounds,
-                            .EntityID               = entt::to_integral(Entity),
-                            .BatchedDrawID          = DrawIt->second,
-                            .Flags                  = Flags,
-                            .BoneOffset             = BoneDataOffset,
-                            .VertexBufferAddress    = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
-                            .IndexBufferAddress     = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
-                            .MaterialIndex          = (uint32)Material->GetMaterialIndex(),
+                            .Transform                  = TransformMatrix,
+                            .SphereBounds               = SphereBounds,
+                            .VertexBufferAddress        = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
+                            .IndexBufferAddress         = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .EntityID                   = entt::to_integral(Entity),
+                            .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
+                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(BoneDataOffset, (uint16)Material->GetMaterialIndex())
                         });
                     }
                 });
@@ -399,7 +396,9 @@ namespace Lumina
 
                 for (FInstanceData& Instance : InstanceData)
                 {
-                    Instance.BatchedDrawID = IndexRemap[Instance.BatchedDrawID];
+                    uint32 Flags = Instance.DrawIDAndFlags & 0xFF000000;
+                    uint32 NewDrawID = IndexRemap[Instance.DrawIDAndFlags & 0x00FFFFFF];
+                    Instance.DrawIDAndFlags = (NewDrawID & 0x00FFFFFF) | Flags;
                 }
             
                 RenderStats.NumBatches = DrawCommands.size();

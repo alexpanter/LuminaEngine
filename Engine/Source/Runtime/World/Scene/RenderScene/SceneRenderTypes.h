@@ -336,22 +336,28 @@ namespace Lumina
 
     struct alignas(16) FInstanceData
     {
-        glm::mat4       Transform;
+        glm::mat3x4     Transform;
         glm::vec4       SphereBounds;
-        
-        uint32          EntityID;
-        uint32          BatchedDrawID;
-        EInstanceFlags  Flags;
-        uint32          BoneOffset;
         
         glm::uvec2      VertexBufferAddress;
         glm::uvec2      IndexBufferAddress;
-        
-        uint32          MaterialIndex;
+
+        uint32          EntityID;
+        uint32          DrawIDAndFlags;
+        uint32          BoneOffsetAndMaterialIndex;
     };
     
     VERIFY_SSBO_ALIGNMENT(FInstanceData)
-
+    
+    constexpr uint32 PackDrawIDAndFlags(uint32 DrawID, EInstanceFlags Flags)
+    {
+        return (DrawID & 0x00FFFFFF) | (((uint32)Flags & 0xFF) << 24);
+    }
+    
+    constexpr uint32 PackBoneOffsetAndMaterial(uint16 BoneOffset, uint16 MaterialIndex)
+    {
+        return (uint32)BoneOffset | ((uint32)MaterialIndex << 16);
+    }
     
     struct FCullData
     {
