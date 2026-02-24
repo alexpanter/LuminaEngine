@@ -422,7 +422,7 @@ namespace Lumina
             Shader.Defines   = CompileOptions.MacroDefinitions;
             
             slang::ProgramLayout* ProgramLayout = LinkedProgram->getLayout();
-            for (SlangUInt32 i = 0; i < EntryPointCount; ++i)
+            for (SlangInt32 i = 0; i < EntryPointCount; ++i)
             {
                 slang::EntryPointReflection* EPReflection = ProgramLayout->getEntryPointByIndex(i);
                 switch (EPReflection->getStage())

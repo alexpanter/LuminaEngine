@@ -19,6 +19,11 @@ project "Reflector"
 		LuminaConfig.EnginePath("External/LLVM/bin"),
 	}
 
+	linkoptions
+	{
+		"/NODEFAULTLIB:MSVCRTD",
+	}
+
 	links
 	{
         "XXHash",
