@@ -5,7 +5,7 @@
 namespace Lumina
 {
 
-    inline uint32 PackNormal(glm::vec3 normal)
+    constexpr uint32 PackNormal(glm::vec3 normal)
     {
         int x = (int)(glm::clamp(normal.x, -1.0f, 1.0f) * 511.0f);
         int y = (int)(glm::clamp(normal.y, -1.0f, 1.0f) * 511.0f);
@@ -13,7 +13,7 @@ namespace Lumina
         return ((x & 0x3FF) << 0) | ((y & 0x3FF) << 10) | ((z & 0x3FF) << 20);
     }
 
-    inline uint32 PackColor(glm::vec4 color)
+    constexpr uint32 PackColor(glm::vec4 color)
     {
         uint8 r = (uint8)(glm::clamp(color.r, 0.0f, 1.0f) * 255.0f);
         uint8 g = (uint8)(glm::clamp(color.g, 0.0f, 1.0f) * 255.0f);
@@ -73,7 +73,7 @@ namespace Lumina
     {
         glm::vec3       Position;
         uint32          Normal;
-        glm::u16vec2    UV;
+        uint32          UV;
         uint32          Color;
         //              4 bytes of padding.
         

@@ -54,13 +54,16 @@ namespace Lumina
         NamedImages[(int)ENamedImage::PointLightIcon]       = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/PointLight.png", true);  
         NamedImages[(int)ENamedImage::DirectionalLightIcon] = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/SkyLight.png", true);  
         NamedImages[(int)ENamedImage::SpotLightIcon]        = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/SpotLight.png", true);  
+        
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::PointLightIcon]);
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::DirectionalLightIcon]);
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::SpotLightIcon]);
         #endif
         
     }
 
     void FForwardRenderScene::Shutdown()
     {
-        GRenderContext->WaitIdle();
         GRenderContext->ClearCommandListCache();
         GRenderContext->ClearBindingCaches();
 
@@ -158,7 +161,7 @@ namespace Lumina
             IndirectDrawArguments.reserve(EstimatedProxies * 2);
 			DrawCommands.reserve(EstimatedProxies);
             
-            TFixedHashMap<CMaterial*, uint64, 4> BatchedDraws;
+            TFixedHashMap<FDrawBatchKey, uint64, 4> BatchedDraws;
             
             {
                 LUMINA_PROFILE_SECTION("Process Static Mesh Primitives");
@@ -185,19 +188,27 @@ namespace Lumina
                     glm::vec3 Extents       = BoundingBox.Max - Center;
                     float Radius            = glm::length(Extents);
                     glm::vec4 SphereBounds  = glm::vec4(Center, Radius);
+
+                    float DistSq = glm::dot(Center - glm::vec3(SceneGlobalData.CameraData.Location), Center - glm::vec3(SceneGlobalData.CameraData.Location));
+                    float CullDist = Radius + MeshComponent.MaxDrawDistance;
+
+                    if (MeshComponent.MaxDrawDistance > 0.0f && DistSq > CullDist * CullDist)
+                    {
+                        return;
+                    }
                     
                     EInstanceFlags Flags = EInstanceFlags::None;
                     if (World->IsSelected(Entity))
                     {
                         Flags |= EInstanceFlags::Selected;
                     }
-                    if (MeshComponent.bCastShadow)
-                    {
-                        Flags |= EInstanceFlags::CastShadow;
-                    }
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
+                    }
+                    if (MeshComponent.bIgnoreOcclusionCulling)
+                    {
+						Flags |= EInstanceFlags::IgnoreOcclusionCulling;
                     }
                     
                     for (const FGeometrySurface& Surface : Resource.GeometrySurfaces)
@@ -209,18 +220,32 @@ namespace Lumina
                             Material = CMaterial::GetDefaultMaterial();
                         }
                         
-                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(Material->GetMaterial(), DrawCommands.size());
+                        if (MeshComponent.bCastShadow && Material->DoesCastShadows())
+                        {
+                            Flags |= EInstanceFlags::CastShadow;
+                        }
+
+						bool bDrawInDepthPass = MeshComponent.bUseAsOccluder;
+                        
+                        FDrawBatchKey BatchKey
+                        {
+                            .MaterialID         = (uintptr_t)Material->GetMaterial(),
+							.bDrawInDepthPass   = bDrawInDepthPass,
+						};
+
+                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(BatchKey, DrawCommands.size());
                         uint64 DrawID = BatchIt->second;
                         
                         if (bBatchInserted)
                         {
                             DrawCommands.emplace_back(FMeshDrawCommand
                             {
-                                .VertexShader           = Material->GetVertexShader(EVertexFormat::Static),
+                                .VertexShader           = Material->GetVertexShader(),
                                 .PixelShader            = Material->GetPixelShader(),
                                 .IndirectDrawOffset     = 0,
                                 .DrawArgumentIndexMap   = {},
                                 .DrawCount              = 0,
+								.bDrawInDepthPass       = bDrawInDepthPass,
                             });
                         }
                         
@@ -243,14 +268,13 @@ namespace Lumina
                         
                         InstanceData.emplace_back(FInstanceData
                         {
-                            .Transform              = TransformMatrix,
-                            .SphereBounds           = SphereBounds,
-                            .EntityID               = entt::to_integral(Entity),
-                            .BatchedDrawID          = DrawIt->second,
-                            .Flags                  = Flags,
-                            .BoneOffset             = 0,
-                            .VertexBufferAddress    = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
-                            .IndexBufferAddress     = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .Transform                  = TransformMatrix,
+                            .SphereBounds               = SphereBounds,
+                            .VBAddress                  = Mesh->GetVertexBuffer()->GetAddress(),
+                            .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
+                            .EntityID                   = entt::to_integral(Entity),
+                            .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
+                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(0, (uint16)Material->GetMaterialIndex())
                         });
                     }
                 });
@@ -288,10 +312,6 @@ namespace Lumina
                     {
                         Flags |= EInstanceFlags::Selected;
                     }
-                    if (MeshComponent.bCastShadow)
-                    {
-                        Flags |= EInstanceFlags::CastShadow;
-                    }
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
@@ -306,18 +326,32 @@ namespace Lumina
                             Material = CMaterial::GetDefaultMaterial();
                         }
                         
-                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(Material->GetMaterial(), DrawCommands.size());
+                        if (MeshComponent.bCastShadow && Material->DoesCastShadows())
+                        {
+                            Flags |= EInstanceFlags::CastShadow;
+                        }
+                        
+                        bool bDrawInDepthPass = MeshComponent.bUseAsOccluder;
+
+                        FDrawBatchKey BatchKey
+                        {
+                            .MaterialID = (uintptr_t)Material->GetMaterial(),
+                            .bDrawInDepthPass = bDrawInDepthPass,
+                        };
+
+                        auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(BatchKey, DrawCommands.size());
                         uint64 DrawID = BatchIt->second;
                         
                         if (bBatchInserted)
                         {
                             DrawCommands.emplace_back(FMeshDrawCommand
                             {
-                                .VertexShader           = Material->GetVertexShader(EVertexFormat::Skinned),
+                                .VertexShader           = Material->GetVertexShader(),
                                 .PixelShader            = Material->GetPixelShader(),
                                 .IndirectDrawOffset     = 0,
                                 .DrawArgumentIndexMap   = {},
                                 .DrawCount              = 0,
+								.bDrawInDepthPass       = bDrawInDepthPass,
                             });
                         }
                         
@@ -340,80 +374,84 @@ namespace Lumina
                         
                         InstanceData.emplace_back(FInstanceData
                         {
-                            .Transform              = TransformMatrix,
-                            .SphereBounds           = SphereBounds,
-                            .EntityID               = entt::to_integral(Entity),
-                            .BatchedDrawID          = DrawIt->second,
-                            .Flags                  = Flags,
-                            .BoneOffset             = BoneDataOffset,
-                            .VertexBufferAddress    = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
-                            .IndexBufferAddress     = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .Transform                  = TransformMatrix,
+                            .SphereBounds               = SphereBounds,
+                            .VBAddress                  = Mesh->GetVertexBuffer()->GetAddress(),
+                            .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
+                            .EntityID                   = entt::to_integral(Entity),
+                            .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
+                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(BoneDataOffset, (uint16)Material->GetMaterialIndex())
                         });
                     }
                 });
             }
             
-            
-            TVector<uint32> IndexRemap(IndirectDrawArguments.size());
-            TVector<FDrawIndirectArguments> ReorderedIndirectDrawArguments;
-            ReorderedIndirectDrawArguments.reserve(IndirectDrawArguments.size());
-
-            uint32 Counter = 0;
-            uint32 CumulativeInstanceCount = 0;
-            for (FMeshDrawCommand& DrawCommand : DrawCommands)
             {
-                DrawCommand.DrawCount           = (uint32)DrawCommand.DrawArgumentIndexMap.size();
-                DrawCommand.IndirectDrawOffset  = Counter;
                 
-                RenderStats.NumDraws            += DrawCommand.DrawCount;
+                LUMINA_PROFILE_SECTION("Reorder Instances and Draw Args");
 
-                for (auto& [Key, OldIndex] : DrawCommand.DrawArgumentIndexMap)
+                TVector<uint32> IndexRemap(IndirectDrawArguments.size());
+                TVector<FDrawIndirectArguments> ReorderedIndirectDrawArguments;
+                ReorderedIndirectDrawArguments.reserve(IndirectDrawArguments.size());
+
+                uint32 Counter = 0;
+                uint32 CumulativeInstanceCount = 0;
+                for (FMeshDrawCommand& DrawCommand : DrawCommands)
                 {
-                    IndexRemap[OldIndex] = Counter;
+                    DrawCommand.DrawCount           = (uint32)DrawCommand.DrawArgumentIndexMap.size();
+                    DrawCommand.IndirectDrawOffset  = Counter;
+                
+                    RenderStats.NumDraws            += DrawCommand.DrawCount;
+
+                    for (auto& [Key, OldIndex] : DrawCommand.DrawArgumentIndexMap)
+                    {
+                        IndexRemap[OldIndex] = Counter;
         
-                    FDrawIndirectArguments Args = IndirectDrawArguments[OldIndex];
-                    Args.StartInstanceLocation = CumulativeInstanceCount;
-                    CumulativeInstanceCount += Args.InstanceCount;
+                        FDrawIndirectArguments Args = IndirectDrawArguments[OldIndex];
+                        Args.StartInstanceLocation = CumulativeInstanceCount;
+                        CumulativeInstanceCount += Args.InstanceCount;
                     
-                    RenderStats.NumInstances += Args.InstanceCount;
+                        RenderStats.NumInstances += Args.InstanceCount;
                     
-                    Args.InstanceCount = 0;
+                        Args.InstanceCount = 0;
         
-                    ReorderedIndirectDrawArguments.push_back(Args);
-                    Counter++;
+                        ReorderedIndirectDrawArguments.push_back(Args);
+                        Counter++;
+                    }
                 }
-            }
 
-            IndirectDrawArguments = std::move(ReorderedIndirectDrawArguments);
+                IndirectDrawArguments = std::move(ReorderedIndirectDrawArguments);
 
-            for (FInstanceData& Instance : InstanceData)
-            {
-                Instance.BatchedDrawID = IndexRemap[Instance.BatchedDrawID];
-            }
+                for (FInstanceData& Instance : InstanceData)
+                {
+                    uint32 Flags = Instance.DrawIDAndFlags & 0xFF000000u;
+                    uint32 NewDrawID = IndexRemap[Instance.DrawIDAndFlags & 0x00FFFFFFu];
+                    Instance.DrawIDAndFlags = (NewDrawID & 0x00FFFFFFu) | Flags;
+                }
             
-            RenderStats.NumBatches = DrawCommands.size();
+                RenderStats.NumBatches = DrawCommands.size();
+            }
         }
         
         //========================================================================================================================
         
         {
             LUMINA_PROFILE_SECTION("Process Billboard Primitives");
-
-            uint32 NumBillboards = 0;
             auto View = World->GetEntityRegistry().view<SBillboardComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([this, NumBillboards](const SBillboardComponent& BillboardComponent, const STransformComponent& TransformComponent)
+            View.each([this](entt::entity Entity, const SBillboardComponent& BillboardComponent, const STransformComponent& TransformComponent)
             {
                 if (!BillboardComponent.Texture.IsValid() || !BillboardComponent.Texture->GetRHIRef()->IsValid())
                 {
                     return;
                 }
                 
-                FBillboardInstance& Instance = BillboardInstances.emplace_back();
-                Instance.Position = TransformComponent.GetLocation();
-                Instance.Texture = BillboardComponent.Texture->GetRHIRef();
-                Instance.Size = BillboardComponent.Scale;
-                
-                GRenderContext->WriteDescriptorTable(SceneDescriptorTable, FBindingSetItem::TextureSRV(NumBillboards, Instance.Texture));
+                FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                Billboard.TextureIndex          = BillboardComponent.Texture->GetRHIRef()->GetTextureCacheIndex();
+                Billboard.Position              = TransformComponent.GetLocation();
+                Billboard.Size                  = BillboardComponent.Scale;
+                Billboard.EntityID              = entt::to_integral(Entity);
+
+                RenderStats.NumVertices         += 6;
             });
         }
         
@@ -422,17 +460,10 @@ namespace Lumina
 
             LightData.bHasSun = false;
             auto View = World->GetEntityRegistry().view<SDirectionalLightComponent>(entt::exclude<SDisabledTag>);
-            View.each([this](const SDirectionalLightComponent& DirectionalLightComponent)
+            View.each([this](entt::entity Entity, const SDirectionalLightComponent& DirectionalLightComponent)
             {
                 LightData.bHasSun = true;
                 const FViewVolume& ViewVolume = SceneViewport->GetViewVolume();
-                
-                #if USING(WITH_EDITOR)
-                if (!World->IsGameWorld())
-                {
-                    DrawBillboard(GetNamedImage(ENamedImage::DirectionalLightIcon), glm::vec3(0.0f), 0.35f);
-                }
-                #endif    
                 
                 float NearClip          = ViewVolume.GetNear();
 
@@ -510,7 +541,7 @@ namespace Lumina
             LUMINA_PROFILE_SECTION("Point Light Processing");
 
             auto View = World->GetEntityRegistry().view<SPointLightComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([&] (const SPointLightComponent& PointLightComponent, const STransformComponent& TransformComponent)
+            View.each([&] (entt::entity Entity, const SPointLightComponent& PointLightComponent, const STransformComponent& TransformComponent)
             {
                 FLight Light;
                 Light.Flags                 = LIGHT_TYPE_POINT;
@@ -523,7 +554,11 @@ namespace Lumina
                 #if USING(WITH_EDITOR)
                 if (!World->IsGameWorld())
                 {
-                    DrawBillboard(GetNamedImage(ENamedImage::PointLightIcon), TransformComponent.GetLocation(), 0.35f);
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::PointLightIcon)->GetTextureCacheIndex();
+                    Billboard.Position              = TransformComponent.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
                 }
                 #endif
                 
@@ -585,8 +620,6 @@ namespace Lumina
                 }
                 
                 LightData.Lights[LightData.NumLights++] = Light;
-        
-                //World->DrawDebugSphere(Light.Position, 0.25f, glm::vec4(PointLightComponent.LightColor, 1.0));
             });
         }
         
@@ -596,14 +629,18 @@ namespace Lumina
             LUMINA_PROFILE_SECTION("Spot Light Processing");
 
             auto View = World->GetEntityRegistry().view<SSpotLightComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([&] (SSpotLightComponent& SpotLightComponent, STransformComponent& TransformComponent)
+            View.each([&] (entt::entity Entity, SSpotLightComponent& SpotLightComponent, STransformComponent& TransformComponent)
             {
                 const FTransform& Transform = TransformComponent.WorldTransform;
                 
                 #if USING(WITH_EDITOR)
                 if (!World->IsGameWorld())
                 {
-                    DrawBillboard(GetNamedImage(ENamedImage::SpotLightIcon), TransformComponent.GetLocation(), 0.35f);
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::SpotLightIcon)->GetTextureCacheIndex();
+                    Billboard.Position              = TransformComponent.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
                 }
                 #endif                
         
@@ -652,19 +689,13 @@ namespace Lumina
                 }
         
                 LightData.Lights[LightData.NumLights++] = Light;
-                
-               //World->DrawViewVolume(ViewVolume, FColor::Red);
-        
-               //World->DrawDebugCone(SpotLight.Position, Forward, glm::radians(OuterDegrees), SpotLightComponent.Attenuation, glm::vec4(SpotLightComponent.LightColor, 1.0f));
-               //World->DrawDebugCone(SpotLight.Position, Forward, glm::radians(InnerDegrees), SpotLightComponent.Attenuation, glm::vec4(SpotLightComponent.LightColor, 1.0f));
-        
             });
         }
         
         //========================================================================================================================
         {
             LUMINA_PROFILE_SECTION("Batched Line Processing");
-        
+
             auto View = World->GetEntityRegistry().view<FLineBatcherComponent>();
             View.each([&](FLineBatcherComponent& LineBatcherComponent)
             {
@@ -672,43 +703,39 @@ namespace Lumina
                 {
                     return;
                 }
-        
+
                 for (FLineBatcherComponent::FLineInstance& Line : LineBatcherComponent.Lines)
                 {
-                    if (Line.RemainingLifetime >= 0.0f)
+                    if (!Line.bSingleFrame && Line.RemainingLifetime >= 0.0f)
                     {
                         Line.RemainingLifetime -= SceneGlobalData.DeltaTime;
                     }
                 }
-        
-                TVector<FLineBatcherComponent::FLineInstance> NewLines;
-                TVector<FSimpleElementVertex> NewVertices;
-                
-                NewLines.reserve(LineBatcherComponent.Lines.size());
-                NewVertices.reserve(LineBatcherComponent.Vertices.size());
-        
+
                 struct FLineWithVertices
                 {
                     FLineBatcherComponent::FLineInstance Line;
                     FSimpleElementVertex Vertex0;
                     FSimpleElementVertex Vertex1;
                 };
-                
+
                 TVector<FLineWithVertices> AliveLinesWithVertices;
                 AliveLinesWithVertices.reserve(LineBatcherComponent.Lines.size());
-                
+
+                TVector<FLineBatcherComponent::FLineInstance> NewLines;
+                TVector<FSimpleElementVertex> NewVertices;
+                NewLines.reserve(LineBatcherComponent.Lines.size());
+                NewVertices.reserve(LineBatcherComponent.Vertices.size());
+
                 for (const FLineBatcherComponent::FLineInstance& Line : LineBatcherComponent.Lines)
                 {
-                    if (Line.RemainingLifetime > 0.0f)
-                    {
-                        FLineWithVertices LineData;
-                        LineData.Line = Line;
-                        LineData.Vertex0 = LineBatcherComponent.Vertices[Line.StartVertexIndex];
-                        LineData.Vertex1 = LineBatcherComponent.Vertices[Line.StartVertexIndex + 1];
-                        AliveLinesWithVertices.emplace_back(LineData);
-                    }
+                    FLineWithVertices LineData;
+                    LineData.Line = Line;
+                    LineData.Vertex0 = LineBatcherComponent.Vertices[Line.StartVertexIndex];
+                    LineData.Vertex1 = LineBatcherComponent.Vertices[Line.StartVertexIndex + 1];
+                    AliveLinesWithVertices.emplace_back(LineData);
                 }
-                
+
                 eastl::sort(AliveLinesWithVertices.begin(), AliveLinesWithVertices.end(), [](const FLineWithVertices& A, const FLineWithVertices& B)
                 {
                     if (A.Line.bDepthTest != B.Line.bDepthTest)
@@ -717,62 +744,69 @@ namespace Lumina
                     }
                     return A.Line.Thickness < B.Line.Thickness;
                 });
-                
+
                 uint32 CurrentVertexIndex = 0;
                 for (const FLineWithVertices& LineData : AliveLinesWithVertices)
                 {
                     FLineBatcherComponent::FLineInstance NewLine = LineData.Line;
                     NewLine.StartVertexIndex = CurrentVertexIndex;
-                    NewLines.emplace_back(NewLine);
-        
-                    NewVertices.emplace_back(LineData.Vertex0);
-                    NewVertices.emplace_back(LineData.Vertex1);
-                    
-                    CurrentVertexIndex += 2;
-                }
-        
-                LineBatcherComponent.Lines      = std::move(NewLines);
-                LineBatcherComponent.Vertices   = std::move(NewVertices);
-                
-                if (!LineBatcherComponent.Vertices.empty())
-                {
-                    SimpleVertices = LineBatcherComponent.Vertices;
-            
-                    LineBatches.clear();
-            
-                    if (!LineBatcherComponent.Lines.empty())
+
+                    if (!LineData.Line.bSingleFrame && LineData.Line.RemainingLifetime > 0.0f)
                     {
-                        FLineBatch CurrentBatch;
-                        CurrentBatch.StartVertex = 0;
-                        CurrentBatch.VertexCount = 2;
-                        CurrentBatch.Thickness = LineBatcherComponent.Lines[0].Thickness;
-                        CurrentBatch.bDepthTest = LineBatcherComponent.Lines[0].bDepthTest;
-                
-                        for (size_t i = 1; i < LineBatcherComponent.Lines.size(); ++i)
-                        {
-                            const auto& Line = LineBatcherComponent.Lines[i];
-                    
-                            if (Line.Thickness == CurrentBatch.Thickness && Line.bDepthTest == CurrentBatch.bDepthTest)
-                            {
-                                CurrentBatch.VertexCount += 2;
-                            }
-                            else
-                            {
-                                LineBatches.emplace_back(CurrentBatch);
-                        
-                                CurrentBatch.StartVertex = Line.StartVertexIndex;
-                                CurrentBatch.VertexCount = 2;
-                                CurrentBatch.Thickness = Line.Thickness;
-                                CurrentBatch.bDepthTest = Line.bDepthTest;
-                            }
-                        }
-                
-                        LineBatches.emplace_back(CurrentBatch);
+                        NewLines.emplace_back(NewLine);
+                        NewVertices.emplace_back(LineData.Vertex0);
+                        NewVertices.emplace_back(LineData.Vertex1);
+                        CurrentVertexIndex += 2;
                     }
+                }
+
+                LineBatcherComponent.Lines = std::move(NewLines);
+                LineBatcherComponent.Vertices = std::move(NewVertices);
+
+                if (!AliveLinesWithVertices.empty())
+                {
+                    SimpleVertices.clear();
+                    SimpleVertices.reserve(AliveLinesWithVertices.size() * 2);
+                    for (const FLineWithVertices& LineData : AliveLinesWithVertices)
+                    {
+                        SimpleVertices.emplace_back(LineData.Vertex0);
+                        SimpleVertices.emplace_back(LineData.Vertex1);
+                    }
+
+                    LineBatches.clear();
+
+                    FLineBatch CurrentBatch;
+                    CurrentBatch.StartVertex = 0;
+                    CurrentBatch.VertexCount = 2;
+                    CurrentBatch.Thickness = AliveLinesWithVertices[0].Line.Thickness;
+                    CurrentBatch.bDepthTest = AliveLinesWithVertices[0].Line.bDepthTest;
+
+                    for (size_t i = 1; i < AliveLinesWithVertices.size(); ++i)
+                    {
+                        const auto& LineData = AliveLinesWithVertices[i];
+
+                        if (glm::epsilonEqual(LineData.Line.Thickness, CurrentBatch.Thickness, LE_SMALL_NUMBER) &&
+                            LineData.Line.bDepthTest == CurrentBatch.bDepthTest)
+                        {
+                            CurrentBatch.VertexCount += 2;
+                        }
+                        else
+                        {
+                            RenderStats.NumVertices += CurrentBatch.VertexCount;
+                            LineBatches.emplace_back(CurrentBatch);
+
+                            CurrentBatch.StartVertex = (uint32)SimpleVertices.size() - (uint32)AliveLinesWithVertices.size() * 2 + (uint32)(i * 2);
+                            CurrentBatch.VertexCount = 2;
+                            CurrentBatch.Thickness = LineData.Line.Thickness;
+                            CurrentBatch.bDepthTest = LineData.Line.bDepthTest;
+                        }
+                    }
+
+                    RenderStats.NumVertices += CurrentBatch.VertexCount;
+                    LineBatches.emplace_back(CurrentBatch);
                 }
             });
         }
-        
         
         //========================================================================================================================
         
@@ -806,6 +840,7 @@ namespace Lumina
                 const SIZE_T IndirectArgsSize   = IndirectDrawArguments.size() * sizeof(FDrawIndirectArguments);
                 const SIZE_T ActiveLightsSize   = LightData.NumLights * sizeof(FLight);
                 const SIZE_T LightUploadSize    = offsetof(FSceneLightData, Lights) + ActiveLightsSize;
+                const SIZE_T BillboardSize      = BillboardInstances.size() * sizeof(FBillboardInstance);
                 
                 bool bAnyBufferResized = false;
                 
@@ -839,6 +874,11 @@ namespace Lumina
                     bAnyBufferResized = true;
                 }
                 
+                if (RenderUtils::ResizeBufferIfNeeded(NamedBuffers[(int)ENamedBuffer::Billboards], (uint32)BillboardSize, 2))
+                {
+                    bAnyBufferResized = true;
+                }
+                
                 if (bAnyBufferResized)
                 {
                     CreateLayouts();
@@ -850,6 +890,7 @@ namespace Lumina
                 CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::Indirect), EResourceStates::CopyDest);
                 CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::SimpleVertex), EResourceStates::CopyDest);
                 CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::Light), EResourceStates::CopyDest);
+                CmdList.SetBufferState(GetNamedBuffer(ENamedBuffer::Billboards), EResourceStates::CopyDest);
                 CmdList.CommitBarriers();
                 
                 CmdList.DisableAutomaticBarriers();
@@ -859,6 +900,7 @@ namespace Lumina
                 CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::Indirect), IndirectDrawArguments.data(), IndirectArgsSize);
                 CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::SimpleVertex), SimpleVertices.data(), SimpleVertexSize);
                 CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::Light), &LightData, LightUploadSize);
+                CmdList.WriteBuffer(GetNamedBuffer(ENamedBuffer::Billboards), BillboardInstances.data(), BillboardSize);
                 CmdList.EnableAutomaticBarriers();
             });
         }
@@ -866,10 +908,16 @@ namespace Lumina
 
     void FForwardRenderScene::DrawBillboard(FRHIImage* Image, const glm::vec3& Location, float Scale)
     {
-        FBillboardInstance& Billboard = BillboardInstances.emplace_back();
-        Billboard.Texture = Image;
-        Billboard.Position = Location;
-        Billboard.Size = Scale;
+        if (Image->GetTextureCacheIndex() == -1)
+        {
+            return;
+        }
+        
+        FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+        Billboard.TextureIndex          = Image->GetTextureCacheIndex();
+        Billboard.Position              = Location;
+        Billboard.Size                  = Scale;
+        Billboard.EntityID              = entt::null;
     }
 
     void FForwardRenderScene::ResetPass(FRenderGraph& RenderGraph)
@@ -902,19 +950,19 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Cull Pass", tracy::Color::Pink2);
                 
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("MeshCull.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("MeshCull.slang");
 
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
             PipelineDesc.AddBindingLayout(SceneBindingLayout);
-            PipelineDesc.AddBindingLayout(SceneBindlessLayout);
+            PipelineDesc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                     
             FRHIComputePipelineRef Pipeline = GRenderContext->CreateComputePipeline(PipelineDesc);
             
             FComputeState State;
             State.SetPipeline(Pipeline);
             State.AddBindingSet(SceneBindingSet);
-            State.AddBindingSet(SceneDescriptorTable);
+            State.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             CmdList.SetComputeState(State);
             
             uint32 Num = (uint32)InstanceData.size();
@@ -949,15 +997,14 @@ namespace Lumina
                 .SetDepthStencilState(FDepthStencilState().SetDepthFunc(EComparisonFunc::Greater))
                 .SetRasterState(FRasterState().EnableDepthClip());
             
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("DepthPrePass.slang");
             
             for (const FMeshDrawCommand& Batch : DrawCommands)
             {
-                FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("DepthPrePass.vert");
-                
                 FGraphicsPipelineDesc Desc; Desc
                 .SetRenderState(RenderState)
                 .AddBindingLayout(SceneBindingLayout)
-                .AddBindingLayout(SceneBindlessLayout)
+                .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                 .SetVertexShader(VertexShader);
                 
                 FRHIGraphicsPipelineRef Pipeline = GRenderContext->CreateGraphicsPipeline(Desc, RenderPass);
@@ -967,11 +1014,10 @@ namespace Lumina
                 GraphicsState.SetViewportState(SceneViewportState);
                 GraphicsState.SetPipeline(Pipeline);
                 GraphicsState.AddBindingSet(SceneBindingSet);
-                GraphicsState.AddBindingSet(SceneDescriptorTable);
+                GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
                 GraphicsState.SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                 
                 CmdList.SetGraphicsState(GraphicsState);
-                
                 CmdList.DrawIndirect(Batch.DrawCount, Batch.IndirectDrawOffset * sizeof(FDrawIndirectArguments));
             }
         });
@@ -991,7 +1037,7 @@ namespace Lumina
             LUMINA_PROFILE_SECTION_COLORED("Depth Pyramid Pass", tracy::Color::Orange);
 
             FRHIImage* DepthPyramid = GetNamedImage(ENamedImage::DepthPyramid);
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("DepthPyramidMips.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("DepthPyramidMips.slang");
             int MipCount = DepthPyramid->GetDescription().NumMips;
 
             CmdList.SetEnableUavBarriersForImage(DepthPyramid, false);
@@ -1040,10 +1086,8 @@ namespace Lumina
                 LevelWidth = std::max(LevelWidth, 1u);
                 LevelHeight = std::max(LevelHeight, 1u);
                 
-
-                glm::vec2 Data = glm::vec2(LevelWidth,LevelHeight);
-                TSpan<const Byte> Bytes = AsBytes(Data);
-                CmdList.SetPushConstants(Bytes.data(), Bytes.size_bytes());
+                glm::vec2 Data(LevelWidth,LevelHeight);
+                CmdList.SetPushConstants(&Data, sizeof(glm::vec2));
 
                 uint32 GroupsX = RenderUtils::GetGroupCount(LevelWidth, 32);
                 uint32 GroupsY = RenderUtils::GetGroupCount(LevelHeight, 32);
@@ -1068,19 +1112,19 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Cluster Build Pass", tracy::Color::Pink2);
                 
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("ClusterBuild.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("ClusterBuild.slang");
 
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
             PipelineDesc.AddBindingLayout(SceneBindingLayout);
-            PipelineDesc.AddBindingLayout(SceneBindlessLayout);
+            PipelineDesc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                     
             FRHIComputePipelineRef Pipeline = GRenderContext->CreateComputePipeline(PipelineDesc);
                 
             FComputeState State;
             State.SetPipeline(Pipeline);
             State.AddBindingSet(SceneBindingSet);
-            State.AddBindingSet(SceneDescriptorTable);
+            State.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             CmdList.SetComputeState(State);
 
             FLightClusterPC ClusterPC;
@@ -1108,19 +1152,19 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Light Cull Pass", tracy::Color::Pink2);
                 
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("LightCull.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("LightCull.slang");
 
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
             PipelineDesc.AddBindingLayout(SceneBindingLayout);
-            PipelineDesc.AddBindingLayout(SceneBindlessLayout);
+            PipelineDesc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                     
             FRHIComputePipelineRef Pipeline = GRenderContext->CreateComputePipeline(PipelineDesc);
                 
             FComputeState State;
             State.SetPipeline(Pipeline);
             State.AddBindingSet(SceneBindingSet);
-            State.AddBindingSet(SceneDescriptorTable);
+            State.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             CmdList.SetComputeState(State);
                 
             glm::mat4 ViewProj = SceneViewport->GetViewVolume().GetViewMatrix();
@@ -1144,7 +1188,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Point Light Shadow Pass", tracy::Color::DeepPink2);
             
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMapping.frag");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMappingPixel.slang");
             
             FRenderState RenderState; RenderState
                     .SetDepthStencilState(FDepthStencilState()
@@ -1168,13 +1212,13 @@ namespace Lumina
             FGraphicsState GraphicsState; GraphicsState
                 .SetRenderPass(Move(RenderPass))
                 .AddBindingSet(SceneBindingSet)
-                .AddBindingSet(SceneDescriptorTable)
+                .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable())
                 .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                     
             
             const TVector<FLightShadow>& PointShadows = PackedShadows[(uint32)ELightType::Point];
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMapping.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMappingVert.slang");
             
             for (const FLightShadow& LightShadow : PointShadows)
             {
@@ -1212,7 +1256,7 @@ namespace Lumina
                         .SetDebugName("Point Light Shadow Pass")
                         .SetRenderState(RenderState)
                         .AddBindingLayout(SceneBindingLayout)
-                        .AddBindingLayout(SceneBindlessLayout)
+                        .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                         .SetVertexShader(VertexShader)
                         .SetPixelShader(PixelShader);
                     
@@ -1243,7 +1287,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Spot Shadow Pass", tracy::Color::DeepPink4);
             
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMapping.frag");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMappingPixel.slang");
             
             FRenderState RenderState; RenderState
                 .SetDepthStencilState(FDepthStencilState()
@@ -1256,7 +1300,7 @@ namespace Lumina
             
             const TVector<FLightShadow>& SpotShadows = PackedShadows[(uint32)ELightType::Spot];
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMapping.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMappingVert.slang");
 
             for (const FLightShadow& Shadow : SpotShadows)
             {
@@ -1300,7 +1344,7 @@ namespace Lumina
                     .SetRenderPass(RenderPass)
                     .SetViewportState(ViewportState)
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable)
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable())
                     .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));                    
                 
                 
@@ -1310,7 +1354,7 @@ namespace Lumina
                         .SetDebugName("Spot Shadow Pass")
                         .SetRenderState(RenderState)
                         .AddBindingLayout(SceneBindingLayout)
-                        .AddBindingLayout(SceneBindlessLayout)
+                        .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                         .SetVertexShader(VertexShader)
                         .SetPixelShader(PixelShader);
                     
@@ -1359,7 +1403,7 @@ namespace Lumina
                 .SetRenderArea(glm::uvec2(GCSMResolution, GCSMResolution));
             
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMapping.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMappingVert.slang");
             
             for (const FMeshDrawCommand& Batch : DrawCommands)
             {
@@ -1367,7 +1411,7 @@ namespace Lumina
                     .SetDebugName("Cascaded Shadow Maps")
                     .SetRenderState(RenderState)
                     .AddBindingLayout(SceneBindingLayout)
-                    .AddBindingLayout(SceneBindlessLayout)
+                    .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                     .SetVertexShader(VertexShader);
                 
                 FRHIGraphicsPipelineRef Pipeline = GRenderContext->CreateGraphicsPipeline(Desc, RenderPass);
@@ -1377,7 +1421,7 @@ namespace Lumina
                     .SetViewportState(MakeViewportStateFromImage(GetNamedImage(ENamedImage::Cascade)))
                     .SetPipeline(Pipeline)
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable)
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable())
                     .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect));
                 
                 CmdList.SetGraphicsState(GraphicsState);
@@ -1425,9 +1469,10 @@ namespace Lumina
             FRasterState RasterState;
             RasterState.EnableDepthClip();
             RasterState.SetFillMode(RenderSettings.bWireframe ? ERasterFillMode::Wireframe : ERasterFillMode::Solid);
+            RasterState.SetLineWidth(5.0f);
         
             FDepthStencilState DepthState; DepthState
-                .SetDepthFunc(EComparisonFunc::Equal)
+                .SetDepthFunc(RenderSettings.bWireframe ? EComparisonFunc::GreaterOrEqual : EComparisonFunc::Equal)
                 .DisableDepthWrite();
             
             FRenderState RenderState;
@@ -1442,7 +1487,7 @@ namespace Lumina
                     .SetVertexShader(Batch.VertexShader)
                     .SetPixelShader(Batch.PixelShader)
                     .AddBindingLayout(SceneBindingLayout)
-                    .AddBindingLayout(SceneBindlessLayout);
+                    .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
                 
                 FGraphicsState GraphicsState; GraphicsState
                     .SetRenderPass(RenderPass)
@@ -1450,7 +1495,7 @@ namespace Lumina
                     .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
                     .SetIndirectParams(GetNamedBuffer(ENamedBuffer::Indirect))
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable);
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
                 
                 CmdList.SetGraphicsState(GraphicsState);
                 CmdList.DrawIndirect(Batch.DrawCount, Batch.IndirectDrawOffset * sizeof(FDrawIndirectArguments));
@@ -1460,35 +1505,39 @@ namespace Lumina
 
     void FForwardRenderScene::BillboardPass(FRenderGraph& RenderGraph)
     {
-#if 0
+        if (BillboardInstances.empty() || !RenderSettings.bDrawBillboards)
+        {
+            return;
+        }
+        
         FRGPassDescriptor* Descriptor = RenderGraph.AllocDescriptor();
         RenderGraph.AddPass(RG_Raster, FRGEvent("Billboard Pass"), Descriptor, [&](ICommandList& CmdList)
         {
             LUMINA_PROFILE_SECTION_COLORED("Billboard Pass", tracy::Color::Red);
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("Billboard.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Billboard.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("BillboardVert.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("BillboardPixel.slang");
             
             FRenderPassDesc::FAttachment RenderTarget;
-            RenderTarget.SetImage(HDRRenderTarget);
-            if (RenderSettings.bHasEnvironment)
+            RenderTarget.SetImage(GetNamedImage(ENamedImage::HDR));
+            if (RenderSettings.bHasEnvironment || !DrawCommands.empty())
             {
                 RenderTarget.SetLoadOp(ERenderLoadOp::Load);
             }
             
             FRenderPassDesc::FAttachment PickerImageAttachment; PickerImageAttachment
-                .SetImage(PickerImage)
+                .SetImage(GetNamedImage(ENamedImage::Picker))
                 .SetLoadOp(ERenderLoadOp::Load);
             
             FRenderPassDesc::FAttachment Depth; Depth
-                .SetImage(DepthAttachment)
+                .SetImage(GetNamedImage(ENamedImage::DepthAttachment))
                 .SetLoadOp(ERenderLoadOp::Load);
             
             FRenderPassDesc RenderPass; RenderPass
                 .AddColorAttachment(RenderTarget)
                 .AddColorAttachment(PickerImageAttachment)
                 .SetDepthAttachment(Depth)
-                .SetRenderArea(HDRRenderTarget->GetExtent());
+                .SetRenderArea(GetNamedImage(ENamedImage::HDR)->GetExtent());
         
             FDepthStencilState DepthState; DepthState
                 .DisableDepthWrite()
@@ -1496,29 +1545,25 @@ namespace Lumina
             
             FRenderState RenderState; RenderState
                 .SetDepthStencilState(DepthState);
-
-            for (const FBillboardInstance& Billboard : BillboardInstances)
-            {
-                FGraphicsPipelineDesc Desc; Desc
-                    .SetDebugName("Billboard Pass")
-                    .SetRenderState(RenderState)
-                    .SetVertexShader(VertexShader)
-                    .SetPixelShader(PixelShader)
-                    .AddBindingLayout(BindingLayout)
-                    .AddBindingLayout(BindlessLayout);
             
-                FGraphicsState GraphicsState; GraphicsState
-                    .SetRenderPass(RenderPass)
-                    .SetViewportState(MakeViewportStateFromImage(HDRRenderTarget))
-                    .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
-                    .AddBindingSet(BindingSet)
-                    .AddBindingSet(DescriptorTable);
+            FGraphicsPipelineDesc Desc; Desc
+                .SetDebugName("Billboard Pass")
+                .SetRenderState(RenderState)
+                .SetVertexShader(VertexShader)
+                .SetPixelShader(PixelShader)
+                .AddBindingLayout(SceneBindingLayout)
+                .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             
-                CmdList.SetGraphicsState(GraphicsState);
-                CmdList.Draw(6, 1, 0, 0);   
-            }
+            FGraphicsState GraphicsState; GraphicsState
+                .SetRenderPass(RenderPass)
+                .SetViewportState(MakeViewportStateFromImage(GetNamedImage(ENamedImage::HDR)))
+                .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
+                .AddBindingSet(SceneBindingSet)
+                .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
+            
+            CmdList.SetGraphicsState(GraphicsState);
+            CmdList.Draw(6, BillboardInstances.size(), 0, 0);   
         });
-#endif
     }
 
     void FForwardRenderScene::TransparentPass(FRenderGraph& RenderGraph)
@@ -1538,8 +1583,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Environment Pass", tracy::Color::Green3);
         
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Environment.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Environment.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1562,7 +1607,7 @@ namespace Lumina
             Desc.SetDebugName("Environment Pass");
             Desc.SetRenderState(RenderState);
             Desc.AddBindingLayout(SceneBindingLayout);
-            Desc.AddBindingLayout(SceneBindlessLayout);
+            Desc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             Desc.SetVertexShader(VertexShader);
             Desc.SetPixelShader(PixelShader);
         
@@ -1570,7 +1615,7 @@ namespace Lumina
         
             FGraphicsState GraphicsState;
             GraphicsState.AddBindingSet(SceneBindingSet);
-            GraphicsState.AddBindingSet(SceneDescriptorTable);
+            GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             GraphicsState.SetPipeline(Pipeline);
             GraphicsState.SetRenderPass(RenderPass);
             GraphicsState.SetViewportState(SceneViewportState);
@@ -1594,8 +1639,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Batched Line Draw", tracy::Color::Red2);
     
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("SimpleElement.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SimpleElement.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("SimpleElementVertex.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SimpleElementPixel.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1603,14 +1648,14 @@ namespace Lumina
     
             FRenderPassDesc::FAttachment RenderTarget;
             RenderTarget.SetImage(GetNamedImage(ENamedImage::HDR));
-            if (!DrawCommands.empty())
+            if (!DrawCommands.empty() || RenderSettings.bHasEnvironment || !BillboardInstances.empty())
             {
                 RenderTarget.SetLoadOp(ERenderLoadOp::Load);
             }
     
             FRenderPassDesc::FAttachment Depth; Depth
-                .SetImage(GetNamedImage(ENamedImage::DepthAttachment))
-                .SetLoadOp(ERenderLoadOp::Load);
+            .SetImage(GetNamedImage(ENamedImage::DepthAttachment))
+            .SetLoadOp(ERenderLoadOp::Load);
     
             FRenderPassDesc RenderPass; RenderPass
                 .AddColorAttachment(RenderTarget)
@@ -1648,7 +1693,7 @@ namespace Lumina
                     .SetRenderState(RenderState)
                     .SetInputLayout(SimpleVertexLayoutInput)
                     .AddBindingLayout(SceneBindingLayout)
-                    .AddBindingLayout(SceneBindlessLayout)
+                    .AddBindingLayout(GRenderManager->GetTextureManager().GetLayout())
                     .SetVertexShader(VertexShader)
                     .SetPixelShader(PixelShader);
     
@@ -1658,7 +1703,7 @@ namespace Lumina
                     .SetViewportState(SceneViewportState)
                     .SetPipeline(GRenderContext->CreateGraphicsPipeline(Desc, RenderPass))
                     .AddBindingSet(SceneBindingSet)
-                    .AddBindingSet(SceneDescriptorTable);
+                    .AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
     
                 CmdList.SetGraphicsState(GraphicsState);
                 CmdList.Draw(Batch.VertexCount, 1, Batch.StartVertex, 0);
@@ -1677,8 +1722,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Selection Post Process Pass", tracy::Color::Red2);
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SelectionPostProcess.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SelectionPostProcess.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1707,7 +1752,7 @@ namespace Lumina
             Desc.SetDebugName("Selection Post Process Pass");
             Desc.SetRenderState(RenderState);
             Desc.AddBindingLayout(SceneBindingLayout);
-            Desc.AddBindingLayout(SceneBindlessLayout);
+            Desc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             Desc.SetVertexShader(VertexShader);
             Desc.SetPixelShader(PixelShader);
         
@@ -1716,7 +1761,7 @@ namespace Lumina
             FGraphicsState GraphicsState;
             GraphicsState.SetPipeline(Pipeline);
             GraphicsState.AddBindingSet(SceneBindingSet);
-            GraphicsState.AddBindingSet(SceneDescriptorTable);
+            GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             GraphicsState.SetRenderPass(RenderPass);               
             GraphicsState.SetViewportState(MakeViewportStateFromImage(GetNamedImage(ENamedImage::HDR)));
         
@@ -1747,8 +1792,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Tone Mapping Pass", tracy::Color::Red2);
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ToneMapping.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ToneMapping.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1777,7 +1822,7 @@ namespace Lumina
             Desc.SetDebugName("Tone Mapping Pass");
             Desc.SetRenderState(RenderState);
             Desc.AddBindingLayout(SceneBindingLayout);
-            Desc.AddBindingLayout(SceneBindlessLayout);
+            Desc.AddBindingLayout(GRenderManager->GetTextureManager().GetLayout());
             Desc.SetVertexShader(VertexShader);
             Desc.SetPixelShader(PixelShader);
         
@@ -1786,7 +1831,7 @@ namespace Lumina
             FGraphicsState GraphicsState;
             GraphicsState.SetPipeline(Pipeline);
             GraphicsState.AddBindingSet(SceneBindingSet);
-            GraphicsState.AddBindingSet(SceneDescriptorTable);
+            GraphicsState.AddBindingSet(GRenderManager->GetTextureManager().GetDescriptorTable());
             GraphicsState.SetRenderPass(RenderPass);               
             GraphicsState.SetViewportState(MakeViewportStateFromImage(GetRenderTarget()));
         
@@ -1813,8 +1858,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Debug Draw Pass", tracy::Color::Red2);
         
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Debug.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Debug.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1876,16 +1921,6 @@ namespace Lumina
             BufferDesc.InitialState = EResourceStates::ShaderResource;
             BufferDesc.DebugName = "Scene Global Data";
             NamedBuffers[(int)ENamedBuffer::Scene] = GRenderContext->CreateBuffer(BufferDesc);
-        }
-        
-        {
-            FRHIBufferDesc BufferDesc;
-            BufferDesc.Size = sizeof(FMaterialUniforms);
-            BufferDesc.Usage.SetFlag(BUF_StorageBuffer);
-            BufferDesc.bKeepInitialState = true;
-            BufferDesc.InitialState = EResourceStates::ShaderResource;
-            BufferDesc.DebugName = "Material Uniform Data";
-            NamedBuffers[(int)ENamedBuffer::Materials] = GRenderContext->CreateBuffer(BufferDesc);
         }
 
         {
@@ -1957,6 +1992,16 @@ namespace Lumina
             BufferDesc.bKeepInitialState = true;
             BufferDesc.DebugName = "Indirect Draw Buffer";
             NamedBuffers[(int)ENamedBuffer::Indirect] = GRenderContext->CreateBuffer(BufferDesc);
+        }
+        
+        {
+            FRHIBufferDesc BufferDesc;
+            BufferDesc.Size = sizeof(FBillboardInstance);
+            BufferDesc.Usage.SetFlag(BUF_StorageBuffer);
+            BufferDesc.bKeepInitialState = true;
+            BufferDesc.InitialState = EResourceStates::UnorderedAccess;
+            BufferDesc.DebugName = "Billboard Data";
+            NamedBuffers[(int)ENamedBuffer::Billboards] = GRenderContext->CreateBuffer(BufferDesc);
         }
     }
 
@@ -2087,27 +2132,17 @@ namespace Lumina
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(4, GetNamedBuffer(ENamedBuffer::Indirect)));
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(5, GetNamedBuffer(ENamedBuffer::Bone)));
             BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(6, GetNamedBuffer(ENamedBuffer::Cluster)));
-            BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(7, GetNamedBuffer(ENamedBuffer::Materials)));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(8, GetNamedImage(ENamedImage::Cascade)));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(9, ShadowAtlas.GetImage()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(10, GetNamedImage(ENamedImage::Picker), TStaticRHISampler<false, false>::GetRHI()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(11, GetNamedImage(ENamedImage::DepthPyramid), TStaticRHISampler<false, false>::GetRHI()));
-            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(12, GetNamedImage(ENamedImage::HDR)));
+            BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(7, GRenderManager->GetMaterialManager().GetMaterialBuffer()));
+            BindingSetDesc.AddItem(FBindingSetItem::BufferUAV(8, GetNamedBuffer(ENamedBuffer::Billboards)));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(9, GetNamedImage(ENamedImage::Cascade)));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(10, ShadowAtlas.GetImage()));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(11, GetNamedImage(ENamedImage::Picker), TStaticRHISampler<false, false>::GetRHI()));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(12, GetNamedImage(ENamedImage::DepthPyramid), TStaticRHISampler<false, false>::GetRHI()));
+            BindingSetDesc.AddItem(FBindingSetItem::TextureSRV(13, GetNamedImage(ENamedImage::HDR)));
 
             TBitFlags<ERHIShaderType> Visibility;
             Visibility.SetMultipleFlags(ERHIShaderType::Vertex, ERHIShaderType::Fragment, ERHIShaderType::Compute);
             GRenderContext->CreateBindingSetAndLayout(Visibility, 0, BindingSetDesc, SceneBindingLayout, SceneBindingSet);
-        }
-        
-        {
-            FBindlessLayoutDesc BindlessLayoutDesc;
-            BindlessLayoutDesc.AddBinding(FBindingLayoutItem::Texture_SRV(0));
-            BindlessLayoutDesc.SetVisibility(ERHIShaderType::Fragment);
-            BindlessLayoutDesc.SetVisibility(ERHIShaderType::Vertex);
-            BindlessLayoutDesc.SetMaxCapacity(1024);
-            
-            SceneBindlessLayout = GRenderContext->CreateBindlessLayout(BindlessLayoutDesc);
-            SceneDescriptorTable = GRenderContext->CreateDescriptorTable(SceneBindlessLayout);
         }
     }
 

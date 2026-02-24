@@ -113,7 +113,7 @@ namespace Lumina
 
     bool FPropertyRow::IsReadOnly() const
     {
-        return PropertyHandle == nullptr ? false : PropertyHandle->Property->Metadata.HasMetadata("ReadOnly");
+        return PropertyHandle == nullptr ? false : PropertyHandle->Property->IsReadOnly();
     }
     
     FPropertyPropertyRow::FPropertyPropertyRow(const TSharedPtr<FPropertyHandle>& InPropHandle, FPropertyRow* InParentRow, const FPropertyChangedEventCallbacks& InCallbacks)
@@ -242,8 +242,8 @@ namespace Lumina
     {
         ImGui::Dummy(ImVec2(Offset, 0));
         ImGui::SameLine();
-
-        FString DisplayName = PropertyHandle->Index == 0 ? PropertyHandle->Property->GetPropertyDisplayName() : eastl::to_string(PropertyHandle->Index);
+        
+        FString DisplayName = IsArrayElementProperty() ? eastl::to_string(PropertyHandle->Index) : PropertyHandle->Property->GetPropertyDisplayName();
         ImGui::TextUnformatted(DisplayName.c_str());
     }
 
@@ -272,8 +272,8 @@ namespace Lumina
     {
         FArrayPropertyRow* ArrayRow = static_cast<FArrayPropertyRow*>(ParentRow);
         FArrayProperty* ArrayProperty = static_cast<FArrayPropertyRow*>(ParentRow)->ArrayProperty;
-
         void* ContainerPtr = ArrayRow->GetPropertyHandle()->ContainerPtr;
+        size_t ArrayNum = ArrayProperty->GetNum(ContainerPtr);
         
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 4));
         ImGuiX::FlatButton(LE_ICON_DOTS_HORIZONTAL, ImVec2(18, 24), 428768833);
@@ -283,24 +283,32 @@ namespace Lumina
         {
             if (ImGui::MenuItem(LE_ICON_PLUS" Insert New Element"))
             {
-                
+                ArrayProperty->PushBack(ContainerPtr, nullptr);
+                ArrayRow->RebuildChildren();
             }
 
             if (PropertyHandle->Index > 0)
             {
                 if (ImGui::MenuItem(LE_ICON_ARROW_UP" Move Element Up"))
                 {
-                    
+                    ArrayProperty->Swap(ContainerPtr, PropertyHandle->Index, PropertyHandle->Index - 1);
+                    ArrayRow->RebuildChildren();
                 }
+                
+                ImGuiX::TextTooltip("Move the element up the array (lower index)");
             }
             
             
-            if (std::cmp_less(PropertyHandle->Index, (ArrayProperty->GetNum(ContainerPtr) - 1)))
+            if (std::cmp_less(PropertyHandle->Index, (ArrayNum - 1)))
             {
                 if (ImGui::MenuItem(LE_ICON_ARROW_DOWN" Move Element Down"))
                 {
-                    
+                    ArrayProperty->Swap(ContainerPtr, PropertyHandle->Index, PropertyHandle->Index + 1);
+                    ArrayRow->RebuildChildren();
                 }
+                
+                ImGuiX::TextTooltip("Move the element down the array (higher index)");
+
             }
 
             if (ImGui::MenuItem(LE_ICON_TRASH_CAN" Remove Element"))
@@ -308,10 +316,13 @@ namespace Lumina
                 ArrayProperty->RemoveAt(ContainerPtr, PropertyHandle->Index);
                 ArrayRow->RebuildChildren();
             }
+            
+            ImGuiX::TextTooltip("Remove the element.");
+
             ImGui::EndPopup();
         }
 
-        ImGuiX::ItemTooltip("Array Element Options");
+        ImGuiX::TextTooltip("Array Element Options");
     }
 
     FArrayPropertyRow::FArrayPropertyRow(const TSharedPtr<FPropertyHandle>& InPropHandle, FPropertyRow* InParentRow, const FPropertyChangedEventCallbacks& InCallbacks)
@@ -355,7 +366,7 @@ namespace Lumina
         
         for (size_t i = 0; i < ElementCount; ++i)
         {
-            TSharedPtr<FPropertyHandle> ElementPropHandle = MakeShared<FPropertyHandle>(ArrayProperty->GetAt(ContainerPtr, i), ArrayProperty->GetInternalProperty(), 0);
+            TSharedPtr<FPropertyHandle> ElementPropHandle = MakeShared<FPropertyHandle>(ArrayProperty->GetAt(ContainerPtr, i), ArrayProperty->GetInternalProperty(), i);
             TUniquePtr<FPropertyRow> NewRow = CreatePropertyRow(ElementPropHandle, this, Callbacks);
             NewRow->SetIsArrayElement(true);
             
@@ -370,8 +381,6 @@ namespace Lumina
 
     void FArrayPropertyRow::DrawExtraControlsSection()
     {
-        //ImGui::BeginDisabled();
-
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 4));
         if (ImGuiX::FlatButton(LE_ICON_PLUS, ImVec2(18, 24), 428768833))
         {
@@ -379,7 +388,7 @@ namespace Lumina
             RebuildChildren();
         }
         ImGui::PopStyleVar();
-        ImGuiX::ItemTooltip("Add array element");
+        ImGuiX::TextTooltip("Add array element");
 
         ImGui::SameLine();
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 4));
@@ -390,9 +399,8 @@ namespace Lumina
             
         }
         ImGui::PopStyleVar();
-        ImGuiX::ItemTooltip("Remove all array elements");
+        ImGuiX::TextTooltip("Remove all array elements");
 
-        //ImGui::EndDisabled();
     }
 
     FStructPropertyRow::FStructPropertyRow(const TSharedPtr<FPropertyHandle>& InPropHandle, FPropertyRow* InParentRow, const FPropertyChangedEventCallbacks& InCallbacks)
@@ -522,7 +530,7 @@ namespace Lumina
         FProperty* Current = Struct->LinkedProperty;
         while (Current != nullptr)
         {
-            if (Current->Metadata.HasMetadata("Editable") || Current->Metadata.HasMetadata("ReadOnly"))
+            if (Current->IsVisible())
             {
                 FName Category = "General";
                 if (Current->Metadata.HasMetadata("Category"))

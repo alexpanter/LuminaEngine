@@ -2,7 +2,6 @@
 
 
 #include "MeshComponent.h"
-#include "Core/Math/Transform.h"
 #include "Assets/AssetTypes/Mesh/StaticMesh/StaticMesh.h"
 #include "Core/Object/ObjectHandleTyped.h"
 #include "StaticMeshComponent.generated.h"
@@ -27,11 +26,5 @@ namespace Lumina
         
         PROPERTY(Editable, Category = "Mesh")
         TObjectPtr<CStaticMesh> StaticMesh;
-        
-        PROPERTY(Editable, Category = "Shadow")
-        bool bCastShadow = true;
-
-        PROPERTY(Editable, Category = "Shadow")
-        bool bReceiveShadow = true;
     };
 }

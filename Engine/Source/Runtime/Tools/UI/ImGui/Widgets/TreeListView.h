@@ -25,7 +25,8 @@ namespace Lumina
         FFixedString    TooltipText;
         ImVec4          DisplayColor = ImVec4(0.725f, 0.725f, 0.725f, 1.0f);
         
-        bool            bShowDisabledIcon = false;
+        uint8           bShowDisabledIcon:1 = false;
+		uint8		    bAllowRenaming:1 = false;
 
     };
     
@@ -36,6 +37,7 @@ namespace Lumina
         uint8 bSelected:1       = false;
         uint8 bPassesFilter:1   = false;
         uint8 bDisabled:1       = false;
+        uint8 bEditingText:1    = false;
     };
     
     struct FRootNode {};
@@ -67,6 +69,9 @@ namespace Lumina
         
         /** Called when the visibility icon is toggled */
         TFunction<void(FTreeListView&, entt::entity)>                   VisibilityToggleFunction;
+
+        /** Called when an item is being renamed */
+        TFunction<void(FTreeListView&, entt::entity, FStringView)>      RenameFunction;
     };
     
     
@@ -110,7 +115,7 @@ namespace Lumina
         
         void DrawListItem(entt::entity Entity, const FTreeListViewContext& Context);
 
-        void ClearSelection();
+        void ClearSelections(const FTreeListViewContext& Context);
     
     private:
         

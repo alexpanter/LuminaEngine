@@ -1,8 +1,6 @@
 #include "pch.h"
 #include "TreeListView.h"
-
 #include "imgui.h"
-#include "imgui_internal.h"
 #include "Tools/UI/ImGui/ImGuiDesignIcons.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
 
@@ -10,14 +8,16 @@ namespace Lumina
 {
     void FTreeListView::Draw(const FTreeListViewContext& Context)
     {
+        LUMINA_PROFILE_SCOPE();
+
         if (bDirty)
         {
             RebuildTree(Context);
             return;
         }
         
-        ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_ScrollY;
-        TableFlags |= ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_BordersV;
+        ImGuiTableFlags TableFlags = ImGuiTableFlags_Resizable | ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollX
+        | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_BordersV;
         
         ImGui::PushID(this);
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(2, 2));
@@ -28,8 +28,7 @@ namespace Lumina
             auto View = Registry.view<FTreeNode, FRootNode>();
             ImGuiListClipper Clipper;
             
-            Clipper.Begin(static_cast<int>(View.size_hint()));
-            
+            Clipper.Begin(static_cast<int>(View.size_hint()), 25.0f);
             while (Clipper.Step())
             {
                 for (int i = Clipper.DisplayStart; i < Clipper.DisplayEnd; ++i)
@@ -60,6 +59,13 @@ namespace Lumina
 
             ImGui::EndTable();
         }
+
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
+            ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+            !ImGui::IsAnyItemHovered())
+        {
+            ClearSelections(Context);
+        }
         
         ImGui::PopStyleVar();
         ImGui::PopID();
@@ -85,7 +91,7 @@ namespace Lumina
             }
         });
 
-        ClearSelection();
+        ClearSelections(Context);
         ClearTree();
         
         Context.RebuildTreeFunction(*this);
@@ -105,7 +111,7 @@ namespace Lumina
     void FTreeListView::DrawListItem(entt::entity Entity, const FTreeListViewContext& Context)
     {
         const FTreeNode& TreeNode       = Registry.get<FTreeNode>(Entity);
-        const FTreeNodeDisplay& Display = Registry.get<FTreeNodeDisplay>(Entity);
+        FTreeNodeDisplay& Display = Registry.get<FTreeNodeDisplay>(Entity);
         FTreeNodeState& State           = Registry.get<FTreeNodeState>(Entity);
         bool bHasChildren               = !TreeNode.Children.empty();
         
@@ -128,15 +134,6 @@ namespace Lumina
             Flags |= ImGuiTreeNodeFlags_Selected;
         }
         
-        
-        FFixedString DisplayName = Display.DisplayName.c_str();
-        if (bHasChildren)
-        {
-            DisplayName.append(" (");
-            DisplayName.append(eastl::to_string(TreeNode.Children.size()).c_str());
-            DisplayName.append(")");
-        }
-        
         ImVec4 TextColor = Display.DisplayColor;
         if (State.bDisabled)
         {
@@ -145,15 +142,55 @@ namespace Lumina
         
         ImGui::PushStyleColor(ImGuiCol_Text, TextColor);
         
-        State.bExpanded = ImGui::TreeNodeEx("##TreeNode", Flags, "%s", DisplayName.c_str());
+        ImGui::PushStyleColor(ImGuiCol_Header, ImVec4(0.22f, 0.52f, 0.22f, 0.40f));
+
+        State.bExpanded = ImGui::TreeNodeEx("##TreeNode", Flags, "%s", Display.DisplayName.c_str());
         
-        if (ImGui::IsItemHovered() && ImGui::IsItemClicked(ImGuiMouseButton_Left))
+        if (State.bEditingText && Display.bAllowRenaming)
         {
-            SetSelection(Entity, Context);
+            ImVec2 ItemMin = ImGui::GetItemRectMin();
+            ImVec2 ItemMax = ImGui::GetItemRectMax();
+
+            float ArrowWidth = ImGui::GetFrameHeight();
+            ImGui::SetCursorScreenPos(ImVec2(ItemMin.x + ArrowWidth, ItemMin.y));
+
+            ImGui::SetNextItemWidth(ItemMax.x - ItemMin.x - ArrowWidth);
+            ImGui::SetKeyboardFocusHere();
+
+            static char EditBuffer[256];
+
+            ImGui::PushStyleColor(ImGuiCol_FrameBg, ImVec4(0.1f, 0.1f, 0.1f, 1.0f));
+            if (ImGui::InputText("##EditLabel", EditBuffer, sizeof(EditBuffer),
+                ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+            {
+                State.bEditingText = false;
+                if (Context.RenameFunction)
+                {
+                    Context.RenameFunction(*this, Entity, EditBuffer);
+                }
+
+				EditBuffer[0] = '\0';
+            }
+            ImGui::PopStyleColor();
+
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape) ||
+                (!ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left)))
+            {
+                State.bEditingText = false;
+            }
         }
+
+        ImGui::PopStyleColor();
+
+        bool bTreeNodeClicked = ImGui::IsItemClicked(ImGuiMouseButton_Left) && !ImGui::IsItemToggledOpen();
         
         if (ImGui::IsItemHovered())
         {
+            if (ImGui::IsKeyDown(ImGuiKey_F2) && Display.bAllowRenaming)
+            {
+				State.bEditingText = true;
+            }
+
             for (int Key = ImGuiKey_NamedKey_BEGIN; Key < ImGuiKey_NamedKey_END; Key++)
             {
                 if (ImGui::IsKeyPressed(static_cast<ImGuiKey>(Key)))
@@ -173,7 +210,7 @@ namespace Lumina
                 Context.SetDragDropFunction(*this, Entity);
             }
             
-            ImGui::TextUnformatted(DisplayName.c_str());
+            ImGui::TextUnformatted(Display.DisplayName.c_str());
             ImGui::EndDragDropSource();
         }
 
@@ -187,7 +224,7 @@ namespace Lumina
             ImGui::EndDragDropTarget();
         }
         
-        ImGuiX::ItemTooltip("{}", Display.TooltipText);
+        ImGuiX::TextTooltip("{}", Display.TooltipText);
         
 
         if (Context.ItemContextMenuFunction)
@@ -203,6 +240,7 @@ namespace Lumina
             }
         }
         
+        bool bMouseOverVisibilityButton = false;
         if (Display.bShowDisabledIcon)
         {
             ImGui::SameLine();
@@ -212,15 +250,40 @@ namespace Lumina
             ImGui::SetCursorPosX(ImGui::GetCursorPosX() + AvailableWidth - ButtonWidth + ImGui::GetStyle().FramePadding.x);
         
             const char* Icon = State.bDisabled ? LE_ICON_EYE_OFF : LE_ICON_EYE;
-            if (ImGui::SmallButton(Icon))
+            bool bSmallButtonClicked = ImGui::SmallButton(Icon);
+			bMouseOverVisibilityButton = ImGui::IsItemHovered();
+
+            if(bSmallButtonClicked)
             {
-                State.bDisabled = !State.bDisabled;
+                State.bDisabled = ~State.bDisabled;
+                
+                TVector<entt::entity> Stack(TreeNode.Children.begin(), TreeNode.Children.end());
+                while (!Stack.empty())
+                {
+                    entt::entity Current = Stack.back();
+                    Stack.pop_back();
+
+                    FTreeNodeState& ChildState = Registry.get<FTreeNodeState>(Current);
+                    ChildState.bDisabled = State.bDisabled;
+
+                    FTreeNode& ChildNode = Registry.get<FTreeNode>(Current);
+                    for (entt::entity Grandchild : ChildNode.Children)
+                    {
+                        Stack.push_back(Grandchild);
+                    }
+                }
+                
                 if (Context.VisibilityToggleFunction)
                 {
                     Context.VisibilityToggleFunction(*this, Entity);
                 }
             }
         }
+
+        if(bTreeNodeClicked && !bMouseOverVisibilityButton)
+        {
+            SetSelection(Entity, Context);
+		}
         
         if (State.bExpanded)
         {
@@ -249,16 +312,20 @@ namespace Lumina
         TreeNode.Hash = (Hash == 0) ? Hash::GetHash64(Name) : Hash;
         TreeNode.Parent = Parent;
         
+        bool bShouldBeDisabled = false;
         if (Parent != entt::null && Registry.valid(Parent))
         {
             FTreeNode& ParentNode = Registry.get<FTreeNode>(Parent);
+            FTreeNodeState& ParentState = Registry.get<FTreeNodeState>(Parent);
             ParentNode.Children.push_back(NewNode);
+            bShouldBeDisabled = ParentState.bDisabled;
         }
         
         FTreeNodeDisplay& Display = Registry.emplace<FTreeNodeDisplay>(NewNode);
         Display.DisplayName = Name;
         Display.TooltipText = Name;
-        Registry.emplace<FTreeNodeState>(NewNode);
+        FTreeNodeState& State = Registry.emplace<FTreeNodeState>(NewNode);
+        State.bDisabled = bShouldBeDisabled;
         
         if (Parent == entt::null)
         {
@@ -300,8 +367,17 @@ namespace Lumina
         return false;
     }
     
-    void FTreeListView::ClearSelection()
+    void FTreeListView::ClearSelections(const FTreeListViewContext& Context)
     {
+        auto View = Registry.view<FTreeNodeState>();
+        View.each([&](entt::entity ViewEntity, FTreeNodeState& State)
+        {
+            State.bSelected = false;
 
+            if (Context.ItemSelectedFunction)
+            {
+                //Context.ItemSelectedFunction(*this, entt::null);
+            }
+        });
     }
 }

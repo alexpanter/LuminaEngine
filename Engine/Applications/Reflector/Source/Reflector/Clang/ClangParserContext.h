@@ -43,7 +43,6 @@ namespace Lumina::Reflection
         FReflectedType*                                             LastReflectedType;
                                                                     
         FReflectionDatabase                                         ReflectionDatabase;
-       
         
         FReflectedWorkspace*                                        Workspace = nullptr;
         FReflectedHeader*                                           ReflectedHeader = nullptr;

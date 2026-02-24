@@ -16,7 +16,6 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "Time"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override;
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     
     };

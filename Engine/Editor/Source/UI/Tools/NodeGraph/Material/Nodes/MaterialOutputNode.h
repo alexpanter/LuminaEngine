@@ -19,7 +19,6 @@ namespace Lumina
 
         void BuildNode() override;
         
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 1;}
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         bool IsDeletable() const override { return false; }

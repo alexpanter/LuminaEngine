@@ -12,14 +12,11 @@
 #include "Entity/Components/DirtyComponent.h"
 #include "Entity/Components/EditorComponent.h"
 #include "entity/components/entitytags.h"
-#include "Entity/Components/InterpolatingMovementComponent.h"
 #include "Entity/Components/LineBatcherComponent.h"
 #include "Entity/Components/NameComponent.h"
 #include "Entity/Components/ScriptComponent.h"
 #include "Entity/Components/SingletonEntityComponent.h"
 #include "entity/components/tagcomponent.h"
-#include "Events/KeyCodes.h"
-#include "glm/gtx/matrix_decompose.hpp"
 #include "Physics/Physics.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
@@ -32,6 +29,7 @@ namespace Lumina
     CWorld::CWorld()
         : SingletonEntity(entt::null)
         , SystemContext(this)
+        , LineBatcherComponent(nullptr)
     {
     }
 
@@ -75,6 +73,7 @@ namespace Lumina
             SingletonEntity = EntityRegistry.create();
         }
         
+        LineBatcherComponent = &EntityRegistry.emplace<FLineBatcherComponent>(SingletonEntity);
         EntityRegistry.emplace<FSingletonEntityTag>(SingletonEntity);
         EntityRegistry.emplace<FHideInSceneOutliner>(SingletonEntity);
         
@@ -93,13 +92,13 @@ namespace Lumina
             eastl::visit([&](const auto& Sys) { Sys.Startup(SystemContext); }, System);
         });
         
-        EntityRegistry.on_destroy<FRelationshipComponent>().connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
-        EntityRegistry.on_construct<SScriptComponent>().connect<&ThisClass::OnScriptComponentCreated>(this);
-        EntityRegistry.on_destroy<SScriptComponent>().connect<&ThisClass::OnScriptComponentDestroyed>(this);
-        SystemContext.EventSink<FSwitchActiveCameraEvent>().connect<&ThisClass::OnChangeCameraEvent>(this);
+        EntityRegistry.on_destroy   <FRelationshipComponent>()  .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
+        EntityRegistry.on_construct <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentCreated>(this);
+        EntityRegistry.on_destroy   <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentDestroyed>(this);
+        SystemContext.EventSink     <FSwitchActiveCameraEvent>().connect<&ThisClass::OnChangeCameraEvent>(this);
         
         auto CameraView = EntityRegistry.view<SCameraComponent>(entt::exclude<SDisabledTag>);
-        CameraView.each([&](entt::entity Entity, SCameraComponent& Camera)
+        CameraView.each([&](entt::entity Entity, const SCameraComponent& Camera)
         {
            if (Camera.bAutoActivate)
            {
@@ -120,7 +119,7 @@ namespace Lumina
         });
         
         auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
-        RelationshipView.each([&](entt::entity Entity, SScriptComponent& Script, FRelationshipComponent& Relationship)
+        RelationshipView.each([&](entt::entity Entity, SScriptComponent& Script, const FRelationshipComponent& Relationship)
         {
             if (Relationship.Parent == entt::null)
             {
@@ -147,11 +146,11 @@ namespace Lumina
     
     void CWorld::TeardownWorld()
     {
-        RegistryPending.clear<>();
-        EntityRegistry.clear<>();
-        
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);
         EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentCreated>(this);
+        
+        RegistryPending.clear<>();
+        EntityRegistry.clear<>();
         
         ForEachUniqueSystem([&](const FSystemVariant& System)
         {
@@ -524,10 +523,7 @@ namespace Lumina
 
     void CWorld::DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness, bool bDepthTest, float Duration)
     {
-        FLineBatcherComponent& Batcher = GetOrCreateLineBatcher();
-        
-        float ActualDuration = eastl::max<float>(static_cast<float>(GetWorldDeltaTime()) + LE_KINDA_SORTA_SMALL_NUMBER, Duration);
-        Batcher.DrawLine(Start, End, Color, Thickness, bDepthTest, ActualDuration);
+        LineBatcherComponent->DrawLine(Start, End, Color, Thickness, bDepthTest, Duration);
     }
     
     TOptional<FRayResult> CWorld::CastRay(const FRayCastSettings& Settings)
@@ -666,10 +662,5 @@ namespace Lumina
         {
             eastl::visit([&](auto& System) { System.Update(Context); }, SystemVariant);
         }
-    }
-
-    FLineBatcherComponent& CWorld::GetOrCreateLineBatcher()
-    {
-        return EntityRegistry.get_or_emplace<FLineBatcherComponent>(SingletonEntity);
     }
 }

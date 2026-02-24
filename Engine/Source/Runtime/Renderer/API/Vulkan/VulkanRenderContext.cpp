@@ -471,6 +471,9 @@ namespace Lumina
     bool FVulkanRenderContext::Initialize(const FRenderContextDesc& Desc)
     {
         LUMINA_PROFILE_SCOPE();
+        
+        CrashTracker = MakeUnique<RHI::FVulkanCrashTracker>();
+
         ASSERT(glfwVulkanSupported(), "Vulkan Is Not Supported!");
         VkResult VolkInitResult = volkInitialize();
         ASSERT(VolkInitResult == VK_SUCCESS, "Volk failed to initialize");
@@ -486,10 +489,15 @@ namespace Lumina
         .set_allocation_callbacks(VK_ALLOC_CALLBACK);
         if (Description.bValidation)
         {
-            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
-            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
-            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
-            Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
+            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
+            //Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
+            Builder.add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT);
+            Builder.add_debug_messenger_severity(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT);
+            Builder.add_debug_messenger_type(VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT);
+            Builder.add_debug_messenger_type(VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT);
+            Builder.add_debug_messenger_type(VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT);
             Builder.add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT);
             Builder.request_validation_layers();
             Builder.use_default_debug_messenger();
@@ -513,7 +521,6 @@ namespace Lumina
         
         volkLoadInstance(VulkanInstance);
         
-
         if (Description.bValidation)
         {
             DebugUtils.DebugMessenger = InstBuilder->debug_messenger;
@@ -529,7 +536,6 @@ namespace Lumina
         uint32 Patch = VK_API_VERSION_PATCH(APIVer);
         
         LOG_TRACE("Vulkan Render Context - {} - API: {}.{}.{} - Validation: {}", GetDevice()->GetPhysicalDeviceProperties().deviceName, Major, Minor, Patch, Description.bValidation);
-        
 
         DebugUtils.DebugUtilsObjectNameEXT      = (PFN_vkSetDebugUtilsObjectNameEXT)(vkGetInstanceProcAddr(VulkanInstance, "vkSetDebugUtilsObjectNameEXT"));
         
@@ -611,7 +617,7 @@ namespace Lumina
         VK_CHECK(vkDeviceWaitIdle(VulkanDevice->GetDevice()));
     }
 
-    bool FVulkanRenderContext::FrameStart(const FUpdateContext& UpdateContext, uint8 InCurrentFrameIndex)
+    bool FVulkanRenderContext::FrameStart(const FUpdateContext& UpdateContext, uint8 InCurrentFrameIndex) 
     {
         LUMINA_PROFILE_SCOPE();
 
@@ -691,8 +697,6 @@ namespace Lumina
     
     void FVulkanRenderContext::CreateDevice(vkb::Instance Instance)
     {
-        CrashTracker = MakeUnique<RHI::FVulkanCrashTracker>();
-        
         VkPhysicalDeviceFeatures DeviceFeatures             = {};
         DeviceFeatures.fragmentStoresAndAtomics             = VK_TRUE;
         DeviceFeatures.samplerAnisotropy                    = VK_TRUE;
@@ -705,6 +709,8 @@ namespace Lumina
         DeviceFeatures.shaderStorageImageWriteWithoutFormat = VK_TRUE;
         DeviceFeatures.drawIndirectFirstInstance            = VK_TRUE;
         DeviceFeatures.vertexPipelineStoresAndAtomics       = VK_TRUE; // @TODO See if we need this.
+        DeviceFeatures.shaderInt16                          = VK_TRUE;
+        //DeviceFeatures.shaderInt64                          = VK_TRUE;
 
         VkPhysicalDeviceVulkan11Features Features11 = {};
         Features11.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES;
@@ -721,11 +727,21 @@ namespace Lumina
         Features12.shaderOutputLayer                = VK_TRUE; // Should not stay.
         Features12.samplerFilterMinmax              = VK_TRUE;
         Features12.bufferDeviceAddress              = VK_TRUE;
+        Features12.runtimeDescriptorArray           = VK_TRUE;
+        Features12.shaderInt8                       = VK_TRUE;
+        Features12.shaderFloat16                    = VK_TRUE;
 
+        VkPhysicalDeviceComputeShaderDerivativesFeaturesKHR DerivativesFeature{};
+        DerivativesFeature.sType                        = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COMPUTE_SHADER_DERIVATIVES_FEATURES_KHR;
+        DerivativesFeature.computeDerivativeGroupQuads  = VK_TRUE;
+
+        
         VkPhysicalDeviceVulkan13Features Features13 = {};
-        Features13.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
-        Features13.dynamicRendering = VK_TRUE;
-        Features13.synchronization2 = VK_TRUE;
+        Features13.sType                            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES;
+        Features13.dynamicRendering                 = VK_TRUE;
+        Features13.synchronization2                 = VK_TRUE;
+        Features13.pNext                            = &DerivativesFeature;
+        
         
         vkb::PhysicalDeviceSelector selector(Instance);
         vkb::PhysicalDevice PhysicalDevice = selector
@@ -742,6 +758,8 @@ namespace Lumina
         
         PhysicalDevice.enable_extension_if_present(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
         PhysicalDevice.enable_extension_if_present(VK_EXT_SAMPLER_FILTER_MINMAX_EXTENSION_NAME);
+        PhysicalDevice.enable_extension_if_present(VK_KHR_COMPUTE_SHADER_DERIVATIVES_EXTENSION_NAME);
+        PhysicalDevice.enable_extension_if_present(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);
 
         if (PhysicalDevice.enable_extension_if_present(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME))
         {
@@ -1317,16 +1335,13 @@ namespace Lumina
         // but until we have some data cache setup, we'll just leave it for now.
         
         TVector<FString> Shaders;
-
         const FString ShaderDir(Paths::GetEngineResourceDirectory() + "/Shaders");
-        const THashSet<FStringView> ValidExts = { ".frag", ".vert", ".comp", ".geo", };
 
         for (const auto& entry : std::filesystem::directory_iterator(ShaderDir.c_str()))
         {
             if (!entry.is_directory())
             {
-                FString Extension = entry.path().extension().string().c_str();
-                if (ValidExts.count(Extension))
+                if (entry.path().extension() == ".slang")
                 {
                     Shaders.emplace_back(entry.path().string().c_str());
                 }

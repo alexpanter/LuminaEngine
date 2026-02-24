@@ -1,11 +1,6 @@
 ﻿#include "AssetEditorTool.h"
 #include "Core/Object/Package/Package.h"
-#include "Core/Object/Package/Thumbnail/PackageThumbnail.h"
-#include "FileSystem/FileSystem.h"
-#include "Renderer/RenderContext.h"
-#include "Renderer/RHIGlobals.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
-#include "World/Scene/RenderScene/RenderScene.h"
 
 namespace Lumina
 {
@@ -25,6 +20,8 @@ namespace Lumina
 
     void FAssetEditorTool::Update(const FUpdateContext& UpdateContext)
     {
+        DrawWorldGrid();
+        
         if (!bAssetLoadBroadcasted && Asset != nullptr)
         {
             OnAssetLoadFinished();

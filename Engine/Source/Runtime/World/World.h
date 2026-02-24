@@ -3,7 +3,6 @@
 #include "Core/Object/Object.h"
 #include "Core/UpdateContext.h"
 #include "World/Entity/Components/CameraComponent.h"
-#include "Core/Object/ObjectHandleTyped.h"
 #include "Entity/Registry/EntityRegistry.h"
 #include "Renderer/RenderGraph/RenderGraph.h"
 #include "Memory/SmartPtr.h"
@@ -113,7 +112,7 @@ namespace Lumina
         
         //~ Begin Debug Drawing
         void DrawBillboard(FRHIImage* Image, const glm::vec3& Location, float Scale) override;
-        void DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness = 1.0f, bool bDepthTest = true, float Duration = 0.0f) override;
+        void DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness = 1.0f, bool bDepthTest = true, float Duration = -1.0f) override;
         //~ End Debug Drawing
         
         TOptional<FRayResult> CastRay(const FRayCastSettings& Settings);
@@ -140,9 +139,9 @@ namespace Lumina
         
         bool RegisterSystem(const FSystemVariant& NewSystem);
         void TickSystems(FSystemContext& Context);
-        FLineBatcherComponent& GetOrCreateLineBatcher();
     
     private:
+        
         
         FEntityRegistry                                     RegistryPending;
         FEntityRegistry                                     EntityRegistry;
@@ -156,6 +155,8 @@ namespace Lumina
         TUniquePtr<Physics::IPhysicsScene>                  PhysicsScene;
         
         TVector<FSystemVariant>                             SystemUpdateList[(int32)EUpdateStage::Max];
+        
+        FLineBatcherComponent*                              LineBatcherComponent;
         
         EWorldType                                          WorldType = EWorldType::None;
         

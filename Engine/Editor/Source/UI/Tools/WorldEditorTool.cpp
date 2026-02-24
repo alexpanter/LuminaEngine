@@ -24,6 +24,7 @@
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "world/entity/components/entitytags.h"
+#include "World/Entity/Components/LineBatcherComponent.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
@@ -157,16 +158,36 @@ namespace Lumina
         {
             RebuildSceneOutliner(Tree);
         };
+
+        OutlinerContext.RenameFunction = [this](FTreeListView& Tree, entt::entity Item, FStringView NewName)
+        {
+            FEntityListViewItemData& Data = Tree.Get<FEntityListViewItemData>(Item);
+
+            FFixedString Name;
+            Name.append(LE_ICON_CUBE).append(" ")
+                .append_convert(NewName.begin(), NewName.length()).append_convert(FString(" - (" + eastl::to_string(entt::to_integral(Data.Entity)) + ")"));
+
+			Tree.Get<FTreeNodeDisplay>(Item).DisplayName = Name;
+
+            SNameComponent& NameComponent = World->GetEntityRegistry().get<SNameComponent>(Data.Entity);
+            NameComponent.Name = NewName;
+		};
         
         OutlinerContext.ItemSelectedFunction = [this](FTreeListView& Tree, entt::entity Item)
         {
             if (Item == entt::null)
             {
-                World->GetEntityRegistry().clear<FSelectedInEditorComponent>();
+                ClearSelectedEntities();
                 return;
             }
             
             FEntityListViewItemData& Data = Tree.Get<FEntityListViewItemData>(Item);
+            
+            if (World->GetEntityRegistry().any_of<FSelectedInEditorComponent>(Data.Entity))
+            {
+                // Already selected.
+                return;
+            }
             
             ClearSelectedEntities();
             AddSelectedEntity(Data.Entity, false);
@@ -227,6 +248,8 @@ namespace Lumina
 
     void FWorldEditorTool::Update(const FUpdateContext& UpdateContext)
     {
+        DrawWorldGrid();
+
         while (!ComponentDestroyRequests.empty())
         {
             FComponentDestroyRequest Request = ComponentDestroyRequests.back();
@@ -301,7 +324,6 @@ namespace Lumina
                 World->DrawBox(Transform.GetLocation(), MeshComponent->GetAABB().GetSize() * 0.5f * Transform.GetScale(), Transform.GetRotation(), FColor::Red, 5.0f);
             }
         });
-
         
         auto CopyView = World->GetEntityRegistry().view<FCopiedTag>();
         CopyView.each([&](entt::entity Entity)
@@ -559,12 +581,10 @@ namespace Lumina
             
             if (!bOverImGuizmo)
             {
-                // Check LEFT mouse button drag for selection box
                 ImVec2 LeftDragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
                 float LeftDragDistance = sqrtf(LeftDragDelta.x * LeftDragDelta.x + LeftDragDelta.y * LeftDragDelta.y);
                 bool bLeftDragging = LeftDragDistance >= 15.0f;
     
-                // Check RIGHT mouse button drag for context menu
                 ImVec2 RightDragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
                 float RightDragDistance = sqrtf(RightDragDelta.x * RightDragDelta.x + RightDragDelta.y * RightDragDelta.y);
                 bool bRightDragging = RightDragDistance < 15.0f;
@@ -627,6 +647,7 @@ namespace Lumina
                     }
                     else
                     {
+#if 0
                         uint32 MinTexX = static_cast<uint32>(glm::min(Start.x, End.x) * ScaleX);
                         uint32 MinTexY = static_cast<uint32>(glm::min(Start.y, End.y) * ScaleY);
                         uint32 MaxTexX = static_cast<uint32>(glm::max(Start.x, End.x) * ScaleX);
@@ -636,6 +657,8 @@ namespace Lumina
                         {
                             AddSelectedEntity(Entity, true);
                         }
+#endif
+						ImGuiX::Notifications::NotifyInfo("{}", "This functionality is temporarily disabled as the current implementation is too slow. We are working on a more efficient solution that should be available in a future update.");
                     } 
     
                     SelectionBox.bActive = false;
@@ -962,7 +985,6 @@ namespace Lumina
         {
             bool bComponentAdded = false;
     
-            // Modal header styling
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.9f, 1.0f));
             ImGui::TextUnformatted("Select a component to add to the entity");
             ImGui::PopStyleColor();
@@ -985,7 +1007,6 @@ namespace Lumina
             
             ImGui::Spacing();
     
-            // Component list area
             float const tableHeight = ImGui::GetContentRegionAvail().y - ImGui::GetFrameHeightWithSpacing() * 2;
             
             ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(12, 8));
@@ -1100,7 +1121,6 @@ namespace Lumina
             ImGui::Separator();
             ImGui::Spacing();
     
-            // Bottom buttons
             float buttonWidth = 120.0f;
             float availWidth = ImGui::GetContentRegionAvail().x;
             ImGui::SetCursorPosX((availWidth - buttonWidth) * 0.5f);
@@ -1423,19 +1443,10 @@ namespace Lumina
     {
         const ImVec2 BtnSize = ImVec2(ButtonSize, ButtonSize);
     
-        bool GridActive = false;
-        if (GridActive)
+		ImColor IconColor = bWorldGridEnabled ? ImVec4(0.2f, 0.6f, 1.0f, 1.0f) : ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+        if (ImGuiX::IconButton(LE_ICON_GRID, "##GridToggle", IconColor, BtnSize))
         {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.6f, 1.0f, 0.6f));
-        }
-        
-        if (ImGuiX::IconButton(LE_ICON_GRID, "##GridToggle", 0xFFFFFFFF, BtnSize))
-        {
-        }
-        
-        if (GridActive)
-        {
-            ImGui::PopStyleColor();
+            bWorldGridEnabled = !bWorldGridEnabled;
         }
         
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
@@ -1578,19 +1589,28 @@ namespace Lumina
                     ImGui::EndMenu();
                 }
                 
-                if (ImGui::MenuItem("Lit"))
+                bool bLit = RenderScene->GetSceneRenderSettings().bLit;
+                if (ImGui::MenuItem("Lit", nullptr, &bLit))
                 {
-                    
+                    RenderScene->GetSceneRenderSettings().bLit = bLit;
                 }
-                if (ImGui::MenuItem("Unlit"))
+                
+                bool bUnlit = RenderScene->GetSceneRenderSettings().bUnlit;
+                if (ImGui::MenuItem("Unlit", nullptr, &bUnlit))
                 {
-                    
+                    RenderScene->GetSceneRenderSettings().bUnlit = bUnlit;
                 }
                 
                 bool bValue = RenderScene->GetSceneRenderSettings().bWireframe;
                 if (ImGui::MenuItem("Wireframe", nullptr, &bValue))
                 {
                     RenderScene->GetSceneRenderSettings().bWireframe = bValue;
+                }
+                
+                bool bDrawBillboards = RenderScene->GetSceneRenderSettings().bDrawBillboards;
+                if (ImGui::MenuItem("Draw Billboards", nullptr, &bDrawBillboards))
+                {
+                    RenderScene->GetSceneRenderSettings().bDrawBillboards = bDrawBillboards;
                 }
                 
                 ImGui::EndMenu();
@@ -2014,6 +2034,7 @@ namespace Lumina
             
             if (ImGui::IsWindowAppearing())
             {
+                AddEntityComponentFilter.Clear();
                 ImGui::SetKeyboardFocusHere(-1);
             }
             
@@ -2096,6 +2117,7 @@ namespace Lumina
                         else
                         {
                             CreateEntityWithComponent(Struct);
+                            ClearSelectedEntities();
                         }
                         
                         ImGui::CloseCurrentPopup();
@@ -2132,6 +2154,7 @@ namespace Lumina
                     if (ImGui::Button(LE_ICON_CUBE " Empty Entity", ImVec2(-1, 0.0f)))
                     {
                         CreateEntity();
+                        ClearSelectedEntities();
                         ImGui::CloseCurrentPopup();
                         AddEntityComponentFilter.Clear();
                     }
@@ -2227,6 +2250,7 @@ namespace Lumina
             FTreeNodeDisplay& Display   = Tree.Get<FTreeNodeDisplay>(ItemEntity);
             Display.TooltipText         = FString("Entity: " + eastl::to_string(entt::to_integral(WorldEntity))).c_str();
             Display.bShowDisabledIcon   = true;
+			Display.bAllowRenaming      = true;
             
             Tree.EmplaceUserData<FEntityListViewItemData>(ItemEntity).Entity = WorldEntity;
 
@@ -2312,10 +2336,12 @@ namespace Lumina
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.0f);
             
             constexpr float ButtonWidth = 30.0f;
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.7f, 0.3f, 0.8f));
             if (ImGui::Button(LE_ICON_PLUS, ImVec2(ButtonWidth, 0.0f)))
             {
                 ImGui::OpenPopup("AddToEntityMenu");
             }
+            ImGui::PopStyleColor();
             
             if (ImGui::IsItemHovered())
             {
@@ -2858,7 +2884,7 @@ namespace Lumina
                     ComponentDestroyRequests.push(FComponentDestroyRequest{Table->GetType(), Entity});
                 }
             
-                ImGuiX::ItemTooltip("{}", "Remove Component");
+                ImGuiX::TextTooltip("{}", "Remove Component");
             
                 ImGui::PopStyleVar();
                 ImGui::PopStyleColor(4);

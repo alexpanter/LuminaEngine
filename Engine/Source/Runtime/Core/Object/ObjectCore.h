@@ -105,13 +105,20 @@ namespace Lumina
         return T::StaticClass()->template GetDefaultObject<T>();
     }
     
-    enum class EPropertyFlags : uint8
+    enum class EPropertyFlags : uint16
     {
-        None = 0,
-        PF_Const,
-        PF_Private,
-        PF_Protected,
-        PF_SubField,
+        None                = 0,
+        Editable            = BIT(0),
+        ReadOnly            = BIT(1),
+        Transient           = BIT(2),
+        Const               = BIT(3),
+        Private             = BIT(4),
+        Protected           = BIT(5),
+        SubField            = BIT(6),
+        Trivial             = BIT(7),
+        Script              = BIT(8),
+        Builtin             = BIT(9),
+        BulkSerialize       = BIT(10),
     };
 
     ENUM_CLASS_FLAGS(EPropertyFlags);
@@ -204,9 +211,9 @@ namespace Lumina
 
     };
 
-    using FStructRegistrationInfo = TRegistrationInfo<CStruct>;
-    using FClassRegistrationInfo = TRegistrationInfo<CClass>;
-    using FEnumRegistrationInfo = TRegistrationInfo<CEnum>;
+    using FStructRegistrationInfo   = TRegistrationInfo<CStruct>;
+    using FClassRegistrationInfo    = TRegistrationInfo<CClass>;
+    using FEnumRegistrationInfo     = TRegistrationInfo<CEnum>;
 
     struct FMetaDataPairParam
     {
@@ -231,8 +238,17 @@ namespace Lumina
     
     // Access an element by index (mutable)
     typedef void* (*ArrayGetAtPtr)(void* InContainer, size_t Index);
-
     
+    // Resize an array.
+    typedef void (*ArrayResizePtr)(void* InContainer, size_t Index);
+
+    // Reserve an array
+    typedef void (*ArrayReservePtr)(void* InContainer, size_t Index);
+    
+    // Swap two elements of the array.
+    typedef void (*ArraySwapPtr)(void* InContainer, size_t LHS, size_t RHS);
+
+
     struct FPropertyParams
     {
         const char*         Name;
@@ -300,6 +316,9 @@ namespace Lumina
         ArrayRemoveAtPtr    RemoveAtFn;
         ArrayClearPtr       ClearFn;
         ArrayGetAtPtr       GetAtFn;
+        ArrayResizePtr      ResizeFn;
+        ArrayReservePtr     ReserveFn;
+        ArraySwapPtr        SwapFn;
         
         uint16 NumMetaData;
         const FMetaDataPairParam* MetaDataArray;

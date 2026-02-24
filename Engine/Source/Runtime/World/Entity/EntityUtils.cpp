@@ -3,6 +3,7 @@
 #include "Scripting/ScriptTypes.h"
 #include "Components/DirtyComponent.h"
 #include "Components/EditorComponent.h"
+#include "components/entitytags.h"
 #include "Components/RelationshipComponent.h"
 #include "Components/ScriptComponent.h"
 #include "Components/SingletonEntityComponent.h"
@@ -326,6 +327,14 @@ namespace Lumina::ECS::Utils
         {
             ChildRelationship.Parent = entt::null;
         }
+        
+        if (Registry.any_of<SDisabledTag>(Parent))
+        {
+            if (!Registry.any_of<SDisabledTag>(Child))
+            {
+                Registry.emplace<SDisabledTag>(Child);
+            }
+        }
 
         FTransform NewTransform;
         NewTransform.Location = Translation;
@@ -349,7 +358,7 @@ namespace Lumina::ECS::Utils
 
         for (auto It = ToDestroy.rbegin(); It != ToDestroy.rend(); ++It)
         {
-            if (Registry.valid(*It))
+            if (Registry.valid(*It) && Registry.any_of<FRelationshipComponent>(*It))
             {
                 RemoveFromParent(Registry, *It);
             }

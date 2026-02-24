@@ -13,9 +13,13 @@ namespace Lumina
         CustomData += Outer + "::" + Name + "ArrayGetNum_WrapperImpl, ";
         CustomData += Outer + "::" + Name + "ArrayRemoveAt_WrapperImpl, ";
         CustomData += Outer + "::" + Name + "ArrayClear_WrapperImpl, ";
-        CustomData += Outer + "::" + Name + "ArrayGetAt_WrapperImpl";
+        CustomData += Outer + "::" + Name + "ArrayGetAt_WrapperImpl, ";
+        CustomData += Outer + "::" + Name + "ArrayResize_WrapperImpl, ";
+        CustomData += Outer + "::" + Name + "ArrayReserve_WrapperImpl, ";
+        CustomData += Outer + "::" + Name + "ArraySwap_WrapperImpl";
 
-        AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", "Lumina::EPropertyTypeFlags::Vector", CustomData);
+        eastl::string PropertyFlagStr = PropertyFlagsToString(PropertyFlags);
+        AppendPropertyDef(Stream, PropertyFlagStr.c_str(), "Lumina::EPropertyTypeFlags::Vector", CustomData);
     }
 
     bool FReflectedArrayProperty::HasAccessors()
@@ -34,7 +38,10 @@ namespace Lumina
         Stream += "static void " + Name + "ArrayRemoveAt_WrapperImpl(void* Object, size_t Index); \\\n";
         Stream += "static void " + Name + "ArrayClear_WrapperImpl(void* Object); \\\n";
         Stream += "static void* " + Name + "ArrayGetAt_WrapperImpl(void* Object, size_t Index);\\\n";
-        
+        Stream += "static void " + Name + "ArrayResize_WrapperImpl(void* Object, size_t Size);\\\n";
+        Stream += "static void " + Name + "ArrayReserve_WrapperImpl(void* Object, size_t Size);\\\n";
+        Stream += "static void " + Name + "ArraySwap_WrapperImpl(void* Object, size_t LHS, size_t RHS);\\\n";
+
         return true;
     }
 
@@ -90,6 +97,27 @@ namespace Lumina
         Stream += "{\n";
         Stream += "\t" + ReflectedType->DisplayName + "* Obj = (" + ReflectedType->DisplayName + "*)Object;\n";
         Stream += "\treturn &Obj->" + Name + "[Index];\n";
+        Stream += "}\n\n";
+        
+        // Array Resize
+        Stream += "void " + ReflectedType->QualifiedName + "::" + Name + "ArrayResize_WrapperImpl(void* Object, size_t Size)\n";
+        Stream += "{\n";
+        Stream += "\t" + ReflectedType->DisplayName + "* Obj = (" + ReflectedType->DisplayName + "*)Object;\n";
+        Stream += "\tObj->" + Name + ".resize(Size);\n";
+        Stream += "}\n\n";
+        
+        // Array Reserve
+        Stream += "void " + ReflectedType->QualifiedName + "::" + Name + "ArrayReserve_WrapperImpl(void* Object, size_t Size)\n";
+        Stream += "{\n";
+        Stream += "\t" + ReflectedType->DisplayName + "* Obj = (" + ReflectedType->DisplayName + "*)Object;\n";
+        Stream += "\tObj->" + Name + ".reserve(Size);\n";
+        Stream += "}\n\n";
+        
+        // Array Swap
+        Stream += "void " + ReflectedType->QualifiedName + "::" + Name + "ArraySwap_WrapperImpl(void* Object, size_t RHS, size_t LHS)\n";
+        Stream += "{\n";
+        Stream += "\t" + ReflectedType->DisplayName + "* Obj = (" + ReflectedType->DisplayName + "*)Object;\n";
+        Stream += "\tstd::swap(Obj->" + Name + "[RHS], Obj->" + Name + "[LHS]);\n";
         Stream += "}\n\n";
     
         return true;

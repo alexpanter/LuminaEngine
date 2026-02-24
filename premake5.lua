@@ -164,6 +164,8 @@ workspace "Lumina"
         include "Engine/Source/ThirdParty/json"
         include "Engine/Source/ThirdParty/fastgltf"
         include "Engine/Source/ThirdParty/OpenFBX"
+        include "Engine/Source/ThirdParty/basis_universal"
+        include "Engine/Source/ThirdParty/SLang"
 	group ""
 
     group "Build"

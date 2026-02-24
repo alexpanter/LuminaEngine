@@ -224,7 +224,7 @@ namespace Lumina
         {
             OnUndo();
         }
-        ImGuiX::ItemTooltip("Undo");
+        ImGuiX::TextTooltip("Undo");
 
         //-------------------------------------------------------------------------
         
@@ -232,7 +232,7 @@ namespace Lumina
         {
             
         }
-        ImGuiX::ItemTooltip("Redo");
+        ImGuiX::TextTooltip("Redo");
         ImGui::EndDisabled();
 
         if (ImGui::BeginMenu(LE_ICON_HELP_CIRCLE_OUTLINE" Help"))
@@ -344,6 +344,40 @@ namespace Lumina
         EditorTransform.SetRotation(Rotation);
     
         World->MarkTransformDirty(EditorEntity);
+    }
+
+    void FEditorTool::DrawWorldGrid(int Scale, int Spacing)
+    {
+        if (World && !World->IsGameWorld() && bWorldGridEnabled)
+        {
+            for (int i = -Scale; i <= Scale; ++i)
+            {
+                const float Coord = static_cast<float>(i * Spacing);
+                
+                const glm::vec4 ZAxisColor  = (i == 0) ? glm::vec4(0.0f, 0.0f, 1.0f, 1.0f) : glm::vec4(0.05f);
+                const glm::vec4 XAxisColor  = (i == 0) ? glm::vec4(1.0f, 0.0f, 0.0f, 1.0f) : glm::vec4(0.05f);
+                const float AxisThickness   = (i == 0) ? 8.0f : 3.5f;
+
+                World->DrawLine(
+                    glm::vec3(Coord, 0, -Scale * Spacing),
+                    glm::vec3(Coord, 0,  Scale * Spacing),
+                    ZAxisColor,
+                    AxisThickness);
+                
+
+                World->DrawLine(
+                    glm::vec3(-Scale * Spacing, 0, Coord),
+                    glm::vec3( Scale * Spacing, 0, Coord),
+                    XAxisColor,
+                    AxisThickness);
+            }
+            
+            World->DrawLine(
+            glm::vec3(0, -Scale, 0),
+            glm::vec3(0,  Scale, 0),
+            glm::vec4(0.0f, 1.0f, 0.0f, 1.0f),
+            8.0f);
+        }
     }
 
     bool FEditorTool::BeginViewportToolbarGroup(char const* GroupID, ImVec2 GroupSize, const ImVec2& Padding)

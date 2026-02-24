@@ -17,8 +17,10 @@ namespace Lumina
         
         void AppendDefinition(eastl::string& Stream) const override
         {
+            eastl::string PropertyFlagStr = PropertyFlagsToString(PropertyFlags);
+
             eastl::string CustomData = "Construct_CEnum_" + ClangUtils::MakeCodeFriendlyNamespace(TypeName);
-            AppendPropertyDef(Stream, "Lumina::EPropertyFlags::None", "Lumina::EPropertyTypeFlags::Enum", CustomData);
+            AppendPropertyDef(Stream, PropertyFlagStr.c_str(), "Lumina::EPropertyTypeFlags::Enum", CustomData);
         }
 
         const char* GetPropertyParamType() const override { return "FEnumPropertyParams"; }

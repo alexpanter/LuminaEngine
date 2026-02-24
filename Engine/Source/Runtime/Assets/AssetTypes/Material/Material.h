@@ -34,10 +34,10 @@ namespace Lumina
         bool SetScalarValue(const FName& Name, const float Value) override;
         bool SetVectorValue(const FName& Name, const glm::vec4& Value) override;
         bool GetParameterValue(EMaterialParameterType Type, const FName& Name, FMaterialParameter& Param) override;
+        FMaterialUniforms* GetMaterialUniforms() override { return &MaterialUniforms; }
+        
         CMaterial* GetMaterial() const override;
-        FRHIBindingSet* GetBindingSet() const override;
-        FRHIBindingLayout* GetBindingLayout() const override;
-        FRHIVertexShader* GetVertexShader(EVertexFormat Format) const override;
+        FRHIVertexShader* GetVertexShader() const override;
         FRHIPixelShader* GetPixelShader() const override;
         static CMaterial* GetDefaultMaterial();
 
@@ -64,21 +64,20 @@ namespace Lumina
         PROPERTY()
         TVector<TObjectPtr<CTexture>>           Textures;
         
+        PROPERTY()
         TVector<uint32>                         PixelShaderBinaries;
 
+        PROPERTY()
+        TVector<uint32>                         VertexShaderBinaries;
+        
+        PROPERTY()
         TVector<FMaterialParameter>             Parameters;
         
         FMaterialUniforms                       MaterialUniforms;
         
-        FRHIVertexShaderRef                     StaticVertexShader;
-        FRHIVertexShaderRef                     SkinnedVertexShader;
-        
+        FRHIVertexShaderRef                     VertexShader;
         FRHIPixelShaderRef                      PixelShader;
-        FRHIBufferRef                           UniformBuffer;
-        FRHIBindingLayoutRef                    BindingLayout;
-        FRHIBindingSetRef                       BindingSet;
 
-        static CMaterial* DefaultMaterial;
     };
     
 }

@@ -10,6 +10,7 @@
 #include "Core/Object/ObjectIterator.h"
 #include "Core/Profiler/Profile.h"
 #include "Core/Windows/Window.h"
+#include "encoder/basisu_enc.h"
 #include "FileSystem/FileSystem.h"
 #include "Input/InputProcessor.h"
 #include "nlohmann/json.hpp"
@@ -50,6 +51,8 @@ namespace Lumina
         
         FConsoleRegistry::Get().LoadFromConfig();
         
+        basisu::basisu_encoder_init();
+
         Audio::Initialize();
         Task::Initialize();
         Physics::Initialize();

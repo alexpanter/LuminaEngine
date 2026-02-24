@@ -44,7 +44,7 @@ namespace Lumina
         Descriptors.resize(Capacity);
         Memory::Memzero(Descriptors.data(), sizeof(FBindingSetItem) * Capacity);
     }
-
+    
     FDescriptorTableManager::~FDescriptorTableManager()
     {
         for (auto& Descriptor : Descriptors)

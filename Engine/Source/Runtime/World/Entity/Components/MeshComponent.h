@@ -17,6 +17,24 @@ namespace Lumina
         PROPERTY(Editable, Category = "Materials")
         TVector<TObjectPtr<CMaterialInterface>> MaterialOverrides;
 
+        PROPERTY(Editable, Category = "Culling")
+        float MaxDrawDistance = 0.0f;
+
+        PROPERTY(Editable, Category = "Culling")
+        float BoundsScale = 1.0f;
+
+        PROPERTY(Editable, Category = "Culling")
+        bool bUseAsOccluder = true;
+
+        PROPERTY(Editable, Category = "Culling")
+        bool bIgnoreOcclusionCulling = false;
+
+        PROPERTY(Editable, Category = "Shadow")
+        bool bCastShadow = true;
+
+        PROPERTY(Editable, Category = "Shadow")
+        bool bReceiveShadow = true;
+
     };
     
 }

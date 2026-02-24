@@ -97,14 +97,25 @@ namespace Lumina
         Num,
     };
     
+    enum class EGPUSceneSettingFlags : uint16
+    {
+        None    = 0,
+        Unlit   = BIT(0),
+        Lit     = BIT(1),
+    };
+    
+    ENUM_CLASS_FLAGS(EGPUSceneSettingFlags);
+    
     enum class EInstanceFlags : uint32
     {
-        None            = 0,
-        Billboard       = BIT(0),
-        Skinned         = BIT(1),
-        Selected        = BIT(2),
-        CastShadow      = BIT(3),
-        ReceiveShadow   = BIT(4),
+        None                    = 0,
+        Billboard               = BIT(0),
+        Skinned                 = BIT(1),
+        Selected                = BIT(2),
+        CastShadow              = BIT(3),
+        ReceiveShadow           = BIT(4),
+		Occluder                = BIT(5),
+        IgnoreOcclusionCulling  = BIT(6),
     };
     
     ENUM_CLASS_FLAGS(EInstanceFlags);
@@ -253,7 +264,6 @@ namespace Lumina
 
     VERIFY_SSBO_ALIGNMENT(FLight)
     
-    
     struct FSkyLight
     {
         glm::vec4 Color;
@@ -276,10 +286,10 @@ namespace Lumina
     
     struct FLineBatch
     {
-        uint32 StartVertex;
-        uint32 VertexCount;
-        float Thickness;
-        bool bDepthTest;
+        uint32  StartVertex;
+        uint32  VertexCount;
+        float   Thickness;
+        bool    bDepthTest;
     };
     
     struct FSSAOSettings
@@ -300,11 +310,12 @@ namespace Lumina
         FRHIImageRef AlbedoSpec;
     };
     
-    struct FBillboardInstance
+    struct alignas(16) FBillboardInstance
     {
         glm::vec3       Position;
         float           Size;
-        FRHIImageRef    Texture;
+        uint32          TextureIndex;
+        uint32          EntityID;
     };
     
     struct alignas(16) FCluster
@@ -330,17 +341,25 @@ namespace Lumina
         glm::mat4       Transform;
         glm::vec4       SphereBounds;
         
+        uint64          VBAddress;
+        uint64          IBAddress;
+
         uint32          EntityID;
-        uint32          BatchedDrawID;
-        EInstanceFlags  Flags;
-        uint32          BoneOffset;
-        
-        glm::uvec2      VertexBufferAddress;
-        glm::uvec2      IndexBufferAddress;
+        uint32          DrawIDAndFlags;
+        uint32          BoneOffsetAndMaterialIndex;
     };
     
     VERIFY_SSBO_ALIGNMENT(FInstanceData)
-
+    
+    constexpr uint32 PackDrawIDAndFlags(uint32 DrawID, EInstanceFlags Flags)
+    {
+        return (DrawID & 0x00FFFFFF) | (((uint32)Flags & 0xFF) << 24);
+    }
+    
+    constexpr uint32 PackBoneOffsetAndMaterial(uint16 BoneOffset, uint16 MaterialIndex)
+    {
+        return (uint32)BoneOffset | ((uint32)MaterialIndex << 16);
+    }
     
     struct FCullData
     {
@@ -361,6 +380,11 @@ namespace Lumina
         float PyramidHeight;
     };
     
+    
+    struct FGPUSceneSettings
+    {
+        EGPUSceneSettingFlags Flags;
+    };
 
     struct FSceneGlobalData
     {
@@ -410,5 +434,8 @@ namespace Lumina
         uint8 bFrustumCull:1            = true;
         uint8 bOcclusionCull:1          = true;
         uint8 bWireframe:1              = false;
+        uint8 bDrawBillboards:1         = true;
+        uint8 bUnlit:1                  = false;
+        uint8 bLit:1                    = false;
     };
 }

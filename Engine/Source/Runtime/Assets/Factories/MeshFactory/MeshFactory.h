@@ -22,8 +22,8 @@ namespace Lumina
         bool IsExtensionSupported(FStringView Ext) override { return Ext == ".gltf" || Ext == ".glb" || Ext == ".obj" || Ext == ".fbx"; }
 
         bool HasImportDialogue() const override { return true; }
-        bool DrawImportDialogue(const FFixedString& RawPath, const FFixedString& DestinationPath, eastl::any& ImportSettings, bool& bShouldClose) override;
-        void TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const eastl::any& ImportSettings) override;
+        bool DrawImportDialogue(const FFixedString& RawPath, const FFixedString& DestinationPath, TUniquePtr<Import::FImportSettings>& ImportSettings, bool& bShouldClose) override;
+        void TryImport(const FFixedString& RawPath, const FFixedString& DestinationPath, const Import::FImportSettings* Settings) override;
         
     };
 }

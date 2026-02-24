@@ -82,7 +82,7 @@ namespace Lumina
         return NodePins[uint32(Direction)][Index];
     }
 
-    CEdNodeGraphPin* CEdGraphNode::CreatePin(CClass* InClass, const FString& Name, ENodePinDirection Direction, EMaterialInputType Type)
+    CEdNodeGraphPin* CEdGraphNode::CreatePin(CClass* InClass, const FString& Name, ENodePinDirection Direction)
     {
         CEdNodeGraphPin* NewPin = NewObject<CEdNodeGraphPin>(InClass);
         NewPin->PinID = HashPinID(FullName, Name, Direction);

@@ -27,8 +27,8 @@ namespace Lumina
             Indirect,
             Bone,
             Cluster,
-            Materials,
             SimpleVertex,
+            Billboards,
             
             Num,
         };
@@ -113,13 +113,10 @@ namespace Lumina
 
         FRHIViewportRef                     SceneViewport;
         
-        
         FSceneGlobalData                    SceneGlobalData;
         
         FRHIBindingSetRef                   SceneBindingSet;
         FRHIBindingLayoutRef                SceneBindingLayout;
-        FRHIBindingLayoutRef                SceneBindlessLayout;
-        FRHIDescriptorTableRef              SceneDescriptorTable;
         
         TVector<FSimpleElementVertex>       SimpleVertices;
         

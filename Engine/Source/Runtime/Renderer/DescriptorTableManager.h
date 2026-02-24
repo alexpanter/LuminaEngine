@@ -38,6 +38,7 @@ namespace Lumina
     public:
         
         FDescriptorTableManager(IRenderContext* InContext, FRHIBindingLayout* BindingLayout);
+        FDescriptorTableManager() = default;
         ~FDescriptorTableManager();
         
         // Custom hasher that doesn't look at the binding slot

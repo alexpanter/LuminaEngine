@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include "Core/Object/ObjectMacros.h"
+#include "Assets/AssetTypes/Mesh/StaticMesh/StaticMesh.h"
 #include "Core/Object/Object.h"
 #include "Core/Object/ObjectHandleTyped.h"
-#include "Assets/AssetTypes/Mesh/StaticMesh/StaticMesh.h"
+#include "Core/Object/ObjectMacros.h"
 #include "ThumbnailManager.generated.h"
 
 namespace Lumina
@@ -26,6 +26,8 @@ namespace Lumina
 
         void AsyncLoadThumbnailsForPackage(const FName& Package);
         FPackageThumbnail* GetThumbnailForPackage(const FName& Package);
+        
+        void OnPackageDestroyed(FName Package);
         
         PROPERTY(NotSerialized)
         TObjectPtr<CStaticMesh> CubeMesh;

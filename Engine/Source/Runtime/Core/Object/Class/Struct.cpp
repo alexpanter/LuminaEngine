@@ -50,7 +50,10 @@ namespace Lumina
     void CStruct::Link()
     {
 
-        if (bLinked) return;
+        if (bLinked)
+        {
+            return;
+        }
         bLinked = true;
 
         if (SuperStruct)
@@ -142,6 +145,11 @@ namespace Lumina
             
             for (FProperty* Current = LinkedProperty; Current; Current = (FProperty*)Current->Next)
             {
+                if (Current->IsTransient())
+                {
+                    continue;
+                }
+                
                 FPropertyTag PropertyTag;
                 PropertyTag.Type = Current->GetTypeName();
                 PropertyTag.Name = Current->GetPropertyName();
@@ -212,6 +220,13 @@ namespace Lumina
         
                 if (FoundProperty)
                 {
+                    if (FoundProperty->IsTransient())
+                    {
+                        LOG_WARN("Property '{}' that was previously serialized, is not marked transient. Skipping.", Tag.Name.ToString());
+                        Ar.Seek(DataStartPos + Tag.Size);
+                        continue;
+                    }
+                    
                     if (FoundProperty->GetTypeName() == Tag.Type)
                     {
                         void* ValuePtr = FoundProperty->IsA(EPropertyTypeFlags::Vector) ? Data : FoundProperty->GetValuePtr<void>(Data);
@@ -240,7 +255,6 @@ namespace Lumina
                 }
                 else
                 {
-                    // Property doesn't exist, skip it
                     LOG_WARN("Property '{}' of type '{}' not found in struct, skipping", Tag.Name.ToString(), Tag.Type.ToString());
                 }
         

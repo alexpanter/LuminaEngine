@@ -1,5 +1,4 @@
 ﻿#include "PCH.h"
-#include <future>
 #include <glm/gtx/string_cast.hpp>
 #include "ImportHelpers.h"
 #include "Assets/AssetTypes/Mesh/Animation/Animation.h"
@@ -587,7 +586,7 @@ namespace Lumina::Import::Mesh::FBX
                                 FSkinnedVertex Vertex;
                                 Vertex.Position = Pos;
                                 Vertex.Normal   = PackNormal(Normal);
-                                Vertex.UV       = UV;
+                                Vertex.UV       = glm::packHalf2x16(UV);
                                 Vertex.Color    = PackColor(Col);
     
                                 glm::u8vec4 JointIndices{};
@@ -617,7 +616,7 @@ namespace Lumina::Import::Mesh::FBX
                                 FVertex Vertex;
                                 Vertex.Position = Pos;
                                 Vertex.Normal   = PackNormal(Normal);
-                                Vertex.UV       = UV;
+                                Vertex.UV       = glm::packHalf2x16(UV);
                                 Vertex.Color    = PackColor(Col);
 
                                 VertexIdx = (uint32)eastl::get<TVector<FVertex>>(MeshResource->Vertices).size();

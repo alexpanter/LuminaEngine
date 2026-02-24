@@ -274,7 +274,7 @@ namespace Lumina
                 uint64 totalMipMemory = 0;
                 uint64 baseMipMemory = 0;
                 
-                if (Texture->TextureResource->Mips.size() > 0)
+                if (!Texture->TextureResource->Mips.empty())
                 {
                     baseMipMemory = Texture->TextureResource->Mips[0].Pixels.size();
                     for (const auto& Mip : Texture->TextureResource->Mips)
@@ -506,23 +506,84 @@ namespace Lumina
         
             ImGui::Spacing();
             ImGui::Spacing();
-        
-            // === Quick Actions ===
+            
             ImGuiX::Font::PushFont(ImGuiX::Font::EFont::Large);
             ImGui::SeparatorText("Actions");
             ImGuiX::Font::PopFont();
             
             ImGui::Spacing();
-        
+            ImGui::TextDisabled("Transform Tools");
+            ImGui::Spacing();
+            
+            if (ImGui::Button("Flip Vertical##Texture", ImVec2(150, 0)))
+            {
+                for (FTextureResource::FMip& Mip : Texture->GetTextureResource().Mips)
+                {
+                    uint8* Pixels           = Mip.Pixels.data();
+                    uint32 Height           = Mip.Height;
+                    uint32 RowSize          = Mip.RowPitch;
+                    
+                    TVector<uint8> TempRow(RowSize);
+
+                    for (uint32 Y = 0; Y < Height / 2; Y++)
+                    {
+                        uint8* Top    = Pixels + Y * RowSize;
+                        uint8* Bottom = Pixels + (Height - 1 - Y) * RowSize;
+                    
+                        memcpy(TempRow.data(), Top, RowSize);
+                        memcpy(Top, Bottom, RowSize);
+                        memcpy(Bottom, TempRow.data(), RowSize);
+                    }
+                }
+                
+                Asset->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            ImGuiX::TextTooltip("Flip the texture along the vertical axis.");
+            
+            ImGui::SameLine();
+            
+            if (ImGui::Button("Flip Horizontal##Texture", ImVec2(150, 0)))
+            {
+                for (FTextureResource::FMip& Mip : Texture->GetTextureResource().Mips)
+                {
+                    uint8* Pixels        = Mip.Pixels.data();
+                    uint32 Width         = Mip.Width;
+                    uint32 Height        = Mip.Height;
+                    uint32 BytesPerPixel = Mip.RowPitch / Mip.Width;
+
+                    for (uint32 Y = 0; Y < Height; Y++)
+                    {
+                        for (uint32 X = 0; X < Width / 2; X++)
+                        {
+                            uint8* Left  = Pixels + (Y * Width + X) * BytesPerPixel;
+                            uint8* Right = Pixels + (Y * Width + (Width - 1 - X)) * BytesPerPixel;
+
+                            for (uint32 C = 0; C < BytesPerPixel; C++)
+                            {
+                                std::swap(Left[C], Right[C]);
+                            }
+                        }
+                    }
+                }
+                
+                Asset->PostLoad();
+                Asset->GetPackage()->MarkDirty();
+            }
+            
+            ImGuiX::TextTooltip("Flip the texture along the horizontal axis.");
+
             if (ImGui::Button("Export to File...", ImVec2(-1, 0)))
             {
                 // TODO: Implement export
             }
-        
+            ImGuiX::TextTooltip("Export the texture to disk.");
+            
             if (ImGui::Button("Analyze Color Distribution", ImVec2(-1, 0)))
             {
                 // TODO: Implement analysis
             }
+            ImGuiX::TextTooltip("Analyze the color distribution across all pixels.");
         });
     }
 

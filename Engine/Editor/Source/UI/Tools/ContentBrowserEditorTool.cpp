@@ -39,12 +39,13 @@
 #include <Tools/UI/ImGui/ImGuiDesignIcons.h>
 #include <Tools/UI/ImGui/Widgets/TileViewWidget.h>
 #include <Tools/UI/ImGui/Widgets/TreeListView.h>
-#include <EASTL/any.h>
 #include <imgui.h>
 #include <imgui_internal.h>
 #include "Core/Object/Package/Thumbnail/PackageThumbnail.h"
 #include "Thumbnails/ThumbnailManager.h"
 #include <LuminaEditor.h>
+
+#include "Tools/Import/ImportHelpers.h"
 
 namespace Lumina
 {
@@ -116,7 +117,7 @@ namespace Lumina
         
         CreateToolWindow("Content", [&] (bool bIsFocused)
         {
-            float Left = 200.0f;
+            float Left = 225.0f;
             float Right = ImGui::GetContentRegionAvail().x - Left;
             
             DrawDirectoryBrowser(bIsFocused, ImVec2(Left, 0));
@@ -126,35 +127,48 @@ namespace Lumina
             DrawContentBrowser(bIsFocused, ImVec2(Right, 0));
         });
         
-        ContentBrowserTileViewContext.DragDropFunction = [this] (FTileViewItem* DropItem)
+        ContentBrowserTileViewContext.DragDropFunction = [this] (FTileViewItem* DropItem, const TVector<FTileViewItem*>& Selections)
         {
-            auto* TypedDroppedItem = (FContentBrowserTileViewItem*)DropItem;
-            if (!TypedDroppedItem->IsDirectory())
-            {
-                return;
-            }
-            
             const ImGuiPayload* Payload = ImGui::AcceptDragDropPayload(FContentBrowserTileViewItem::DragDropID, ImGuiDragDropFlags_AcceptBeforeDelivery);
             if (Payload && Payload->IsDelivery())
             {
-                uintptr_t ValuePtr = *static_cast<uintptr_t*>(Payload->Data);
-                auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
-
-                if (SourceItem == TypedDroppedItem)
+                auto* TypedDroppedItem = static_cast<FContentBrowserTileViewItem*>(DropItem);
+                if (!TypedDroppedItem->IsDirectory())
                 {
                     return;
                 }
+                
+                uintptr_t ValuePtr = *static_cast<uintptr_t*>(Payload->Data);
+                auto* PayloadItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
+                if (PayloadItem != TypedDroppedItem)
+                {
+                    HandleContentBrowserDragDrop(TypedDroppedItem->GetVirtualPath(), PayloadItem->GetVirtualPath());
+                }
 
-                HandleContentBrowserDragDrop(TypedDroppedItem->GetVirtualPath(), SourceItem->GetVirtualPath());
+                for (FTileViewItem* Item : Selections)
+                {
+                    auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(Item);
+                    
+                    if (PayloadItem == Item)
+                    {
+                        continue;
+                    }
+                    
+                    if (SourceItem == TypedDroppedItem)
+                    {
+                        continue;
+                    }
+
+                    HandleContentBrowserDragDrop(TypedDroppedItem->GetVirtualPath(), SourceItem->GetVirtualPath());
+                }
             }
         };
 
-        ContentBrowserTileViewContext.DrawItemOverrideFunction = [this] (FTileViewItem* Item) -> bool
+        ContentBrowserTileViewContext.DrawItemOverrideFunction = [this] (FTileViewItem* Item)
         {
             FContentBrowserTileViewItem* ContentItem = static_cast<FContentBrowserTileViewItem*>(Item);
             
             ImVec4 TintColor = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-            
             
             ImTextureRef ImTexture;
             if (ContentItem->IsDirectory())
@@ -186,7 +200,7 @@ namespace Lumina
         
             ImDrawList* DrawList = ImGui::GetWindowDrawList();
             ImVec2 Pos = ImGui::GetCursorScreenPos();
-            ImVec2 Size = ImVec2(120.0f, 120.0f);
+            ImVec2 Size = ImVec2(ContentBrowserTileView.GetTileSize(), ContentBrowserTileView.GetTileSize());
             
             DrawList->AddRectFilled(
                 ImVec2(Pos.x + 3, Pos.y + 3),
@@ -208,19 +222,41 @@ namespace Lumina
                     2.0f
                 );
             }
+            
+            if (Item->IsSelected())
+            {
+                DrawList->AddRect(
+                    Pos, 
+                    ImVec2(Pos.x + Size.x + 8, Pos.y + Size.y + 8), 
+                    ImGui::ColorConvertFloat4ToU32(ImVec4(0.6f, 0.6f, 0.1f, 0.9f)), 
+                    8.0f, 
+                    0, 
+                    2.5f
+                ); 
+            }
         
             ImGui::PopStyleVar(2);
             ImGui::PopStyleColor(3);
-        
+            
+            if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+            {
+                if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+                {
+                    return FTileViewItem::EClickState::SingleWithCtrl;
+                }
+                
+                return FTileViewItem::EClickState::Single;
+            }
+            
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {
-                return true;
+                return FTileViewItem::EClickState::Double;
             }
         
-            return false;
+            return FTileViewItem::EClickState::None;
         };
         
-        ContentBrowserTileViewContext.ItemSelectedFunction = [this] (FTileViewItem* Item)
+        ContentBrowserTileViewContext.ItemDoubleClickedFunction = [this] (FTileViewItem* Item)
         {
             FContentBrowserTileViewItem* ContentItem = static_cast<FContentBrowserTileViewItem*>(Item);
             FFixedString Path {ContentItem->GetVirtualPath().data(), ContentItem->GetVirtualPath().size()};
@@ -241,6 +277,11 @@ namespace Lumina
             {
                 ToolContext->OpenScriptEditor(ContentItem->GetPathSource());
             }
+        };
+        
+        ContentBrowserTileViewContext.ItemSelectedFunction = [this] (FTileViewItem* Item)
+        {
+            
         };
         
         ContentBrowserTileViewContext.DrawItemContextMenuFunction = [this] (const TVector<FTileViewItem*>& Items)
@@ -301,7 +342,15 @@ namespace Lumina
             
             for (const VFS::FFileInfo& Info : SortedPaths)
             {
-                ContentBrowserTileView.AddItemToTree<FContentBrowserTileViewItem>(nullptr, Info);
+                if (Info.VirtualPath == "/Game/Content" || Info.VirtualPath == "/Game/Scripts")
+                {
+                    ContentBrowserTileView.AddItemToTree<FContentBrowserTileViewItem>(nullptr, Info, true);
+                }
+                else
+                {
+                    ContentBrowserTileView.AddItemToTree<FContentBrowserTileViewItem>(nullptr, Info, false);
+                }
+                
             }
         };
 
@@ -317,6 +366,12 @@ namespace Lumina
             if (Key == ImGuiKey_Delete)
             {
                 FContentBrowserTileViewItem* ContentItem = static_cast<FContentBrowserTileViewItem*>(&Item);
+                if (ContentItem->IsProtected())
+                {
+                    ImGuiX::Notifications::NotifyError("Cannot delete a core directory");
+                    return true;
+                }
+                
                 OpenDeletionWarningPopup(ContentItem);
                 return true;
             }
@@ -336,15 +391,26 @@ namespace Lumina
             if (Payload && Payload->IsDelivery())
             {
                 uintptr_t ValuePtr = *static_cast<uintptr_t*>(Payload->Data);
-                auto* SourceItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
+                auto* PayloadItem = reinterpret_cast<FContentBrowserTileViewItem*>(ValuePtr);
                 
-                HandleContentBrowserDragDrop(Data.Path, SourceItem->GetVirtualPath());
+                HandleContentBrowserDragDrop(Data.Path, PayloadItem->GetVirtualPath());
+
+                for (FTileViewItem* TileItem : ContentBrowserTileView.GetSelections())
+                {
+                    auto* SourceItem = static_cast<FContentBrowserTileViewItem*>(TileItem);
+                    
+                    if (PayloadItem == TileItem)
+                    {
+                        continue;
+                    }
+
+                    HandleContentBrowserDragDrop(Data.Path, SourceItem->GetVirtualPath());
+                }
             }
         };
         
         DirectoryContext.RebuildTreeFunction = [this](FTreeListView& Tree)
         {
-            
             TFunction<void(entt::entity, FStringView)> AddChildrenRecursive;
             
             AddChildrenRecursive = [&](entt::entity ParentItem, FStringView CurrentPath)
@@ -369,7 +435,6 @@ namespace Lumina
                     }
             
                     AddChildrenRecursive(ItemEntity, Info.VirtualPath); 
-                    
                 });
             };
             
@@ -444,9 +509,12 @@ namespace Lumina
                 VFS::RemoveAll(Destroy.PendingDestroy);
                 ImGuiX::Notifications::NotifySuccess("Deleted Directory {0}", Destroy.PendingDestroy);
             }
-            else if (AliveObject)
+            else
             {
-                ToolContext->OnDestroyAsset(AliveObject);
+                if (AliveObject)
+                {
+                    ToolContext->OnDestroyAsset(AliveObject);
+                }
                 
                 if (CPackage::DestroyPackage(Destroy.PendingDestroy))
                 {
@@ -528,6 +596,18 @@ namespace Lumina
             ImGui::PopStyleVar(2);
             ImGui::EndMenu();
         }
+
+		if (ImGui::BeginMenu(LE_ICON_COGS " View Options"))
+        {
+            ImGui::SetNextItemWidth(128.0f);
+            float TileSize = ContentBrowserTileView.GetTileSize();
+            if (ImGui::SliderFloat("##Zoom", &TileSize, 46.0f, 256.0f, "Tile: %.1fx"))
+            {
+                ContentBrowserTileView.SetTileSize(TileSize);
+            }
+            
+            ImGui::EndMenu();
+        }
     }
 
     void FContentBrowserEditorTool::HandleContentBrowserDragDrop(FStringView DropPath, FStringView PayloadPath)
@@ -559,7 +639,7 @@ namespace Lumina
             }
             ActionRegistry.EnqueueAction<FPendingDestroy>(FPendingDestroy{ FFixedString(Item->GetVirtualPath().data(), Item->GetVirtualPath().size()) });
         }
-
+        
         if (Callback)
         {
             Callback(EYesNo::No);
@@ -651,7 +731,7 @@ namespace Lumina
             {
                 struct FModelState
                 {
-                    eastl::any ImportSettings;
+                    TUniquePtr<Import::FImportSettings> ImportSettings;
                     bool bShouldClose = false;
                 } State;
                 
@@ -663,7 +743,7 @@ namespace Lumina
                     {
                         Task::AsyncTask(1, 1, [Factory, Path, DestinationPath, ImportSettings = Move(SharedState->ImportSettings)](uint32, uint32, uint32)
                         {
-                            Factory->Import(Path, DestinationPath, ImportSettings);
+                            Factory->Import(Path, DestinationPath, ImportSettings.get());
                             
                             MainThread::Enqueue([Path = Move(Path)] ()
                             {
@@ -679,7 +759,7 @@ namespace Lumina
             {
                 Task::AsyncTask(1, 1, [this, Factory, Path = Move(Path), PathString = Move(DestinationPath)] (uint32, uint32, uint32)
                 {
-                    Factory->Import(Path, PathString);
+                    Factory->Import(Path, PathString, nullptr);
                     
                     MainThread::Enqueue([Path = Move(Path)] ()
                     {
@@ -877,7 +957,7 @@ namespace Lumina
 
     void FContentBrowserEditorTool::DrawDirectoryBrowser(bool bIsFocused, ImVec2 Size)
     {
-        ImGui::BeginChild("Directories", Size);
+        ImGui::BeginChild("Directories", Size, ImGuiChildFlags_None, ImGuiWindowFlags_HorizontalScrollbar);
 
         DirectoryListView.Draw(DirectoryContext);
         
@@ -886,7 +966,7 @@ namespace Lumina
 
     void FContentBrowserEditorTool::DrawContentBrowser(bool bIsFocused, ImVec2 Size)
     {
-        constexpr float Padding = 10.0f;
+        constexpr float Padding = 1.0f;
 
         ImVec2 AdjustedSize = ImVec2(Size.x - 2 * Padding, 0.0f);
 
@@ -897,9 +977,19 @@ namespace Lumina
         if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         {
             ImGui::OpenPopup("ContentContextMenu");
+            ImGui::SetNextWindowSizeConstraints(ImVec2(175.0f, 100.0f), ImVec2(0.0f, 0.0f));
         }
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,  ImVec2(6.0f, 6.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,    ImVec2(8.0f, 5.0f));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_PopupRounding,  6.0f);
 
-        ImGui::SetNextWindowSizeConstraints(ImVec2(200.0f, 100.0f), ImVec2(0.0f, 0.0f));
+        ImGui::PushStyleColor(ImGuiCol_PopupBg,      ImVec4(0.13f, 0.13f, 0.15f, 0.97f));
+        ImGui::PushStyleColor(ImGuiCol_Border,       ImVec4(0.30f, 0.30f, 0.35f, 1.00f));
+        ImGui::PushStyleColor(ImGuiCol_HeaderHovered,ImVec4(0.22f, 0.45f, 0.75f, 0.50f));
+        ImGui::PushStyleColor(ImGuiCol_Header,       ImVec4(0.22f, 0.45f, 0.75f, 0.30f));
+        ImGui::PushStyleColor(ImGuiCol_Text,         ImVec4(0.90f, 0.90f, 0.92f, 1.00f));
         
         if (ImGui::BeginPopup("ContentContextMenu"))
         {
@@ -907,11 +997,12 @@ namespace Lumina
             FString MenuItemName = FString(FolderIcon) + " " + "New Folder";
             if (ImGui::MenuItem(MenuItemName.c_str()))
             {
-                FString PathString = FString(SelectedPath + "/NewFolder");
-                VFS::CreateDir(PathString);
+				FFixedString FinalPath = VFS::MakeUniqueFilePath(SelectedPath + "/NewFolder");
+            
+                VFS::CreateDir(FinalPath);
                 RefreshContentBrowser();
             }
-
+            
             if (SelectedPath.find("/Game/Scripts") != FString::npos)
             {
                 DrawScriptsDirectoryContextMenu();
@@ -922,6 +1013,32 @@ namespace Lumina
             }
             
             ImGui::EndPopup();
+        }
+        
+        ImGui::PopStyleColor(5);
+        ImGui::PopStyleVar(4);
+        
+        if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        {
+            ContentBrowserTileView.ClearSelections();
+        }
+        
+        if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered() && ImGui::IsKeyPressed(ImGuiKey_Delete) && !ContentBrowserTileView.GetSelections().empty())
+        {
+            if (Dialogs::Confirmation("Confirm Deletion", "Are you sure you want to delete these files/directories?\n This action cannot be undone."))
+            {
+                for (FTileViewItem* Selection : ContentBrowserTileView.GetSelections())
+                {
+                    FContentBrowserTileViewItem* ContentBrowserItem = static_cast<FContentBrowserTileViewItem*>(Selection);
+                    DEBUG_ASSERT(Selection->IsSelected());
+                    
+                    ActionRegistry.EnqueueAction<FPendingDestroy>(
+                    FPendingDestroy
+                    { 
+                        FFixedString(ContentBrowserItem->GetVirtualPath().data(), ContentBrowserItem->GetVirtualPath().size())
+                    });
+                }
+            }
         }
         
         ImGui::BeginHorizontal("Breadcrumbs");
@@ -941,7 +1058,7 @@ namespace Lumina
         
                 ImGui::PushID(static_cast<int>(std::distance(RelativePath.begin(), it)));
                 {
-                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(4, 2));
+                    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3, 2));
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2, 0));
             
                     if (ImGui::Button(it->string().c_str()))
@@ -988,9 +1105,12 @@ namespace Lumina
     {
         ImGui::Separator();
         
-        if (ImGui::MenuItem(LE_ICON_ARCHIVE_EDIT " Rename", "F2"))
+        if (!ContentItem->IsProtected())
         {
-            PushRenameModal(ContentItem);
+            if (ImGui::MenuItem(LE_ICON_ARCHIVE_EDIT " Rename", "F2"))
+            {
+                PushRenameModal(ContentItem);
+            }
         }
         
         if (ImGui::MenuItem(LE_ICON_FOLDER " Show in Explorer", nullptr, false))
@@ -1006,15 +1126,18 @@ namespace Lumina
             ImGuiX::Notifications::NotifyInfo("Path copied to clipboard");
         }
 
-        ImGui::Separator();
-
-        ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
-        bool bDeleteClicked = ImGui::MenuItem(LE_ICON_ALERT_OCTAGON " Delete", "Del");
-        ImGui::PopStyleColor();
-
-        if (bDeleteClicked)
+        if (!ContentItem->IsProtected())
         {
-            OpenDeletionWarningPopup(ContentItem);
+            ImGui::Separator();
+
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 100, 100, 255));
+            bool bDeleteClicked = ImGui::MenuItem(LE_ICON_ALERT_OCTAGON " Delete", "Del");
+            ImGui::PopStyleColor();
+
+            if (bDeleteClicked)
+            {
+                OpenDeletionWarningPopup(ContentItem);
+            }
         }
     }
 
@@ -1138,7 +1261,7 @@ namespace Lumina
                     continue;
                 }
                 
-                FString DisplayName = Factory->GetAssetName();
+                FString DisplayName = FString(LE_ICON_OPEN_IN_NEW) + " " + Factory->GetAssetName();
                 if (ImGui::MenuItem(DisplayName.c_str()))
                 {
                     FFixedString Path = Paths::Combine(SelectedPath, Factory->GetDefaultAssetCreationName());

@@ -556,7 +556,7 @@ static uint32_t FindBaseId(SpvReflectPrvParser* p_parser, SpvReflectPrvAccessCha
         UNCHECKED_READU32(p_parser, base_node->word_offset + 2, base_id);
       } break;
       default: {
-        assert(false);
+        //assert(false); @TODO LUMINA WTF IS THIS.
       } break;
     }
 

@@ -41,5 +41,4 @@ namespace Lumina
         PROPERTY()
         uint16 Index;
     };
-    
 }

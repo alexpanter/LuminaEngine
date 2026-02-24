@@ -1,6 +1,6 @@
 ﻿#pragma once
+
 #include "Core/Reflection/Type/LuminaTypes.h"
-#include "Lumina.h"
 #include "Memory/SmartPtr.h"
 
 namespace Lumina
@@ -11,13 +11,16 @@ namespace Lumina
     {
     public:
         FArrayProperty(const FFieldOwner& InOwner, const FArrayPropertyParams* Params)
-            :FProperty(InOwner, Params)
+            : FProperty(InOwner, Params)
         {
-            PushBackFn = Params->PushBackFn;
-            GetNumFn = Params->GetNumFn;
-            RemoveAtFn = Params->RemoveAtFn;
-            ClearFn = Params->ClearFn;
-            GetAtFn = Params->GetAtFn;
+            PushBackFn  = Params->PushBackFn;
+            GetNumFn    = Params->GetNumFn;
+            RemoveAtFn  = Params->RemoveAtFn;
+            ClearFn     = Params->ClearFn;
+            GetAtFn     = Params->GetAtFn;
+            ResizeFn    = Params->ResizeFn;
+            ReserveFn   = Params->ReserveFn;
+            SwapFn      = Params->SwapFn;
         }
         
         void AddProperty(FProperty* Property) override { Inner.reset(Property); }
@@ -51,6 +54,21 @@ namespace Lumina
         {
             return GetAtFn(InContainer, Index);
         }
+        
+        void Resize(void* InContainer, size_t Size) const
+        {
+            ResizeFn(InContainer, Size);
+        }
+
+        void Reserve(void* InContainer, size_t Size) const
+        {
+            ReserveFn(InContainer, Size);
+        }
+        
+        void Swap(void* InContainer, size_t LHS, size_t RHS) const
+        {
+            SwapFn(InContainer, LHS, RHS);
+        }
 
         template<typename T = void, typename TFunc>
         void ForEach(void* InContainer, TFunc&& Func) const
@@ -78,6 +96,10 @@ namespace Lumina
         ArrayRemoveAtPtr        RemoveAtFn;
         ArrayClearPtr           ClearFn;
         ArrayGetAtPtr           GetAtFn;
+        ArrayResizePtr          ResizeFn;
+        ArrayReservePtr         ReserveFn;
+        ArraySwapPtr            SwapFn;
+
         TUniquePtr<FProperty>   Inner;
         
     };

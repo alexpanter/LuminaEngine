@@ -9,46 +9,6 @@ enum EInternal { EC_InternalUseOnlyConstructor };
 
 #define NO_API
 
-#define REFLECT(...)
-#define FUNCTION(...)
-#define PROPERTY(...)
-
-namespace PF
-{
-    /// Flags used to annotate properties with metadata for tooling, editor visibility, serialization, etc.
-    enum
-    {
-        Unknown,
-
-        /** Custom display name for the property */
-        DisplayName,         
-
-        /** This property cannot be edited in editor windows */
-        ReadOnly,
-
-        /** This property can be edited in editor windows */
-        Editable,
-
-        /** Marks this property as representing a color (enables color picker UI, for example) */
-        Color,
-
-        /** Specifies the minimum allowed value (usually used with numeric properties) */
-        Min,
-
-        /** Specifies the maximum allowed value (usually used with numeric properties) */
-        Max,
-
-        /** This property will not be serialized */
-        NotSerialized,
-
-        /** Organizes this property under a named category in the editor UI */
-        Category,
-
-        Count
-    };
-}
-
-
 #define CONCAT_INNER(a, b) a##b
 #define CONCAT(a, b) CONCAT_INNER(a, b)
 
@@ -80,6 +40,10 @@ namespace PF
 #if defined(REFLECTION_PARSER)
 
     #define GENERATED_BODY(...)
+    #define REFLECT(...)    __attribute__((annotate(#__VA_ARGS__)))
+    #define FUNCTION(...)   __attribute__((annotate(#__VA_ARGS__)))
+    #define PROPERTY(...)   __attribute__((annotate(#__VA_ARGS__)))
+
     #define REFLECT(...)
     #define PROPERTY(...)
     #define FUNCTION(...)
@@ -87,6 +51,9 @@ namespace PF
 #else
 
     #define GENERATED_BODY(...) CONCAT4(CURRENT_FILE_ID, _, __LINE__, _GENERATED_BODY)
+    #define REFLECT(...)
+    #define PROPERTY(...)
+    #define FUNCTION(...)
 
 #endif
 

@@ -92,11 +92,11 @@ namespace Lumina
             }, Vertices);
         }
         
-        void SetUVAt(size_t Index, glm::u16vec2 UV)
+        void SetUVAt(size_t Index, glm::vec2 UV)
         {
             eastl::visit([&]<typename T0>(T0& Vector)
             {
-                Vector[Index].UV = UV;
+                Vector[Index].UV = glm::packHalf2x16(UV);
             }, Vertices);
         }
         
@@ -134,11 +134,11 @@ namespace Lumina
             }, Vertices);
         }
         
-        glm::u16vec2 GetUVAt(size_t Index) const
+        glm::vec2 GetUVAt(size_t Index) const
         {
             return eastl::visit([&]<typename T0>(const T0& Vector)
             {
-                return Vector[Index].UV;
+                return glm::unpackHalf2x16(Vector[Index].UV);
             }, Vertices);
         }
         

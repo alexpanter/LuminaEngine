@@ -7,6 +7,7 @@
 
 namespace Lumina
 {
+    struct FMaterialUniforms;
     class CMaterial;
     struct FMaterialParameter;
     enum class EMaterialParameterType : uint8;
@@ -34,10 +35,12 @@ namespace Lumina
         virtual bool SetVectorValue(const FName& Name, const glm::vec4& Value) { return false; }
         virtual bool SetScalarValue(const FName& Name, const float Value) { return false; }
         virtual bool GetParameterValue(EMaterialParameterType Type, const FName& Name, FMaterialParameter& Param) { return false; }
+        virtual FMaterialUniforms* GetMaterialUniforms() { return nullptr; }
         
-        virtual FRHIBindingSet* GetBindingSet() const { return nullptr; }
-        virtual FRHIBindingLayout* GetBindingLayout() const { return nullptr; }
-        virtual FRHIVertexShader* GetVertexShader(EVertexFormat Format) const { return nullptr; }
+        int32 GetMaterialIndex() const { return MaterialIndex; }
+        void SetMaterialIndex(int32 Index) { MaterialIndex = Index; }
+        
+        virtual FRHIVertexShader* GetVertexShader() const { return nullptr; }
         virtual FRHIPixelShader* GetPixelShader() const { return nullptr; }
 
         virtual EMaterialType GetMaterialType() const { return EMaterialType::None; };
@@ -54,5 +57,6 @@ namespace Lumina
 
         std::atomic_bool        bReadyForRender;
         
+        int32                   MaterialIndex = -1;
     };
 }

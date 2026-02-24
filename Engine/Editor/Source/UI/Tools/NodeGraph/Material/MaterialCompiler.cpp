@@ -15,12 +15,12 @@ namespace Lumina
 
 	FString FMaterialCompiler::BuildTree(size_t& StartReplacement, size_t& EndReplacement)
 	{
-		FString FragmentPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/ForwardBasePass.frag";
+		FString FragmentPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/BasePixelPass.slang";
 
 		FString LoadedString;
 		if (!FileHelper::LoadFileIntoString(LoadedString, FragmentPath))
 		{
-			LOG_ERROR("Failed to find ForwardBasePass.frag!");
+			LOG_ERROR("Failed to find BasePixelPass.slang!");
 			return LoadedString;
 		}
 
@@ -47,31 +47,31 @@ namespace Lumina
 		// Could add type compatibility checking here
 	}
 
-	FString FMaterialCompiler::GetVectorType(EMaterialInputType Type) const
+	static FString GetVectorType(EMaterialInputType Type)
 	{
 		switch (Type)
 		{
 			case EMaterialInputType::Float:		return "float";
-			case EMaterialInputType::Float2:	return "vec2";
-			case EMaterialInputType::Float3:	return "vec3";
-			case EMaterialInputType::Float4:	return "vec4";
+			case EMaterialInputType::Float2:	return "float2";
+			case EMaterialInputType::Float3:	return "float3";
+			case EMaterialInputType::Float4:	return "float4";
 			default: return "float";
 		}
 	}
 
-	FString FMaterialCompiler::GetVectorType(int32 ComponentCount) const
+	static FString GetVectorType(int32 ComponentCount)
 	{
 		switch (ComponentCount)
 		{
 			case 1: return "float";
-			case 2: return "vec2";
-			case 3: return "vec3";
-			case 4: return "vec4";
+			case 2: return "float2";
+			case 3: return "float3";
+			case 4: return "float4";
 			default: return "float";
 		}
 	}
 
-	int32 FMaterialCompiler::GetComponentCount(EComponentMask Mask) const
+	int32 FMaterialCompiler::GetComponentCount(EComponentMask Mask)
 	{
 		switch (Mask)
 		{
@@ -89,7 +89,7 @@ namespace Lumina
 		return 0;
 	}
 
-	int32 FMaterialCompiler::GetComponentCount(EMaterialInputType Type) const
+	int32 FMaterialCompiler::GetComponentCount(EMaterialInputType Type)
 	{
 		switch (Type)
 		{
@@ -97,11 +97,12 @@ namespace Lumina
 			case EMaterialInputType::Float2:	return 2;
 			case EMaterialInputType::Float3:	return 3;
 			case EMaterialInputType::Float4:	return 4;
+			case EMaterialInputType::Texture:	return 4;
 			default: return 1;
 		}
 	}
 
-	EMaterialInputType FMaterialCompiler::GetTypeFromComponentCount(int32 Count) const
+	static EMaterialInputType GetTypeFromComponentCount(int32 Count)
 	{
 		switch (Count)
 		{
@@ -223,7 +224,7 @@ namespace Lumina
 		}
 
 		FString IndexString = eastl::to_string(VectorParameters[ParamID].Index);
-		ShaderChunks.append("vec2 " + NodeID + " = GetMaterialVec4(" + IndexString + ").xy;\n");
+		ShaderChunks.append("float2 " + NodeID + " = GetMaterialVec4(" + IndexString + ").xy;\n");
 	}
 
 	void FMaterialCompiler::DefineFloat3Parameter(const FString& NodeID, const FName& ParamID, float Value[3])
@@ -235,7 +236,7 @@ namespace Lumina
 		}
 
 		FString IndexString = eastl::to_string(VectorParameters[ParamID].Index);
-		ShaderChunks.append("vec3 " + NodeID + " = GetMaterialVec4(" + IndexString + ").xyz;\n");
+		ShaderChunks.append("float3 " + NodeID + " = GetMaterialVec4(" + IndexString + ").xyz;\n");
 	}
 
 	void FMaterialCompiler::DefineFloat4Parameter(const FString& NodeID, const FName& ParamID, float Value[4])
@@ -247,7 +248,7 @@ namespace Lumina
 		}
 
 		FString IndexString = eastl::to_string(VectorParameters[ParamID].Index);
-		ShaderChunks.append("vec4 " + NodeID + " = GetMaterialVec4(" + IndexString + ");\n");
+		ShaderChunks.append("float4 " + NodeID + " = GetMaterialVec4(" + IndexString + ");\n");
 	}
 
 	// ========================================================================
@@ -264,7 +265,7 @@ namespace Lumina
 	{
 		FString ValueStringX = eastl::to_string(Value[0]);
 		FString ValueStringY = eastl::to_string(Value[1]);
-		ShaderChunks.append("vec2 " + ID + " = vec2(" + ValueStringX + ", " + ValueStringY + ");\n");
+		ShaderChunks.append("float2 " + ID + " = float2(" + ValueStringX + ", " + ValueStringY + ");\n");
 	}
 
 	void FMaterialCompiler::DefineConstantFloat3(const FString& ID, float Value[3])
@@ -272,7 +273,7 @@ namespace Lumina
 		FString ValueStringX = eastl::to_string(Value[0]);
 		FString ValueStringY = eastl::to_string(Value[1]);
 		FString ValueStringZ = eastl::to_string(Value[2]);
-		ShaderChunks.append("vec3 " + ID + " = vec3(" + ValueStringX + ", " + ValueStringY + ", " + ValueStringZ + ");\n");
+		ShaderChunks.append("float3 " + ID + " = float3(" + ValueStringX + ", " + ValueStringY + ", " + ValueStringZ + ");\n");
 	}
 
 	void FMaterialCompiler::DefineConstantFloat4(const FString& ID, float Value[4])
@@ -281,7 +282,7 @@ namespace Lumina
 		FString ValueStringY = eastl::to_string(Value[1]);
 		FString ValueStringZ = eastl::to_string(Value[2]);
 		FString ValueStringW = eastl::to_string(Value[3]);
-		ShaderChunks.append("vec4 " + ID + " = vec4(" + ValueStringX + ", " + ValueStringY + ", " + ValueStringZ + ", " + ValueStringW + ");\n");
+		ShaderChunks.append("float4 " + ID + " = float4(" + ValueStringX + ", " + ValueStringY + ", " + ValueStringZ + ", " + ValueStringW + ");\n");
 	}
 
 	void FMaterialCompiler::BreakFloat2(CMaterialInput* A)
@@ -372,7 +373,7 @@ namespace Lumina
 		FString RMask = GetSwizzleForMask(ValueR.Mask);
 		FString GMask = GetSwizzleForMask(ValueG.Mask);
 		
-		ShaderChunks.append(TypeStr + " " + OwningNode + " = vec2(" + ValueR.Value + RMask + ", " +  ValueG.Value + GMask + ");\n");
+		ShaderChunks.append(TypeStr + " " + OwningNode + " = float2(" + ValueR.Value + RMask + ", " +  ValueG.Value + GMask + ");\n");
 	}
 
 	void FMaterialCompiler::MakeFloat3(CMaterialInput* R, CMaterialInput* G, CMaterialInput* B)
@@ -403,7 +404,7 @@ namespace Lumina
 		FString GMask = GetSwizzleForMask(ValueG.Mask);
 		FString BMask = GetSwizzleForMask(ValueB.Mask);
 
-		ShaderChunks.append(TypeStr + " " + OwningNode + " = vec3(" + ValueR.Value + RMask + ", " +  ValueG.Value + GMask + ", " + ValueB.Value + BMask + ");\n");
+		ShaderChunks.append(TypeStr + " " + OwningNode + " = float3(" + ValueR.Value + RMask + ", " +  ValueG.Value + GMask + ", " + ValueB.Value + BMask + ");\n");
 	}
 
 	void FMaterialCompiler::MakeFloat4(CMaterialInput* R, CMaterialInput* G, CMaterialInput* B, CMaterialInput* A)
@@ -436,7 +437,7 @@ namespace Lumina
 		FString BMask = GetSwizzleForMask(ValueB.Mask);
 		FString AMask = GetSwizzleForMask(ValueA.Mask);
 
-		ShaderChunks.append(TypeStr + " " + OwningNode + " = vec4(" + ValueR.Value + RMask + ", "
+		ShaderChunks.append(TypeStr + " " + OwningNode + " = float4(" + ValueR.Value + RMask + ", "
 			+  ValueG.Value + GMask + ", " + ValueB.Value + BMask + ", " + ValueA.Value + AMask + ");\n");
 	}
 
@@ -446,8 +447,7 @@ namespace Lumina
 
 	void FMaterialCompiler::DefineTextureSample(const FString& ID)
 	{
-		ShaderChunks.append("layout(set = 2, binding = " + eastl::to_string(BindingIndex) + ") uniform sampler2D " + ID + "_sample;\n");
-		BindingIndex++;
+		return;
 	}
 
 	void FMaterialCompiler::TextureSample(const FString& ID, CTexture* Texture, CMaterialInput* Input)
@@ -457,7 +457,7 @@ namespace Lumina
 			return;
 		}
 
-		FInputValue UVValue = GetTypedInputValue(Input, "vec2(UV0)");
+		FInputValue UVValue = GetTypedInputValue(Input, "float2(UV0)");
 
 		FString UVStr;
 		if (UVValue.ComponentCount >= 2)
@@ -466,10 +466,11 @@ namespace Lumina
 		}
 		else
 		{
-			UVStr = "vec2(" + UVValue.Value + ")";
+			UVStr = "float2(" + UVValue.Value + ")";
 		}
-
-		ShaderChunks.append("vec4 " + ID + " = texture(" + ID + "_sample, " + UVStr + ");\n");
+		
+		int32 Index = static_cast<int32>(BoundImages.size());
+		ShaderChunks.append("float4 " + ID + " = uGlobalTextures[GetMaterialTexture(MaterialIndex, " + eastl::to_string(Index) + ")].Sample(" + UVStr + ");\n");
 		BoundImages.push_back(Texture);
 	}
 
@@ -484,22 +485,36 @@ namespace Lumina
 
 	void FMaterialCompiler::VertexNormal(const FString& ID)
 	{
-		ShaderChunks.append("vec3 " + ID + " = WorldNormal.xyz;\n");
+		ShaderChunks.append("float3 " + ID + " = WorldNormal.xyz;\n");
 	}
 
-	void FMaterialCompiler::TexCoords(const FString& ID)
+	void FMaterialCompiler::TexCoords(const FString& ID, uint32 Index, float UTiling, float VTiling)
 	{
-		ShaderChunks.append("vec2 " + ID + " = UV0;\n");
+		ShaderChunks.append("float2 " + ID + " = UV0 * float2(" + eastl::to_string(UTiling) + ", " + eastl::to_string(VTiling) + ");\n");
+	}
+
+	void FMaterialCompiler::Panner(CMaterialInput* UV, CMaterialInput* Time, CMaterialInput* Speed)
+	{
+		CMaterialExpression_Panner* PannerNode = UV->GetOwningNode<CMaterialExpression_Panner>();
+		
+		FInputValue UVValue = GetTypedInputValue(UV, "float2(UV0)");
+		FInputValue TimeValue = GetTypedInputValue(Time, "GetTime()");
+		FInputValue SpeedValue = GetTypedInputValue(Speed, "float2(" + eastl::to_string(PannerNode->SpeedX) + ", " + eastl::to_string(PannerNode->SpeedY) + ")");
+		const FString OwningNode = UV->GetOwningNode()->GetNodeFullName();
+		
+		ShaderChunks.append("float2 " + OwningNode + " = " + UVValue.Value + " + " + SpeedValue.Value + " * " + TimeValue.Value + ";\n");
+		
+		PannerNode->Output->SetInputType(EMaterialInputType::Float2);
 	}
 
 	void FMaterialCompiler::WorldPos(const FString& ID)
 	{
-		ShaderChunks.append("vec3 " + ID + " = WorldPosition;\n");
+		ShaderChunks.append("float3 " + ID + " = WorldPosition;\n");
 	}
 
 	void FMaterialCompiler::CameraPos(const FString& ID)
 	{
-		ShaderChunks.append("vec3 " + ID + " = GetCameraPosition();\n");
+		ShaderChunks.append("float3 " + ID + " = GetCameraPosition();\n");
 	}
 
 	void FMaterialCompiler::EntityID(const FString& ID)
@@ -570,7 +585,7 @@ namespace Lumina
 		FInputValue AValue = GetTypedInputValue(A, Node->ConstA);
 		FString TypeStr = GetVectorType(AValue.Type);
 
-		ShaderChunks.append(TypeStr + " " + OwningNode + " = fract(" + AValue.Value + ");\n");
+		ShaderChunks.append(TypeStr + " " + OwningNode + " = frac(" + AValue.Value + ");\n");
 	}
 
 	void FMaterialCompiler::Floor(CMaterialInput* A, CMaterialInput* B)
@@ -644,7 +659,7 @@ namespace Lumina
 			ShaderChunks.append("// ERROR: Type mismatch\n");
 		}
 
-		ShaderChunks.append(TypeStr + " " + OwningNode + " = mod(" + AValue.Value + ", " + BValue.Value + ");\n");
+		ShaderChunks.append(TypeStr + " " + OwningNode + " = fmod(" + AValue.Value + ", " + BValue.Value + ");\n");
 		Node->Output->SetInputType(ResultType);
 	}
 
@@ -750,7 +765,7 @@ namespace Lumina
 			ShaderChunks.append("// ERROR: Type mismatch\n");
 		}
 
-		ShaderChunks.append(TypeStr + " " + OwningNode + " = mix(" + AValue.Value + ", " + BValue.Value + ", " + CValue.Value + ");\n");
+		ShaderChunks.append(TypeStr + " " + OwningNode + " = lerp(" + AValue.Value + ", " + BValue.Value + ", " + CValue.Value + ");\n");
 		Node->Output->SetInputType(ResultType);
 	}
 

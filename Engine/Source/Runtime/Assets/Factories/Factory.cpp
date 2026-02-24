@@ -61,9 +61,9 @@ namespace Lumina
         return New;
     }
 
-    void CFactory::Import(const FFixedString& ImportFile, const FFixedString& DestinationPath, const eastl::any& ImportSettings)
+    void CFactory::Import(const FFixedString& ImportFile, const FFixedString& DestinationPath, const Import::FImportSettings* Settings)
     {
-        TryImport(ImportFile, DestinationPath, ImportSettings);
+        TryImport(ImportFile, DestinationPath, Settings);
     }
     
     bool CFactory::ShowCreationDialogue(CFactory* Factory, FStringView Path)

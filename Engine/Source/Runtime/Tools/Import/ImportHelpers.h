@@ -22,22 +22,39 @@ namespace Lumina
 
 namespace Lumina::Import
 {
+    struct FImportSettings
+    {
+        virtual ~FImportSettings() = default;
+        
+        template<typename T>
+        requires(eastl::is_base_of_v<FImportSettings, T> && !eastl::is_pointer_v<T>)
+        const T& As() const
+        {
+            return *static_cast<const T*>(this);
+        }
+    };
+    
+    
     namespace Textures
     {
         struct FTextureImportResult
         {
-            TVector<uint8> Pixels;
-            glm::uvec2 Dimensions;
-            EFormat Format;
+            TVector<uint8>  Pixels;
+            glm::uvec2      Dimensions;
+            EFormat         Format;
         };
         
         /** Gets an image's raw pixel data */
-        RUNTIME_API TOptional<FTextureImportResult> ImportTexture(FStringView RawFilePath, bool bFlipVertical = true);
+        RUNTIME_API TOptional<FTextureImportResult> ImportTexture(FStringView RawFilePath, bool bFlipVertical = true, glm::uvec2 Size = {});
+        RUNTIME_API TOptional<FTextureImportResult> ImportTexture(TSpan<const uint8> ImageData, bool bFlipVertical = true, glm::uvec2 Size = {});
     
         /** Creates a raw RHI Image */
-        NODISCARD RUNTIME_API FRHIImageRef CreateTextureFromImport(FStringView RawFilePath, bool bFlipVerticalOnLoad = true);
+        NODISCARD RUNTIME_API FRHIImageRef CreateTextureFromImport(FStringView RawFilePath, bool bFlipVerticalOnLoad = true, glm::uvec2 Size = {});
     }
 
+    
+    
+    
     namespace Mesh
     {
         struct FMeshImportOptions
@@ -53,14 +70,17 @@ namespace Lumina::Import
             float Scale             = 1.0f;
         };
 
-        struct FMeshImportImage
+        struct FMeshImportImage : FImportSettings
         {
-            FFixedString RelativePath;
-            size_t ByteOffset;
+            FFixedString    RelativePath;
+            FRHIImageRef    DisplayImage;
+            TVector<uint8>  Bytes;
+            
+            NODISCARD bool IsBytes() const { return !Bytes.empty(); }
 
             bool operator==(const FMeshImportImage& Other) const
             {
-                return Other.RelativePath == RelativePath && Other.ByteOffset == ByteOffset;
+                return Other.RelativePath == RelativePath && Other.Bytes == Bytes;
             }
         };
 
@@ -70,7 +90,7 @@ namespace Lumina::Import
             {
                 size_t Seed = 0;
                 Hash::HashCombine(Seed, Asset.RelativePath);
-                Hash::HashCombine(Seed, Asset.ByteOffset);
+                Hash::HashCombine(Seed, Asset.Bytes.data());
                 return Seed;
             }
         };
@@ -79,12 +99,11 @@ namespace Lumina::Import
         {
             bool operator()(const FMeshImportImage& A, const FMeshImportImage& B) const noexcept
             {
-                return A.RelativePath == B.RelativePath && A.ByteOffset == B.ByteOffset;
+                return A.RelativePath == B.RelativePath && A.Bytes == B.Bytes;
             }
         };
 
         using FMeshImportTextureMap = THashSet<FMeshImportImage, FMeshImportImageHasher, FMeshImportImageEqual>;
-
         
         struct FMeshStatistics : INonCopyable
         {
@@ -92,7 +111,7 @@ namespace Lumina::Import
             TVector<meshopt_VertexFetchStatistics>      VertexFetchStatics;
         };
 
-        struct FMeshImportData : INonCopyable
+        struct FMeshImportData : FImportSettings
         {
             FMeshStatistics                             MeshStatistics;
             FMeshImportTextureMap                       Textures;
@@ -105,7 +124,6 @@ namespace Lumina::Import
         void GenerateShadowBuffers(FMeshResource& MeshResource);
         void AnalyzeMeshStatistics(FMeshResource& MeshResource, FMeshStatistics& OutMeshStats);
         
-
         namespace OBJ
         {
             NODISCARD RUNTIME_API TExpected<FMeshImportData, FString> ImportOBJ(const FMeshImportOptions& ImportOptions, FStringView FilePath);

@@ -19,11 +19,12 @@ namespace Lumina
         void Serialize(FArchive& Ar) override;
         void PreLoad() override;
         void PostLoad() override;
+        void OnDestroy() override;
         bool IsAsset() const override { return true; }
 
 
         FORCEINLINE FRHIImage* GetRHIRef() const { return TextureResource.get() ? TextureResource->RHIImage : nullptr; }
-        FTextureResource* GetTextureResource() const { return TextureResource.get(); }
+        FTextureResource& GetTextureResource() const { return *TextureResource.get(); }
         uint8 GetNumMips() const { return TextureResource.get() ? TextureResource->Mips.size() : 0u; }
         
         TUniquePtr<FTextureResource> TextureResource;

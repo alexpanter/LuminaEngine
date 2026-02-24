@@ -12,6 +12,46 @@ namespace Lumina::Reflection
     class FReflectedProject;
 }
 
+#define BIT(x) (1 << (x))
+
+#define ENUM_CLASS_FLAGS(Enum) \
+inline           Enum& operator|=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
+inline           Enum& operator&=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs & (__underlying_type(Enum))Rhs); } \
+inline           Enum& operator^=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs ^ (__underlying_type(Enum))Rhs); } \
+inline constexpr Enum  operator| (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
+inline constexpr Enum  operator& (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs & (__underlying_type(Enum))Rhs); } \
+inline constexpr Enum  operator^ (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs ^ (__underlying_type(Enum))Rhs); } \
+inline constexpr bool  operator! (Enum  E)             { return !(__underlying_type(Enum))E; } \
+inline constexpr Enum  operator~ (Enum  E)             { return (Enum)~(__underlying_type(Enum))E; }
+
+template<typename Enum>
+constexpr bool EnumHasAllFlags(Enum Flags, Enum Contains)
+{
+    using UnderlyingType = __underlying_type(Enum);
+    return ((UnderlyingType)Flags & (UnderlyingType)Contains) == (UnderlyingType)Contains;
+}
+
+template<typename Enum>
+constexpr bool EnumHasAnyFlags(Enum Flags, Enum Contains)
+{
+    using UnderlyingType = __underlying_type(Enum);
+    return ((UnderlyingType)Flags & (UnderlyingType)Contains) != 0;
+}
+
+template<typename Enum>
+void EnumAddFlags(Enum& Flags, Enum FlagsToAdd)
+{
+    using UnderlyingType = __underlying_type(Enum);
+    Flags = (Enum)((UnderlyingType)Flags | (UnderlyingType)FlagsToAdd);
+}
+
+template<typename Enum>
+void EnumRemoveFlags(Enum& Flags, Enum FlagsToRemove)
+{
+    using UnderlyingType = __underlying_type(Enum);
+    Flags = (Enum)((UnderlyingType)Flags & ~(UnderlyingType)FlagsToRemove);
+}
+
 
 /** This must reflect EPropertyTypeFlags found in ObjectCore.h */
 enum class EPropertyTypeFlags : uint64_t
@@ -44,6 +84,62 @@ enum class EPropertyTypeFlags : uint64_t
     Vector              = 1 << 17,
     Struct              = 1 << 18,
 };
+
+/** Must be in-sync with EPropertyFlags in ObjectCore.h */
+enum class EPropertyFlags : uint16_t
+{
+    None                = 0,
+    Editable            = BIT(0),
+    ReadOnly            = BIT(1),
+    Transient           = BIT(2),
+    Const               = BIT(3),
+    Private             = BIT(4),
+    Protected           = BIT(5),
+    SubField            = BIT(6),
+    Trivial             = BIT(7),
+    Script              = BIT(8),
+    Builtin             = BIT(9),
+    BulkSerialize       = BIT(10),
+};
+
+ENUM_CLASS_FLAGS(EPropertyFlags)
+
+inline eastl::string PropertyFlagsToString(EPropertyFlags Flags)
+{
+    if (Flags == EPropertyFlags::None)
+    {
+        return "Lumina::EPropertyFlags::None";
+    }
+
+    eastl::string Result;
+
+    auto AppendFlag = [&](EPropertyFlags Flag, eastl::string_view Name)
+    {
+        if ((Flags & Flag) != EPropertyFlags::None)
+        {
+            if (!Result.empty())
+            {
+                Result += " | ";
+            }
+            Result.append_convert(Name.begin(), Name.length());
+        }
+    };
+
+    AppendFlag(EPropertyFlags::Editable,   "Lumina::EPropertyFlags::Editable");
+    AppendFlag(EPropertyFlags::ReadOnly,   "Lumina::EPropertyFlags::ReadOnly");
+    AppendFlag(EPropertyFlags::Transient,  "Lumina::EPropertyFlags::Transient");
+    AppendFlag(EPropertyFlags::Const,      "Lumina::EPropertyFlags::Const");
+    AppendFlag(EPropertyFlags::Private,    "Lumina::EPropertyFlags::Private");
+    AppendFlag(EPropertyFlags::Protected,  "Lumina::EPropertyFlags::Protected");
+    AppendFlag(EPropertyFlags::SubField,   "Lumina::EPropertyFlags::SubField");
+    AppendFlag(EPropertyFlags::Trivial,    "Lumina::EPropertyFlags::Trivial");
+    AppendFlag(EPropertyFlags::Script,    "Lumina::EPropertyFlags::Script");
+    AppendFlag(EPropertyFlags::Builtin,    "Lumina::EPropertyFlags::Builtin");
+    AppendFlag(EPropertyFlags::BulkSerialize,    "Lumina::EPropertyFlags::BulkSerialize");
+
+    return Result;
+}
+
 
 namespace Lumina::Reflection
 {

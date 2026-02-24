@@ -141,6 +141,9 @@ namespace Lumina
         
         /** Moves the viewport to focus on the desired entity */
         virtual void FocusViewportToEntity(entt::entity Entity);
+        
+        /** Draws an editor viewport grid if a world exists */
+        virtual void DrawWorldGrid(int Scale = 100, int Spacing = 1);
 
         bool BeginViewportToolbarGroup(char const* GroupID, ImVec2 GroupSize, const ImVec2& Padding);
         void EndViewportToolbarGroup();
@@ -217,6 +220,8 @@ namespace Lumina
 
         bool                            bViewportFocused = false;
         bool                            bViewportHovered = false;
+
+		bool							bWorldGridEnabled = true;
     };
     
 }

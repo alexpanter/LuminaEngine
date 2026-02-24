@@ -16,6 +16,7 @@
 #include "Memory/Memory.h"
 #include "Paths/Paths.h"
 #include "Renderer/MeshData.h"
+#include "Renderer/RendererUtils.h"
 #include "Renderer/RenderResource.h"
 #include "Renderer/Vertex.h"
 
@@ -288,31 +289,94 @@ namespace Lumina::Import::Mesh::GLTF
 
             if (ImportOptions.bImportTextures)
             {
+                uint32 ImageCounter = 0;
                 for (auto& Image : Asset.images)
                 {
                     FMeshImportImage GLTFImage;
                     if (auto* URI = std::get_if<fastgltf::sources::URI>(&Image.data))
                     {
-                        GLTFImage.ByteOffset = URI->fileByteOffset;
                         GLTFImage.RelativePath = URI->uri.c_str();
+                        FFixedString FullPath = Paths::Combine(VFS::Parent(FilePath), GLTFImage.RelativePath);
+                        GLTFImage.DisplayImage = Textures::CreateTextureFromImport(FullPath, true, glm::uvec2(128, 128));
+                        
                         ImportData.Textures.emplace(Move(GLTFImage));
                     }
                     else if (auto* BufferView = std::get_if<fastgltf::sources::BufferView>(&Image.data))
                     {
+                        const fastgltf::BufferView& View = Asset.bufferViews[BufferView->bufferViewIndex];
+                        const fastgltf::Buffer& Buffer   = Asset.buffers[View.bufferIndex];
+
+                        if (auto* BufferArray = std::get_if<fastgltf::sources::Array>(&Buffer.data))
+                        {
+                            const uint8* Start = BufferArray->bytes.data() + View.byteOffset;
+                            GLTFImage.Bytes.assign(Start, Start + View.byteLength);
+                        }
                         
+                        if (!Image.name.empty())
+                        {
+                            GLTFImage.RelativePath = Image.name.c_str();
+                        }
+                        else
+                        {
+                            GLTFImage.RelativePath.assign(MeshName + "Image_").append_convert(eastl::to_string(ImageCounter));
+                        }
+                        
+                        GLTFImage.DisplayImage = RenderUtils::CreateImageFromPixels(GLTFImage.Bytes, true , glm::uvec2(128, 128));
+                        ImportData.Textures.emplace(Move(GLTFImage));
                     }
                     else if (auto* Array = std::get_if<fastgltf::sources::Array>(&Image.data))
                     {
+                        const uint8* Start = Array->bytes.data();
+                        GLTFImage.Bytes.assign(Start, Start + Array->bytes.size());
+
+                        if (!Image.name.empty())
+                        {
+                            GLTFImage.RelativePath = Image.name.c_str();
+                        }
+                        else
+                        {
+                            GLTFImage.RelativePath.assign(MeshName + "Image_").append_convert(eastl::to_string(ImageCounter));
+                        }
                         
+                        GLTFImage.DisplayImage = RenderUtils::CreateImageFromPixels(GLTFImage.Bytes, true , glm::uvec2(128, 128));
+                        ImportData.Textures.emplace(Move(GLTFImage));
                     }
                     else if (auto* Vector = std::get_if<fastgltf::sources::Vector>(&Image.data))
                     {
+                        const uint8* Start = Vector->bytes.data();
+                        GLTFImage.Bytes.assign(Start, Start + Vector->bytes.size());
                         
+                        if (!Image.name.empty())
+                        {
+                            GLTFImage.RelativePath = Image.name.c_str();
+                        }
+                        else
+                        {
+                            GLTFImage.RelativePath.assign(MeshName + "Image_").append_convert(eastl::to_string(ImageCounter));
+                        }
+
+                        GLTFImage.DisplayImage = RenderUtils::CreateImageFromPixels(GLTFImage.Bytes, true , glm::uvec2(128, 128));
+                        ImportData.Textures.emplace(Move(GLTFImage));
                     }
                     else if (auto* ByteView = std::get_if<fastgltf::sources::ByteView>(&Image.data))
                     {
+                        const uint8* Start = reinterpret_cast<const uint8*>(ByteView->bytes.data());
+                        GLTFImage.Bytes.assign(Start, Start + ByteView->bytes.size());
+
+                        if (!Image.name.empty())
+                        {
+                            GLTFImage.RelativePath = Image.name.c_str();
+                        }
+                        else
+                        {
+                            GLTFImage.RelativePath.assign(MeshName + "Image_").append_convert(eastl::to_string(ImageCounter));
+                        }
                         
+                        GLTFImage.DisplayImage = RenderUtils::CreateImageFromPixels(GLTFImage.Bytes, true , glm::uvec2(128, 128));
+                        ImportData.Textures.emplace(Move(GLTFImage));
                     }
+                    
+                    ImageCounter++;
                 }
             }
             
@@ -405,10 +469,7 @@ namespace Lumina::Import::Mesh::GLTF
                             Value.y = 1.0f - Value.y;
                         }
 
-                        glm::u16vec2 VertexUV;
-                        VertexUV.x = (uint16)(glm::clamp(Value.x, 0.0f, 1.0f) * 65535.0f);
-                        VertexUV.y = (uint16)(glm::clamp(Value.y, 0.0f, 1.0f) * 65535.0f);
-                        NewResource->SetUVAt(InitialVert + Index, VertexUV);
+                        NewResource->SetUVAt(InitialVert + Index, Value);
                     });
                 }
                 

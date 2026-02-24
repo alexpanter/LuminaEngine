@@ -11,7 +11,6 @@ namespace Lumina
         Float3,
         Float4,
         Texture,
-        Wildcard,
     };
 
     enum class EComponentMask : uint8

@@ -1,4 +1,6 @@
 #pragma once
+#include "MaterialManager.h"
+#include "TextureManager.h"
 #include "Core/Delegates/Delegate.h"
 #include "Subsystems/Subsystem.h"
 
@@ -35,13 +37,19 @@ namespace Lumina
 
         uint32 GetCurrentFrameIndex() const { return CurrentFrameIndex; }
         
+        NODISCARD RHI::FTextureManager& GetTextureManager() const { return *TextureManager.get(); }
+        NODISCARD RHI::FMaterialManager& GetMaterialManager() const { return *MaterialManager.get(); }
+        
     private:
         
         #if WITH_EDITOR
-        IImGuiRenderer*     ImGuiRenderer = nullptr;
+        IImGuiRenderer*                     ImGuiRenderer = nullptr;
         #endif
         
-        uint8               CurrentFrameIndex = 0;
+        TUniquePtr<RHI::FTextureManager>    TextureManager;
+        TUniquePtr<RHI::FMaterialManager>   MaterialManager;
+        
+        uint8                               CurrentFrameIndex = 0;
     };
     
     
