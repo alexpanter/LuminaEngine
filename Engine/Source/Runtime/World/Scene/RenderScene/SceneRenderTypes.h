@@ -314,6 +314,8 @@ namespace Lumina
     {
         glm::vec3       Position;
         float           Size;
+        
+        uint32          ColorPack;
         uint32          TextureIndex;
         uint32          EntityID;
     };

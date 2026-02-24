@@ -18,16 +18,15 @@ struct VSOutput
 VSOutput VertexMain(uint VertexIndex: SV_VulkanVertexID, uint InstanceIndex: SV_VulkanInstanceID, uint ViewIndex : SV_ViewID, uniform FPushConstants PC)
 {
     FInstanceData InstanceData = GetInstanceData(InstanceIndex);
-    uint          Flags        = GetInstanceDataFlags(InstanceData);
 
     FVertexData VertexData;
-    if (HasFlag(Flags, INSTANCE_FLAG_SKINNED))
+    if (InstanceData.HasFlag(EInstanceFlags::Skinned))
     {
         VertexData = LoadSkinnedVertex(
             InstanceData.VBAddress,
             InstanceData.IBAddress,
             VertexIndex,
-            GetInstanceDataBoneIndex(InstanceData));
+            InstanceData.BoneOffset);
     }
     else
     {

@@ -340,24 +340,27 @@ namespace Lumina
     {
         using namespace entt::literals;
         
-        CComponentVisualizerRegistry& ComponentVisualizerRegistry = CComponentVisualizerRegistry::Get();
-
-        auto View = World->GetEntityRegistry().view<FSelectedInEditorComponent>(entt::exclude<SDisabledTag>);
-        View.each([&] (entt::entity SelectedEntity)
+        if (bShowComponentVisualizers)
         {
-            ECS::Utils::ForEachComponent(World->GetEntityRegistry(), SelectedEntity, [&](void*, entt::basic_sparse_set<>& Set, const entt::meta_type& Type)
-            {
-                if (entt::meta_any ReturnValue = ECS::Utils::InvokeMetaFunc(Type, "static_struct"_hs))
-                {
-                    CStruct* StructType = ReturnValue.cast<CStruct*>();
+            CComponentVisualizerRegistry& ComponentVisualizerRegistry = CComponentVisualizerRegistry::Get();
 
-                    if (CComponentVisualizer* Visualizer = ComponentVisualizerRegistry.GetComponentVisualizer(StructType))
+            auto View = World->GetEntityRegistry().view<FSelectedInEditorComponent>(entt::exclude<SDisabledTag>);
+            View.each([&] (entt::entity SelectedEntity)
+            {
+                ECS::Utils::ForEachComponent(World->GetEntityRegistry(), SelectedEntity, [&](void*, entt::basic_sparse_set<>& Set, const entt::meta_type& Type)
+                {
+                    if (entt::meta_any ReturnValue = ECS::Utils::InvokeMetaFunc(Type, "static_struct"_hs))
                     {
-                        Visualizer->Draw(World, World->GetEntityRegistry(), SelectedEntity);
+                        CStruct* StructType = ReturnValue.cast<CStruct*>();
+
+                        if (CComponentVisualizer* Visualizer = ComponentVisualizerRegistry.GetComponentVisualizer(StructType))
+                        {
+                            Visualizer->Draw(World, World->GetEntityRegistry(), SelectedEntity);
+                        }
                     }
-                }
+                });
             });
-        });
+        }
     }
 
     void FWorldEditorTool::OnEntityCreated(entt::registry& Registry, entt::entity Entity)
@@ -427,7 +430,7 @@ namespace Lumina
             }
         }
         
-        if (bGamePreviewRunning)
+        if (World->IsGameWorld())
         {
             return;
         }
@@ -811,11 +814,6 @@ namespace Lumina
 
     void FWorldEditorTool::DrawViewportToolbar(const FUpdateContext& UpdateContext)
     {
-        if (!IsAssetEditorTool() && !bSimulatingWorld && !bGamePreviewRunning)
-        {
-            return;
-        }
-        
         constexpr float Padding = 8.0f;
         constexpr float ItemSpacing = 6.0f;
         constexpr float ButtonSize = 32.0f;
@@ -841,12 +839,15 @@ namespace Lumina
         if (ImGui::Begin("##ViewportToolbar", nullptr, WindowFlags))
         {
             ImGui::BeginGroup();
+            
+            if (IsAssetEditorTool())
+            {
+                DrawSimulationControls(ButtonSize);
         
-            DrawSimulationControls(ButtonSize);
-        
-            ImGui::SameLine();
-            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-            ImGui::SameLine();
+                ImGui::SameLine();
+                ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+                ImGui::SameLine();   
+            }
             
             DrawCameraControls(ButtonSize);
         
@@ -1552,6 +1553,21 @@ namespace Lumina
         {
             ImGui::Text("Visualizations");
             ImGui::Separator();
+            
+            if (ImGui::BeginMenu("Components"))
+            {
+                ImGui::Checkbox("Show All", &bShowComponentVisualizers);
+                
+                ImGui::BeginDisabled(!bShowComponentVisualizers);
+                for (auto&& [Struct, Visualizer] : CComponentVisualizerRegistry::Get().GetVisualizers())
+                {
+                    bool bFoobar = false;
+                    ImGui::Checkbox(Struct->MakeDisplayName().c_str(), &bFoobar);
+                }
+                ImGui::EndDisabled();
+                
+                ImGui::EndMenu();
+            }
             
             if (ImGui::BeginMenu("Physics"))
             {

@@ -1,12 +1,11 @@
 #include "pch.h"
 #include "ForwardRenderScene.h"
 #include "Assets/AssetTypes/Material/Material.h"
-#include "Core/Console/ConsoleVariable.h"
-#include "Core/Templates/AsBytes.h"
-#include "Core/Windows/Window.h"
 #include "Assets/AssetTypes/Mesh/SkeletalMesh/SkeletalMesh.h"
 #include "assets/assettypes/mesh/skeleton/skeleton.h"
 #include "Assets/AssetTypes/Textures/Texture.h"
+#include "Core/Console/ConsoleVariable.h"
+#include "Core/Windows/Window.h"
 #include "Paths/Paths.h"
 #include "Renderer/RendererUtils.h"
 #include "Renderer/RHIStaticStates.h"
@@ -67,6 +66,12 @@ namespace Lumina
         GRenderContext->ClearCommandListCache();
         GRenderContext->ClearBindingCaches();
 
+        #if USING(WITH_EDITOR)
+        GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::PointLightIcon]);
+        GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::DirectionalLightIcon]);
+        GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::SpotLightIcon]);
+        #endif
+        
         FRenderManager::OnSwapchainResized.Remove(SwapchainResizedHandle);
         
         LOG_TRACE("Shutting down Forward Render Scene");
@@ -556,6 +561,7 @@ namespace Lumina
                 {
                     FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
                     Billboard.TextureIndex          = GetNamedImage(ENamedImage::PointLightIcon)->GetTextureCacheIndex();
+                    Billboard.ColorPack             = Light.Color;
                     Billboard.Position              = TransformComponent.GetLocation();
                     Billboard.Size                  = 0.35f;
                     Billboard.EntityID              = entt::to_integral(Entity);
@@ -632,17 +638,6 @@ namespace Lumina
             View.each([&] (entt::entity Entity, SSpotLightComponent& SpotLightComponent, STransformComponent& TransformComponent)
             {
                 const FTransform& Transform = TransformComponent.WorldTransform;
-                
-                #if USING(WITH_EDITOR)
-                if (!World->IsGameWorld())
-                {
-                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
-                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::SpotLightIcon)->GetTextureCacheIndex();
-                    Billboard.Position              = TransformComponent.GetLocation();
-                    Billboard.Size                  = 0.35f;
-                    Billboard.EntityID              = entt::to_integral(Entity);
-                }
-                #endif                
         
                 glm::vec3 UpdatedForward    = Transform.Rotation * FViewVolume::ForwardAxis;
                 glm::vec3 UpdatedUp         = Transform.Rotation * FViewVolume::UpAxis;
@@ -666,6 +661,18 @@ namespace Lumina
                 Light.Radius                = SpotLightComponent.Attenuation;
                 Light.Angles                = glm::vec2(InnerCos, OuterCos);
                 Light.ViewProjection[0]     = ViewVolume.ToReverseDepthViewProjectionMatrix();
+                
+                #if USING(WITH_EDITOR)
+                if (!World->IsGameWorld())
+                {
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::SpotLightIcon)->GetTextureCacheIndex();
+                    Billboard.ColorPack             = Light.Color;
+                    Billboard.Position              = TransformComponent.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
+                }
+                #endif    
         
                 if (SpotLightComponent.bCastShadows)
                 {
@@ -2066,7 +2073,7 @@ namespace Lumina
         {
             FRHIImageDesc ImageDesc;
             ImageDesc.Extent = Extent;
-            ImageDesc.Format = EFormat::RG32_UINT;
+            ImageDesc.Format = EFormat::R32_UINT;
             ImageDesc.Dimension = EImageDimension::Texture2D;
             ImageDesc.InitialState = EResourceStates::RenderTarget;
             ImageDesc.bKeepInitialState = true;
@@ -2207,17 +2214,17 @@ namespace Lumina
         }
 
         uint8* RowStart = static_cast<uint8*>(MappedMemory) + Y * RowPitch;
-        glm::uvec2* PixelPtr = reinterpret_cast<glm::uvec2*>(RowStart) + X;
-        glm::uvec2 PixelValue = *PixelPtr;
+        uint32* PixelPtr = reinterpret_cast<uint32*>(RowStart) + X;
+        uint32 PixelValue = *PixelPtr;
 
         GRenderContext->UnMapStagingTexture(StagingImage);
 
-        if (PixelValue.x == 0)
+        if (PixelValue == 0)
         {
             return entt::null;
         }
 
-        return static_cast<entt::entity>(PixelValue.x);
+        return static_cast<entt::entity>(PixelValue);
     }
 
     THashSet<entt::entity> FForwardRenderScene::GetEntitiesInPixelRange(uint32 MinX, uint32 MinY, uint32 MaxX, uint32 MaxY) const
@@ -2279,12 +2286,12 @@ namespace Lumina
             
             for (uint32 x = 0; x < Width; ++x)
             {
-                glm::uvec2* PixelPtr = reinterpret_cast<glm::uvec2*>(RowStart) + x;
-                glm::uvec2 PixelValue = *PixelPtr;
+                uint32* PixelPtr = reinterpret_cast<uint32*>(RowStart) + x;
+                uint32 PixelValue = *PixelPtr;
     
-                if (PixelValue.x != 0)
+                if (PixelValue != 0)
                 {
-                    entt::entity entity = static_cast<entt::entity>(PixelValue.x);
+                    entt::entity entity = static_cast<entt::entity>(PixelValue);
                     
                     EntityBounds& bounds = entityBoundsMap[entity];
                     bounds.MinX = glm::min(bounds.MinX, x);

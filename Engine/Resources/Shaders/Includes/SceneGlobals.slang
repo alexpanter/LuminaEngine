@@ -97,26 +97,6 @@ FInstanceData GetInstanceData(uint Index)
     return uInstanceData[DrawIDToInstanceID(Index)];
 }
 
-uint GetInstanceDataDrawID(FInstanceData Data)
-{
-    return Data.DrawIDAndFlags & 0x00FFFFFFu;
-}
-
-uint GetInstanceDataFlags(FInstanceData Data)
-{
-    return (Data.DrawIDAndFlags >> 24) & 0xFFu;
-}
-
-uint GetInstanceDataBoneIndex(FInstanceData Data)
-{
-    return Data.BoneOffsetAndMaterialIndex & 0x0000FFFFu;
-}
-
-uint GetInstanceDataMaterialIndex(FInstanceData Data)
-{
-    return (Data.BoneOffsetAndMaterialIndex >> 16) & 0x0000FFFFu;
-}
-
 float4x4 GetModelMatrix(uint Index)
 {
     return uInstanceData[DrawIDToInstanceID(Index)].ModelMatrix;

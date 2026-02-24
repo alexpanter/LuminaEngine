@@ -38,13 +38,26 @@ static const uint LIGHT_FLAG_TYPE_POINT       = BIT(1);
 static const uint LIGHT_FLAG_TYPE_SPOT        = BIT(2);
 static const uint LIGHT_FLAG_CASTSHADOW       = BIT(3);
 
-#define INSTANCE_FLAG_BILLBOARD      BIT(0)
-#define INSTANCE_FLAG_SKINNED        BIT(1)
-#define INSTANCE_FLAG_SELECTED       BIT(2)
-#define INSTANCE_FLAG_CAST_SHADOW    BIT(3)
-#define INSTANCE_FLAG_RECEIVE_SHADOW BIT(4)
-#define INSTANCE_FLAG_OCCLUDER       BIT(5)
-#define INSTANCE_FLAG_NO_CULL        BIT(6)
+enum ELightFlags
+{
+    None            = 0,
+    Directional     = BIT(0),
+    Point           = BIT(1),
+    Spot            = BIT(2),
+    
+    Shadow          = BIT(3),
+}
+
+enum EInstanceFlags
+{
+    None            = 0,
+    Billboard       = BIT(0),
+    Skinned         = BIT(1),
+    CastShadow      = BIT(2),
+    ReceiveShadow   = BIT(3),
+    Occluder        = BIT(4),
+    NoCull          = BIT(5),
+}
 
 // ---------------------------------------------------------------------------------
 //  Structs
@@ -107,13 +120,6 @@ struct FCameraView
     float4x4 InverseCameraProjection;
 };
 
-struct FMaterialUniforms
-{
-    float4 Vectors[MAX_VECTORS];
-    float  Scalars[MAX_SCALARS];
-    uint   Textures[MAX_TEXTURES];
-};
-
 struct FMaterialPixelInputs
 {
     float3 Diffuse;
@@ -148,17 +154,56 @@ struct FSSAOSettings
     float4 Samples[SSAO_KERNEL_SIZE];
 };
 
+struct FMaterialUniforms
+{
+    float4  Vectors[MAX_VECTORS];
+    float   Scalars[MAX_SCALARS];
+    uint    Textures[MAX_TEXTURES];
+};
+
 struct FInstanceData
 {
-    float4x4 ModelMatrix;
-    float4   SphereBounds;
+    float4x4            ModelMatrix;
+    float4              SphereBounds;
 
-    uint*    VBAddress;
-    uint*    IBAddress;
+    uint*               VBAddress;
+    uint*               IBAddress;
 
-    uint     EntityID;
-    uint     DrawIDAndFlags;
-    uint     BoneOffsetAndMaterialIndex;
+    uint                EntityID;
+    private uint        DrawIDAndFlags;
+    private uint        BoneOffsetAndMaterialIndex;
+
+    bool HasFlag(EInstanceFlags Flag)
+    {
+        return HasAllFlags((uint)Flags, (uint)Flag);
+    }
+
+    property uint DrawID
+    {
+        get { return DrawIDAndFlags & 0x00FFFFFFu; }
+        set { DrawIDAndFlags = (DrawIDAndFlags & 0xFF000000u) | (newValue & 0x00FFFFFFu); }
+    }
+
+    property EInstanceFlags Flags
+    {
+        get { return EInstanceFlags((DrawIDAndFlags >> 24) & 0xFFu); }
+        set { DrawIDAndFlags = (DrawIDAndFlags & 0x00FFFFFFu) | ((newValue & 0xFFu) << 24); }
+    }
+
+    property uint BoneOffset
+    {
+        get { return BoneOffsetAndMaterialIndex & 0x0000FFFFu; }
+        set { BoneOffsetAndMaterialIndex = (BoneOffsetAndMaterialIndex & 0xFFFF0000u) | (newValue & 0x0000FFFFu); }
+    }
+
+    property uint MaterialIndex
+    {
+        get { return (BoneOffsetAndMaterialIndex >> 16) & 0x0000FFFFu; }
+        set { BoneOffsetAndMaterialIndex = (BoneOffsetAndMaterialIndex & 0x0000FFFFu) | ((newValue & 0x0000FFFFu) << 16); }
+    }
+
+    property float3 BoundsCenter { get { return SphereBounds.xyz; } }
+    property float BoundsRadius { get { return SphereBounds.w; } }
 };
 
 struct FLightShadow
@@ -173,10 +218,14 @@ struct FLightShadow
 
 struct FBillboardInstance
 {
-    float3 Position;
-    float  Size;
-    uint   TextureIndex;
-    uint   EntityID;
+    float3          Position;
+    float           Size;
+
+    private uint    ColorPack;
+    uint            TextureIndex;
+    uint            EntityID;
+
+    property float3 ColorTint { get { return UnpackColor(ColorPack).rgb; }}
 };
 
 struct FLight

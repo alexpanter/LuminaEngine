@@ -7,17 +7,14 @@ struct PSInput
     float4 NormalWS     : NORMAL_WS;
     float4 FragPos      : FRAG_POS;
     float2 UV           : TEXCOORD0;
-    nointerpolation uint EntityID       : ENTITY_ID;
-    nointerpolation uint ReceiveShadow  : RECEIVE_SHADOW;
-    nointerpolation uint Selected       : SELECTED;
-    nointerpolation uint MatIndex       : MAT_INDEX;
+    uint InstanceIndex  : INSTANCE;
     float4 Position     : SV_Position;
 };
 
 struct PSOutput
 {
-    float4 Color   : SV_Target0;
-    uint2  Picker  : SV_Target1;
+    float4  Color   : SV_Target0;
+    uint    Picker  : SV_Target1;
 };
 
 struct FCubemapCoord
@@ -100,10 +97,12 @@ FCubemapCoord DirectionToCubemapCoord(float3 Dir)
     return Result;
 }
 
-float ComputeShadowFactor(FLight Light, float3 FragmentPos, float Bias, float3 ViewPosition, uint ReceiveShadow)
+float ComputeShadowFactor(FLight Light, float3 FragmentPos, float Bias, float3 ViewPosition, bool ReceiveShadow)
 {
-    if (ReceiveShadow == 0)
+    if (!ReceiveShadow)
+    {
         return 1.0;
+    }
 
     bool IsPointLight       = Light.Flags == LIGHT_FLAG_TYPE_POINT;
     bool IsSpotLight        = Light.Flags == LIGHT_FLAG_TYPE_SPOT;
@@ -241,14 +240,16 @@ float3 EvaluateLightContribution(FLight Light, float3 Position, float3 N, float3
 [shader("fragment")]
 PSOutput FragmentMain(PSInput Input)
 {
-    uint   EntityID      = Input.EntityID;
-    uint   MaterialIndex = Input.MatIndex;
-    float3 ViewNormal    = normalize(Input.NormalVS.xyz);
-    float3 WorldNormal   = normalize(Input.NormalWS.xyz);
-    float3 ViewPosition  = Input.FragPos.xyz;
-    float3 WorldPosition = mul(GetInverseCameraView(), float4(Input.FragPos.xyz, 1.0)).xyz;
-    float2 UV0           = Input.UV;
-    float4 VertexColor   = Input.Color;
+    FInstanceData InstanceData = GetInstanceData(Input.InstanceIndex);
+
+    uint EntityID           = InstanceData.EntityID;
+    uint MaterialIndex      = InstanceData.MaterialIndex;
+    float3 ViewNormal       = normalize(Input.NormalVS.xyz);
+    float3 WorldNormal      = normalize(Input.NormalWS.xyz);
+    float3 ViewPosition     = Input.FragPos.xyz;
+    float3 WorldPosition    = mul(GetInverseCameraView(), float4(Input.FragPos.xyz, 1.0)).xyz;
+    float2 UV0              = Input.UV;
+    float4 VertexColor      = Input.Color;
 
     $MATERIAL_INPUTS
 
@@ -285,7 +286,7 @@ PSOutput FragmentMain(PSInput Input)
     if (uLightData[0].bHasSun != 0)
     {
         FLight Light        = GetLightAt(0);
-        float  Shadow       = ComputeShadowFactor(Light, WorldPosition, 0.0005, ViewPosition, Input.ReceiveShadow);
+        float  Shadow       = ComputeShadowFactor(Light, WorldPosition, 0.0005, ViewPosition, InstanceData.HasFlag(EInstanceFlags::ReceiveShadow));
         Lo                  += EvaluateLightContribution(Light, WorldPosition, N, V, Albedo, Roughness, Metallic, F0) * Shadow;
     }
 
@@ -302,8 +303,8 @@ PSOutput FragmentMain(PSInput Input)
             float  DistToLight          = length(L);
             float  AttenuationFactor    = 1.0 / (DistToLight * DistToLight);
             float  BiasScale            = lerp(0.1, 1.0, AttenuationFactor);
-            float  Bias                 = ComputeShadowBias(Light, N, DirectionToLight, 0) * BiasScale;
-            Shadow                      = ComputeShadowFactor(Light, WorldPosition, Bias, ViewPosition, Input.ReceiveShadow);
+            float Bias                  = ComputeShadowBias(Light, N, DirectionToLight, 0) * BiasScale;
+            Shadow                      = ComputeShadowFactor(Light, WorldPosition, Bias, ViewPosition, InstanceData.HasFlag(EInstanceFlags::ReceiveShadow));
         }
 
         Lo += EvaluateLightContribution(Light, WorldPosition, N, V, Albedo, Roughness, Metallic, F0) * Shadow;
@@ -313,7 +314,7 @@ PSOutput FragmentMain(PSInput Input)
     float3 Color   = Ambient + Lo + Material.Emissive;
 
     PSOutput Output;
-    Output.Color = float4(Color, Alpha);
-    Output.Picker = uint2(Input.EntityID, Input.Selected);
+    Output.Color    = float4(Color, Alpha);
+    Output.Picker   = InstanceData.EntityID;
     return Output;
 }

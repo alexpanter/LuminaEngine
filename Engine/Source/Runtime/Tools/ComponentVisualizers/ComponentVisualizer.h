@@ -20,6 +20,8 @@ namespace Lumina
         
         CComponentVisualizer* GetComponentVisualizer(CStruct* Component);
         
+        const THashMap<CStruct*, CComponentVisualizer*>& GetVisualizers() const { return Visualizers; }
+        
     private:
         
         THashMap<CStruct*, CComponentVisualizer*> Visualizers;
