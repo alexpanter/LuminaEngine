@@ -116,7 +116,7 @@ Contributions to Lumina are recognized in several ways, including Steam keys for
    python Setup.py
    ```
    - This downloads and extracts all dependencies automatically
-   - If the download fails, manually download [External.7z](https://www.dropbox.com/scl/fi/suigjbqj75pzcpxcqm6hv/External.7z?rlkey=ebu8kiw4gswtvj5mclg6wa1lu&st=68ybsxy2&dl=0) and extract it to the `LuminaEngine` folder
+   - If the download fails, manually download [External.7z](https://www.dropbox.com/scl/fi/xkgu0zkwcza98ovobind5/External.zip?rlkey=a7mf53v9ywn0f60c8tzvdk0vd&st=2iexb83z&dl=0) and extract it to the `LuminaEngine` folder
 
 3. **Open the solution**
    - Open `Lumina.sln` in Visual Studio
