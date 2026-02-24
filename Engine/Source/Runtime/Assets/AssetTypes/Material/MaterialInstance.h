@@ -26,7 +26,7 @@ namespace Lumina
         bool GetParameterValue(EMaterialParameterType Type, const FName& Name, FMaterialParameter& Param) override;
         FMaterialUniforms* GetMaterialUniforms() override { return &MaterialUniforms; }
         
-        FRHIVertexShader* GetVertexShader(EVertexFormat Format) const override;
+        FRHIVertexShader* GetVertexShader() const override;
         FRHIPixelShader* GetPixelShader() const override;
 
         void PostLoad() override;

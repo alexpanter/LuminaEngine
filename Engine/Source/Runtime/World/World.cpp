@@ -29,6 +29,7 @@ namespace Lumina
     CWorld::CWorld()
         : SingletonEntity(entt::null)
         , SystemContext(this)
+        , LineBatcherComponent(nullptr)
     {
     }
 

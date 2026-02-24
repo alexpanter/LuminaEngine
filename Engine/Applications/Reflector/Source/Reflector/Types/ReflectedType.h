@@ -12,6 +12,7 @@ namespace Lumina::Reflection
     class FReflectedProject;
 }
 
+#define BIT(x) (1 << (x))
 
 #define ENUM_CLASS_FLAGS(Enum) \
 inline           Enum& operator|=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
@@ -88,15 +89,17 @@ enum class EPropertyTypeFlags : uint64_t
 enum class EPropertyFlags : uint16_t
 {
     None                = 0,
-    Editable            = 1 << 0,
-    ReadOnly            = 1 << 1,
-    Transient           = 1 << 2,
-    Const               = 1 << 3,
-    Private             = 1 << 4,
-    Protected           = 1 << 5,
-    SubField            = 1 << 6,
-    Trivial             = 1 << 7,
-    Script              = 1 << 8,
+    Editable            = BIT(0),
+    ReadOnly            = BIT(1),
+    Transient           = BIT(2),
+    Const               = BIT(3),
+    Private             = BIT(4),
+    Protected           = BIT(5),
+    SubField            = BIT(6),
+    Trivial             = BIT(7),
+    Script              = BIT(8),
+    Builtin             = BIT(9),
+    BulkSerialize       = BIT(10),
 };
 
 ENUM_CLASS_FLAGS(EPropertyFlags)
@@ -131,6 +134,8 @@ inline eastl::string PropertyFlagsToString(EPropertyFlags Flags)
     AppendFlag(EPropertyFlags::SubField,   "Lumina::EPropertyFlags::SubField");
     AppendFlag(EPropertyFlags::Trivial,    "Lumina::EPropertyFlags::Trivial");
     AppendFlag(EPropertyFlags::Script,    "Lumina::EPropertyFlags::Script");
+    AppendFlag(EPropertyFlags::Builtin,    "Lumina::EPropertyFlags::Builtin");
+    AppendFlag(EPropertyFlags::BulkSerialize,    "Lumina::EPropertyFlags::BulkSerialize");
 
     return Result;
 }

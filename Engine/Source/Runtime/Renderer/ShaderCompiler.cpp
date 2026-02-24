@@ -1,148 +1,23 @@
 #include "pch.h"
 #include "ShaderCompiler.h"
-
+#include "RenderContext.h"
 #include "RenderResource.h"
+#include "RHIGlobals.h"
+#include "slang-com-ptr.h"
+#include "slang.h"
 #include "Core/Serialization/MemoryArchiver.h"
 #include "Core/Utils/Defer.h"
+#include "ErrorHandling/CrashTracker.h"
 #include "FileSystem/FileSystem.h"
 #include "Memory/Memory.h"
 #include "Paths/Paths.h"
-#include "Platform/Filesystem/FileHelper.h"
-#include "shaderc/shaderc.hpp"
-#include "SPIRV-Reflect/spirv_reflect.h"
 #include "TaskSystem/TaskSystem.h"
 
 namespace Lumina
 {
+    static Slang::ComPtr<slang::IGlobalSession> SLangGlobalSession;
+    static FSharedMutex SlangMutex;
     
-    class FShaderCIncluder : public shaderc::CompileOptions::IncluderInterface
-    {
-        shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type type, const char* requesting_source, size_t include_depth) override
-        {
-            FString RequestingPath = requesting_source;
-            if (include_depth > 1)
-            {
-                RequestingPath = Paths::GetEngineShadersDirectory() + "/" + RequestingPath;
-            }
-            FString IncludePath = Paths::Parent(RequestingPath) + "/" + FString(requested_source);
-            
-            FString ShaderData;
-            if (FileHelper::LoadFileIntoString(ShaderData, IncludePath))
-            {
-                auto* result = Memory::New<shaderc_include_result>();
-                result->source_name = requested_source;
-                result->source_name_length = strlen(requested_source);
-                result->content = Memory::NewArray<char>(ShaderData.size() + 1);
-                result->content_length = ShaderData.size();
-
-                Memory::Memcpy((void*)result->content, ShaderData.data(), ShaderData.size() + 1);
-                return result;
-            }
-
-            LOG_ERROR("Failed to find shader include at path: {}", IncludePath);
-            return nullptr;
-        }
-
-        void ReleaseInclude(shaderc_include_result* data) override
-        {
-            Memory::DeleteArray(const_cast<char*>(data->content));
-            Memory::Delete(data);
-        }
-    };
-
-    void FSpirVShaderCompiler::ReflectSpirv(TSpan<uint32> SpirV, FShaderReflection& Reflection, bool bReflectFull)
-    {
-        LUMINA_PROFILE_SCOPE();
-        
-        SpvReflectShaderModule Module;
-        SpvReflectResult Result = spvReflectCreateShaderModule(SpirV.size_bytes(), SpirV.data(), &Module);
-        if (Result != SPV_REFLECT_RESULT_SUCCESS)
-        {
-            LOG_ERROR("Failed to create SPIR-V Reflect Module!");
-            return;
-        }
-        
-        switch (Module.shader_stage)  // NOLINT(clang-diagnostic-switch)
-        {
-        case SPV_REFLECT_SHADER_STAGE_VERTEX_BIT:
-            Reflection.ShaderType = ERHIShaderType::Vertex;
-            break;
-        case SPV_REFLECT_SHADER_STAGE_FRAGMENT_BIT:
-            Reflection.ShaderType = ERHIShaderType::Fragment;
-            break;
-        case SPV_REFLECT_SHADER_STAGE_COMPUTE_BIT:
-            Reflection.ShaderType = ERHIShaderType::Compute;
-            break;
-        case SPV_REFLECT_SHADER_STAGE_GEOMETRY_BIT:
-            Reflection.ShaderType = ERHIShaderType::Geometry;
-            break;
-        }
-
-        if (!bReflectFull)
-        {
-            return;
-        }
-
-        uint32 NumDescriptorSets = 0;
-        Result = spvReflectEnumerateDescriptorSets(&Module, &NumDescriptorSets, nullptr);
-        if (Result != SPV_REFLECT_RESULT_SUCCESS)
-        {
-            LOG_ERROR("Failed to enumerate descriptor sets (count).");
-            return;
-        }
-
-        TVector<SpvReflectDescriptorSet*> ReflectSets(NumDescriptorSets);
-        Result = spvReflectEnumerateDescriptorSets(&Module, &NumDescriptorSets, ReflectSets.data());
-        if (Result != SPV_REFLECT_RESULT_SUCCESS)
-        {
-            LOG_ERROR("Failed to enumerate descriptor sets (data).");
-            return;
-        }
-
-        
-        for (uint32 SetIndex = 0; SetIndex < NumDescriptorSets; ++SetIndex)
-        {
-            SpvReflectDescriptorSet* ReflectSet = ReflectSets[SetIndex];
-
-            for (uint32 BindingIndex = 0; BindingIndex < ReflectSet->binding_count; ++BindingIndex)
-            {
-                SpvReflectDescriptorBinding* Binding = ReflectSet->bindings[BindingIndex];
-
-                Reflection.Bindings.push_back();
-                FShaderBinding& NewBinding = Reflection.Bindings.back();
-                
-                NewBinding.Name = Binding->name ? Binding->name : "";
-                NewBinding.Set = Binding->set;
-                NewBinding.Binding = Binding->binding;
-
-                if (Binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER)
-                {
-                    NewBinding.Type = ERHIBindingResourceType::Buffer_CBV;
-                    NewBinding.Size = Binding->block.size;
-                }
-                else if (Binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER)
-                {
-                    NewBinding.Type = ERHIBindingResourceType::Buffer_UAV;
-                    NewBinding.Size = Binding->block.size;
-                }
-                else if (Binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER)
-                {
-                    NewBinding.Type = ERHIBindingResourceType::Texture_SRV;
-                }
-                else if (Binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER)
-                {
-                    NewBinding.Type = ERHIBindingResourceType::Sampler;
-                }
-                else if (Binding->descriptor_type == SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE)
-                {
-                    NewBinding.Type = ERHIBindingResourceType::Texture_UAV;
-                }
-            }
-        }
-        
-        spvReflectDestroyShaderModule(&Module);
-    }
-
     bool FSpirVShaderCompiler::HasPendingRequests() const
     {
         return PendingTasks.load(std::memory_order_acquire) > 0;
@@ -186,17 +61,11 @@ namespace Lumina
         TVector<FShaderCompileOptions> Options(CompileOptions.begin(), CompileOptions.end());
 
         
-        Task::AsyncTask(NumShaders, 1, [this,
+        Task::AsyncTask(NumShaders, NumShaders, [this,
             Paths = Move(Paths),
             Options = Move(Options),
             Callback = Move(OnCompleted)] (uint32 Start, uint32 End, uint32 Thread) mutable
         {
-            
-            shaderc::CompileOptions CompileOpts;
-            CompileOpts.SetIncluder(std::make_unique<FShaderCIncluder>());
-            CompileOpts.SetOptimizationLevel(shaderc_optimization_level_performance);
-            CompileOpts.SetGenerateDebugInfo();
-            CompileOpts.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
 
             uint32 Num = End - Start;
 
@@ -205,81 +74,179 @@ namespace Lumina
                 PendingTasks.fetch_sub(Num, std::memory_order_relaxed);
                 std::atomic_notify_all(&PendingTasks);
             };
-            
+        
+            auto CompileStart = std::chrono::high_resolution_clock::now();
+
             for (uint32 i = Start; i < End; ++i)
             {
-                shaderc::Compiler Compiler;
-                auto CompileStart = std::chrono::high_resolution_clock::now();
+                FWriteScopeLock Lock(SlangMutex);
 
-                const FString& Path = Paths[i];
-                FStringView Filename = VFS::FileName(Path);
-                const FShaderCompileOptions& Opt = Options[i];
+                slang::SessionDesc SessionDesc = {};
+                SessionDesc.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR;
+        
+                slang::TargetDesc TargetDesc = {};
+                TargetDesc.format  = SLANG_SPIRV;
+                TargetDesc.profile = SLangGlobalSession->findProfile("spirv_1_5");
+                TargetDesc.flags   = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY | SLANG_TARGET_FLAG_GENERATE_WHOLE_PROGRAM;
                 
-                for (const FString& Macro : Opt.MacroDefinitions)
+                SessionDesc.targets     = &TargetDesc;
+                SessionDesc.targetCount = 1;
+                
+                FString ShaderDir = Paths::GetEngineResourceDirectory() + "/Shaders";
+                const char* SearchPaths[] = { ShaderDir.c_str() };
+                SessionDesc.searchPaths     = SearchPaths;
+                SessionDesc.searchPathCount = 1;
+                
+                TVector<slang::PreprocessorMacroDesc> Macros;
+                Macros.reserve(Options[i].MacroDefinitions.size());
+                for (const FString& Macro : Options[i].MacroDefinitions)
                 {
-                    CompileOpts.AddMacroDefinition(Macro.c_str());
-                }
-    
-                FString RawShaderString;
-                {
-                    LUMINA_PROFILE_SECTION("Load Shader into String");
-
-                    if (!FileHelper::LoadFileIntoString(RawShaderString, Path))
+                    auto SeparatorPos = Macro.find('=');
+                    if (SeparatorPos != FString::npos)
                     {
-                        LOG_ERROR("Failed to load shader: {0}", Path);
-                        continue;
+                        Macros.push_back({ Macro.substr(0, SeparatorPos).c_str(),
+                                           Macro.substr(SeparatorPos + 1).c_str() });
+                    }
+                    else
+                    {
+                        Macros.push_back({ Macro.c_str(), "1" });
                     }
                 }
+                SessionDesc.preprocessorMacros     = Macros.data();
+                SessionDesc.preprocessorMacroCount = (SlangInt)Macros.size();
+        
+                Slang::ComPtr<slang::ISession> Session;
+                {
+                    if (SLANG_FAILED(SLangGlobalSession->createSession(SessionDesc, Session.writeRef())))
+                    {
+                        LOG_ERROR("Slang: Failed to create session");
+                        return;
+                    }
+                }
+        
                 
-                shaderc::PreprocessedSourceCompilationResult Preprocessed;
+                const FString& Path = Paths[i];
+                FStringView FileName = VFS::FileName(Path);
+                Slang::ComPtr<slang::IModule> SlangModule;
+                Slang::ComPtr<slang::IBlob> Diagnostics;
+                SlangModule = Session->loadModule(FileName.data(), Diagnostics.writeRef());
+        
+                if (Diagnostics)
                 {
-                    LUMINA_PROFILE_SECTION("PreprocessGlsl");
-                    Preprocessed = Compiler.PreprocessGlsl(RawShaderString.c_str(), RawShaderString.size(), shaderc_glsl_infer_from_source, Path.c_str(), CompileOpts);
+                    LOG_WARN("Slang diagnostics: {}", (const char*)Diagnostics->getBufferPointer());
+                    Diagnostics = nullptr;
                 }
-    
-                if (Preprocessed.GetCompilationStatus() != shaderc_compilation_status_success)
+        
+                if (!SlangModule)
                 {
-                    LOG_ERROR("Preprocessing failed: {0} - {1}", Path, Preprocessed.GetErrorMessage());
-                    continue;
+                    LOG_ERROR("Slang: Failed to load shader module");
+                    return;
                 }
-    
-                FString PreprocessedShader(Preprocessed.begin(), Preprocessed.end());
-
-                shaderc::SpvCompilationResult CompileResult;
+            
+                TVector<Slang::ComPtr<slang::IEntryPoint>> EntryPoints;
+                SlangInt32 EntryPointCount = SlangModule->getDefinedEntryPointCount();
+                if (EntryPointCount == 0)
                 {
-                    LUMINA_PROFILE_SECTION("CompileGlslToSpv");
-                    CompileResult = Compiler.CompileGlslToSpv(PreprocessedShader.c_str(), PreprocessedShader.size(), shaderc_glsl_infer_from_source, Path.c_str(), CompileOpts);
+                    LOG_ERROR("Slang: No entry points found in shader source");
+                    return;
                 }
-    
-                if (CompileResult.GetCompilationStatus() != shaderc_compilation_status_success)
+        
+                for (SlangInt32 EntryPointIdx = 0; EntryPointIdx < EntryPointCount; ++EntryPointIdx)
                 {
-                    LOG_ERROR("Compilation failed: {0} - {1}", Path, CompileResult.GetErrorMessage());
-                    continue;
+                    Slang::ComPtr<slang::IEntryPoint> EP;
+                    SlangModule->getDefinedEntryPoint(EntryPointIdx, EP.writeRef());
+                    EntryPoints.push_back(Move(EP));
                 }
-    
-                TVector<uint32> Binaries(CompileResult.begin(), CompileResult.end());
+        
+                TVector<slang::IComponentType*> Components;
+                Components.push_back(SlangModule);
+                for (auto& EP : EntryPoints)
+                {
+                    Components.push_back(EP.get());
+                }
+        
+                Slang::ComPtr<slang::IComponentType> LinkedProgram;
+                if (SLANG_FAILED(Session->createCompositeComponentType(
+                        Components.data(), (SlangInt)Components.size(),
+                        LinkedProgram.writeRef(), Diagnostics.writeRef())))
+                {
+                    if (Diagnostics)
+                    {
+                        LOG_ERROR("Slang link error: {}", (const char*)Diagnostics->getBufferPointer());
+                    }
+                    LOG_ERROR("Slang: Failed to link shader program");
+                    return;
+                }
+        
+                TVector<uint32> Binaries;
+                for (SlangInt EntryPointIdx = 0; EntryPointIdx < (SlangInt)EntryPoints.size(); ++EntryPointIdx)
+                {
+                    Slang::ComPtr<slang::IBlob> Code;
+                    Diagnostics = nullptr;
+        
+                    if (SLANG_FAILED(LinkedProgram->getEntryPointCode(
+                            EntryPointIdx, 0, Code.writeRef(), Diagnostics.writeRef())))
+                    {
+                        if (Diagnostics)
+                        {
+                            LOG_ERROR("Slang compile error: {}", (const char*)Diagnostics->getBufferPointer());
+                        }
+                    
+                        LOG_ERROR("Slang: Failed to get SPIR-V for entry point {}", EntryPointIdx);
+                        return;
+                    }
+        
+                    if (Diagnostics)
+                    {
+                        LOG_WARN("Slang: {}", (const char*)Diagnostics->getBufferPointer());
+                    }
+        
+                    const uint32* SpirvData = static_cast<const uint32*>(Code->getBufferPointer());
+                    size_t SpirvSize        = Code->getBufferSize() / sizeof(uint32);
+                    Binaries.insert(Binaries.end(), SpirvData, SpirvData + SpirvSize);
+                }
+        
                 if (Binaries.empty())
                 {
-                    LOG_ERROR("Shader compiled to empty SPIR-V: {0}", Path);
-                    continue;
+                    LOG_ERROR("Slang: Shader compiled to empty SPIR-V");
+                    return;
                 }
-
-                
+        
                 FShaderHeader Shader;
-                Shader.DebugName = Filename;
-                Shader.Hash = Hash::GetHash64(Binaries);
-                Shader.Binaries = Move(Binaries);
-                Shader.Defines = Opt.MacroDefinitions;
-
-                ReflectSpirv(Shader.Binaries, Shader.Reflection, Options[i].bGenerateReflectionData);
-
+                Shader.DebugName = FileName.data();
+                Shader.Hash      = Hash::GetHash64(Binaries);
+                Shader.Binaries  = Move(Binaries);
+                Shader.Defines   = Options[i].MacroDefinitions;
+            
+                slang::ProgramLayout* ProgramLayout = LinkedProgram->getLayout();
+                for (SlangUInt EntryPointIdx = 0; EntryPointIdx < EntryPointCount; ++EntryPointIdx)
+                {
+                    slang::EntryPointReflection* EPReflection = ProgramLayout->getEntryPointByIndex(EntryPointIdx);
+                    switch (EPReflection->getStage())
+                    {
+                    case SLANG_STAGE_VERTEX:
+                        Shader.Reflection.ShaderType = ERHIShaderType::Vertex;
+                        break;
+                    case SLANG_STAGE_GEOMETRY:
+                        Shader.Reflection.ShaderType = ERHIShaderType::Geometry;
+                        break;
+                    case SLANG_STAGE_FRAGMENT:
+                        Shader.Reflection.ShaderType = ERHIShaderType::Fragment;
+                        break;
+                    case SLANG_STAGE_COMPUTE:
+                        Shader.Reflection.ShaderType = ERHIShaderType::Compute;
+                        break;
+                    }
+                }
+            
                 auto CompileEnd = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double, std::milli> DurationMs = CompileEnd - CompileStart;
-                
-                LOG_TRACE("Compiled shader {0} in {1:.2f} ms (Thread {2})", Filename, DurationMs.count(), Thread);
+        
+                LOG_TRACE("Compiled {0} in {1:.2f} ms (Thread {2})", FileName, DurationMs.count(), Thread);
+        
+                GRenderContext->GetCrashTracker().RegisterShader(Shader.Binaries, Shader.DebugName);
                 
                 Callback(Move(Shader));
-
             }
             
         }, ETaskPriority::High);
@@ -293,7 +260,7 @@ namespace Lumina
 
     void FSpirVShaderCompiler::Initialize()
     {
-        
+        slang::createGlobalSession(SLangGlobalSession.writeRef());
     }
 
     void FSpirVShaderCompiler::Shutdown()
@@ -304,86 +271,187 @@ namespace Lumina
     bool FSpirVShaderCompiler::CompilerShaderRaw(FString ShaderString, const FShaderCompileOptions& CompileOptions, CompletedFunc OnCompleted)
     {
         PendingTasks.fetch_add(1, std::memory_order_relaxed);
-
+        
         Task::AsyncTask(1, 1, [this,
             ShaderString = Move(ShaderString),
             CompileOptions = Move(CompileOptions),
             Callback = Move(OnCompleted)]
             (uint32, uint32, uint32 Thread)
         {
+            FWriteScopeLock Lock(SlangMutex);
+
             DEFER
             {
                 PendingTasks.fetch_sub(1, std::memory_order_relaxed);
                 std::atomic_notify_all(&PendingTasks);
             };
-            
+        
             auto CompileStart = std::chrono::high_resolution_clock::now();
-            
-            shaderc::Compiler Compiler;
-            shaderc::CompileOptions Options;
-            Options.SetIncluder(std::make_unique<FShaderCIncluder>());
-            Options.SetOptimizationLevel(shaderc_optimization_level_performance);
-            Options.SetGenerateDebugInfo();
-            Options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-            
-            FString VertexPath = Paths::GetEngineResourceDirectory() + "/Shaders/GeometryPass.vert";
-            
-            TVector<uint32> Binaries;
+        
+            slang::SessionDesc SessionDesc = {};
+            SessionDesc.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR;
+
+            slang::TargetDesc TargetDesc = {};
+            TargetDesc.format  = SLANG_SPIRV;
+            TargetDesc.profile = SLangGlobalSession->findProfile("spirv_1_5");
+            TargetDesc.flags   = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY | SLANG_TARGET_FLAG_GENERATE_WHOLE_PROGRAM;
+        
+            SessionDesc.targets     = &TargetDesc;
+            SessionDesc.targetCount = 1;
+        
+            FString ShaderDir = Paths::GetEngineResourceDirectory() + "/Shaders";
+            const char* SearchPaths[] = { ShaderDir.c_str() };
+            SessionDesc.searchPaths     = SearchPaths;
+            SessionDesc.searchPathCount = 1;
+        
+            TVector<slang::PreprocessorMacroDesc> Macros;
+            Macros.reserve(CompileOptions.MacroDefinitions.size());
             for (const FString& Macro : CompileOptions.MacroDefinitions)
             {
-                Options.AddMacroDefinition(Macro.c_str());
+                auto SeparatorPos = Macro.find('=');
+                if (SeparatorPos != FString::npos)
+                {
+                    Macros.push_back({ Macro.substr(0, SeparatorPos).c_str(),
+                                       Macro.substr(SeparatorPos + 1).c_str() });
+                }
+                else
+                {
+                    Macros.push_back({ Macro.c_str(), "1" });
+                }
             }
-             
-            auto Preprocessed = Compiler.PreprocessGlsl(ShaderString.c_str(),
-                                                        ShaderString.size(),
-                                                        shaderc_glsl_infer_from_source,
-                                                        VertexPath.c_str(), Options);
-    
-            if (Preprocessed.GetCompilationStatus() != shaderc_compilation_status_success)
+            SessionDesc.preprocessorMacros     = Macros.data();
+            SessionDesc.preprocessorMacroCount = (SlangInt)Macros.size();
+        
+            Slang::ComPtr<slang::ISession> Session;
+            if (SLANG_FAILED(SLangGlobalSession->createSession(SessionDesc, Session.writeRef())))
             {
-                LOG_ERROR("Preprocessing failed: - {}", Preprocessed.GetErrorMessage());
+                LOG_ERROR("Slang: Failed to create session");
                 return;
             }
-    
-            FString PreprocessedShader(Preprocessed.begin(), Preprocessed.end());
-    
-            auto CompileResult = Compiler.CompileGlslToSpv(PreprocessedShader.c_str(),
-                                                           PreprocessedShader.size(),
-                                                           shaderc_glsl_infer_from_source,
-                                                           VertexPath.c_str(), Options);
-    
-            if (CompileResult.GetCompilationStatus() != shaderc_compilation_status_success)
+        
+            Slang::ComPtr<slang::IBlob> Diagnostics;
+        
+            Slang::ComPtr<slang::IModule> SlangModule;
+            SlangModule = Session->loadModuleFromSourceString("RawShader", "RawShader.slang", ShaderString.c_str(), Diagnostics.writeRef());
+        
+            if (Diagnostics)
             {
-                LOG_ERROR("Compilation failed: - {}", CompileResult.GetErrorMessage());
+                LOG_WARN("Slang diagnostics: {}", (const char*)Diagnostics->getBufferPointer());
+                Diagnostics = nullptr;
+            }
+        
+            if (!SlangModule)
+            {
+                LOG_ERROR("Slang: Failed to load shader module");
                 return;
             }
-    
-            Binaries.assign(CompileResult.begin(), CompileResult.end());
             
+            TVector<Slang::ComPtr<slang::IEntryPoint>> EntryPoints;
+            SlangInt32 EntryPointCount = SlangModule->getDefinedEntryPointCount();
+            if (EntryPointCount == 0)
+            {
+                LOG_ERROR("Slang: No entry points found in shader source");
+                return;
+            }
+        
+            for (SlangInt32 i = 0; i < EntryPointCount; ++i)
+            {
+                Slang::ComPtr<slang::IEntryPoint> EP;
+                SlangModule->getDefinedEntryPoint(i, EP.writeRef());
+                EntryPoints.push_back(Move(EP));
+            }
+        
+            TVector<slang::IComponentType*> Components;
+            Components.push_back(SlangModule);
+            for (auto& EP : EntryPoints)
+            {
+                Components.push_back(EP.get());
+            }
+        
+            Slang::ComPtr<slang::IComponentType> LinkedProgram;
+            if (SLANG_FAILED(Session->createCompositeComponentType(
+                    Components.data(), (SlangInt)Components.size(),
+                    LinkedProgram.writeRef(), Diagnostics.writeRef())))
+            {
+                if (Diagnostics)
+                {
+                    LOG_ERROR("Slang link error: {}", (const char*)Diagnostics->getBufferPointer());
+                }
+                LOG_ERROR("Slang: Failed to link shader program");
+                return;
+            }
+        
+            TVector<uint32> Binaries;
+            for (SlangInt i = 0; i < (SlangInt)EntryPoints.size(); ++i)
+            {
+                Slang::ComPtr<slang::IBlob> Code;
+                Diagnostics = nullptr;
+        
+                if (SLANG_FAILED(LinkedProgram->getEntryPointCode(
+                        i, 0, Code.writeRef(), Diagnostics.writeRef())))
+                {
+                    if (Diagnostics)
+                    {
+                        LOG_ERROR("Slang compile error: {}", (const char*)Diagnostics->getBufferPointer());
+                    }
+                    
+                    LOG_ERROR("Slang: Failed to get SPIR-V for entry point {}", i);
+                    return;
+                }
+        
+                if (Diagnostics)
+                {
+                    LOG_WARN("Slang: {}", (const char*)Diagnostics->getBufferPointer());
+                }
+        
+                const uint32* SpirvData = static_cast<const uint32*>(Code->getBufferPointer());
+                size_t SpirvSize        = Code->getBufferSize() / sizeof(uint32);
+                Binaries.insert(Binaries.end(), SpirvData, SpirvData + SpirvSize);
+            }
+        
             if (Binaries.empty())
             {
-                LOG_ERROR("Shader compiled to empty SPIR-V");
+                LOG_ERROR("Slang: Shader compiled to empty SPIR-V");
                 return;
             }
-
-            
+        
             FShaderHeader Shader;
             Shader.DebugName = "RawShader";
-            Shader.Hash = Hash::GetHash64(Binaries);
-            Shader.Binaries = Move(Binaries);
-            Shader.Defines = CompileOptions.MacroDefinitions;
-
-            ReflectSpirv(Shader.Binaries, Shader.Reflection, true);
-
+            Shader.Hash      = Hash::GetHash64(Binaries);
+            Shader.Binaries  = Move(Binaries);
+            Shader.Defines   = CompileOptions.MacroDefinitions;
+            
+            slang::ProgramLayout* ProgramLayout = LinkedProgram->getLayout();
+            for (SlangUInt32 i = 0; i < EntryPointCount; ++i)
+            {
+                slang::EntryPointReflection* EPReflection = ProgramLayout->getEntryPointByIndex(i);
+                switch (EPReflection->getStage())
+                {
+                case SLANG_STAGE_VERTEX:
+                    Shader.Reflection.ShaderType = ERHIShaderType::Vertex;
+                    break;
+                case SLANG_STAGE_GEOMETRY:
+                    Shader.Reflection.ShaderType = ERHIShaderType::Geometry;
+                    break;
+                case SLANG_STAGE_FRAGMENT:
+                    Shader.Reflection.ShaderType = ERHIShaderType::Fragment;
+                    break;
+                case SLANG_STAGE_COMPUTE:
+                    Shader.Reflection.ShaderType = ERHIShaderType::Compute;
+                    break;
+                }
+            }
+            
             auto CompileEnd = std::chrono::high_resolution_clock::now();
             std::chrono::duration<double, std::milli> DurationMs = CompileEnd - CompileStart;
-                
+        
             LOG_TRACE("Compiled raw shader in {0:.2f} ms (Thread {1})", DurationMs.count(), Thread);
+        
+            GRenderContext->GetCrashTracker().RegisterShader(Shader.Binaries, Shader.DebugName);
             
             Callback(Move(Shader));
-            
         });
-        
+
         return true;
     }
 }

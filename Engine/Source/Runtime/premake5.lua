@@ -32,7 +32,7 @@ project "Runtime"
         "**.cpp",
         "**.h",
         "**.lua",
-        "**.glsl",
+        "**.slang",
         LuminaConfig.GetReflectionFiles()
     }
 
@@ -52,7 +52,7 @@ project "Runtime"
     {
         LuminaConfig.EnginePath("Engine/Source/ThirdParty/NvidiaAftermath/lib"),
         LuminaConfig.EnginePath("Engine/Source/ThirdParty/lua"),
-        "%{LuminaConfig.EngineDirectory}/External/ShaderC",
+        LuminaConfig.EnginePath("External/SLang/lib"),
     }
 
     fatalwarnings
@@ -88,15 +88,11 @@ project "Runtime"
         "FastGLTF",
         "OpenFBX",
         "BasicUniversal",
-        "shaderc_combined",
+        "slang",
+        "slang-compiler",
         "GFSDK_Aftermath_Lib.lib",
         "GFSDK_Aftermath_Lib.x64.dll",
-    }
-
-    filter "configurations:Debug or configurations:DebugEditor"
-        removelinks { "shaderc_combined" }
-        links { "shaderc_combinedd" }
-        
+    }        
         
     filter "files:Engine/Source/ThirdParty/**.cpp"
         enablepch "Off"

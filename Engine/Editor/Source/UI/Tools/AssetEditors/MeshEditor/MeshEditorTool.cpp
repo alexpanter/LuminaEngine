@@ -466,7 +466,7 @@ namespace Lumina
         STransformComponent& MeshTransform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
         
         float FloorY = MeshTransform.GetLocation().y + StaticMesh->GetAABB().Min.y;
-        CreateFloorPlane(-FloorY);
+        CreateFloorPlane(FloorY);
         
         STransformComponent& EditorTransform = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
 

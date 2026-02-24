@@ -8,44 +8,40 @@ namespace Lumina
 {
     void CMaterialExpression_TextureSample::BuildNode()
     {
-        CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGBA", ENodePinDirection::Output, EMaterialInputType::Texture));
+        CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGBA", ENodePinDirection::Output));
         ValuePin->SetShouldDrawEditor(true);
         ValuePin->SetHideDuringConnection(false);
         ValuePin->SetPinName("RGBA");
-        ValuePin->InputType = EMaterialInputType::Texture;
+        ValuePin->SetComponentMask(EComponentMask::RGBA);
+        ValuePin->SetInputType(EMaterialInputType::Texture);
 
-        UV = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "UV", ENodePinDirection::Input, EMaterialInputType::Float2));
+        UV = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "UV", ENodePinDirection::Input));
         UV->SetPinColor(IM_COL32(255, 10, 10, 255));
         UV->SetHideDuringConnection(false);
         UV->SetPinName("UV");
         
-        CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
+        CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output));
         R->SetPinColor(IM_COL32(255, 10, 10, 255));
         R->SetHideDuringConnection(false);
         R->SetPinName("R");
         R->SetComponentMask(EComponentMask::R);
         
-        CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output, EMaterialInputType::Float));
+        CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output));
         G->SetPinColor(IM_COL32(10, 255, 10, 255));
         G->SetHideDuringConnection(false);
         G->SetPinName("G");
         G->SetComponentMask(EComponentMask::G);
         
-        CMaterialOutput* B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output, EMaterialInputType::Float));
+        CMaterialOutput* B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output));
         B->SetPinColor(IM_COL32(10, 10, 255, 255));
         B->SetHideDuringConnection(false);
         B->SetPinName("B");
         B->SetComponentMask(EComponentMask::B);
         
-        CMaterialOutput* A = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "A", ENodePinDirection::Output, EMaterialInputType::Float));
+        CMaterialOutput* A = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "A", ENodePinDirection::Output));
         A->SetHideDuringConnection(false);
         A->SetPinName("A");
         A->SetComponentMask(EComponentMask::A);
-    }
-
-    uint32 CMaterialExpression_TextureSample::GenerateExpression(FMaterialCompiler& Compiler)
-    {
-        return 0;
     }
 
     void CMaterialExpression_TextureSample::GenerateDefinition(FMaterialCompiler& Compiler)

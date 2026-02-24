@@ -108,15 +108,17 @@ namespace Lumina
     enum class EPropertyFlags : uint16
     {
         None                = 0,
-        Editable            = 1 << 0,
-        ReadOnly            = 1 << 1,
-        Transient           = 1 << 2,
-        Const               = 1 << 3,
-        Private             = 1 << 4,
-        Protected           = 1 << 5,
-        SubField            = 1 << 6,
-        Trivial             = 1 << 7,
-        Script              = 1 << 8,
+        Editable            = BIT(0),
+        ReadOnly            = BIT(1),
+        Transient           = BIT(2),
+        Const               = BIT(3),
+        Private             = BIT(4),
+        Protected           = BIT(5),
+        SubField            = BIT(6),
+        Trivial             = BIT(7),
+        Script              = BIT(8),
+        Builtin             = BIT(9),
+        BulkSerialize       = BIT(10),
     };
 
     ENUM_CLASS_FLAGS(EPropertyFlags);

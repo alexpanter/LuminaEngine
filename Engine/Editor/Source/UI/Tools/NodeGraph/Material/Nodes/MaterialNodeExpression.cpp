@@ -13,7 +13,7 @@ namespace Lumina
     
     void CMaterialExpression::BuildNode()
     {
-        Output = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "Material Output", ENodePinDirection::Output, EMaterialInputType::Float));
+        Output = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "Material Output", ENodePinDirection::Output));
         Output->SetShouldDrawEditor(false);
     }
 
@@ -27,7 +27,7 @@ namespace Lumina
         Super::BuildNode();
 
         // Input pin - accepts any vector type
-        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Input", ENodePinDirection::Input, EMaterialInputType::Float));
+        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Input", ENodePinDirection::Input));
         
         InputPin->SetInputType(EMaterialInputType::Float4);
         InputPin->SetComponentMask(EComponentMask::RGBA);
@@ -167,12 +167,12 @@ namespace Lumina
         CMaterialExpression::BuildNode();
 
         // Input A - first component(s)
-        InputA = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input, EMaterialInputType::Float4));
+        InputA = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input));
         InputA->SetInputType(EMaterialInputType::Float4);
         InputA->SetComponentMask(EComponentMask::RGBA);
     
         // Input B - second component(s)
-        InputB = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input, EMaterialInputType::Float4));
+        InputB = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input));
         InputB->SetInputType(EMaterialInputType::Float4);
         InputB->SetComponentMask(EComponentMask::RGBA);
     
@@ -192,11 +192,11 @@ namespace Lumina
         Output->SetInputType(EMaterialInputType::Float2);
         Output->SetComponentMask(EComponentMask::RG);
         
-        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input, EMaterialInputType::Float));
+        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input));
         R->SetInputType(EMaterialInputType::Float);
         R->SetComponentMask(EComponentMask::R);
     
-        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input, EMaterialInputType::Float));
+        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input));
         G->SetInputType(EMaterialInputType::Float);
         G->SetComponentMask(EComponentMask::G);
     
@@ -214,15 +214,15 @@ namespace Lumina
         Output->SetInputType(EMaterialInputType::Float3);
         Output->SetComponentMask(EComponentMask::RGB);
         
-        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input, EMaterialInputType::Float));
+        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input));
         R->SetInputType(EMaterialInputType::Float);
         R->SetComponentMask(EComponentMask::R);
     
-        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input, EMaterialInputType::Float));
+        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input));
         G->SetInputType(EMaterialInputType::Float);
         G->SetComponentMask(EComponentMask::G);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input));
         B->SetInputType(EMaterialInputType::Float);
         B->SetComponentMask(EComponentMask::B);
     
@@ -240,19 +240,19 @@ namespace Lumina
         Output->SetInputType(EMaterialInputType::Float4);
         Output->SetComponentMask(EComponentMask::RGBA);
         
-        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input, EMaterialInputType::Float));
+        R = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "R", ENodePinDirection::Input));
         R->SetInputType(EMaterialInputType::Float);
         R->SetComponentMask(EComponentMask::R);
     
-        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input, EMaterialInputType::Float));
+        G = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "G", ENodePinDirection::Input));
         G->SetInputType(EMaterialInputType::Float);
         G->SetComponentMask(EComponentMask::G);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input));
         B->SetInputType(EMaterialInputType::Float);
         B->SetComponentMask(EComponentMask::B);
         
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input));
         A->SetInputType(EMaterialInputType::Float);
         A->SetComponentMask(EComponentMask::A);
     
@@ -303,11 +303,34 @@ namespace Lumina
         Compiler.VertexNormal(FullName);
     }
 
-    void CMaterialExpression_TexCoords::BuildNode()
+    void CMaterialExpression_Panner::BuildNode()
     {
         CMaterialExpression::BuildNode();
+        
+        UV = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "UV", ENodePinDirection::Input));
+        UV->SetPinColor(IM_COL32(255, 10, 10, 255));
+        UV->SetHideDuringConnection(false);
+        UV->SetPinName("UV");
+        UV->SetInputType(EMaterialInputType::Float2);
+                
+        Time = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Time", ENodePinDirection::Input));
+        Time->SetHideDuringConnection(false);
+        Time->SetPinName("Time");
+        Time->SetInputType(EMaterialInputType::Float);
+        
+        Speed = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Speed", ENodePinDirection::Input));
+        Speed->SetHideDuringConnection(false);
+        Speed->SetPinName("Speed");
+        Speed->SetInputType(EMaterialInputType::Float2);
+        
+        Output->SetInputType(EMaterialInputType::Float2);
     }
 
+    void CMaterialExpression_Panner::GenerateDefinition(FMaterialCompiler& Compiler)
+    {
+        Compiler.Panner(UV, Time, Speed);
+    }
+    
     void CMaterialExpression_TexCoords::GenerateDefinition(FMaterialCompiler& Compiler)
     {
         Compiler.TexCoords(FullName, TextureIndex, UTiling, VTiling);
@@ -348,29 +371,29 @@ namespace Lumina
         {
         case EMaterialInputType::Float:
             {
-                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "X", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "X", ENodePinDirection::Output));
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("X");
-                ValuePin->InputType = EMaterialInputType::Float;
+                ValuePin->SetInputType(EMaterialInputType::Float);
             }
             break;
         case EMaterialInputType::Float2:
             {
-                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "XY", ENodePinDirection::Output, EMaterialInputType::Float2));
+                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "XY", ENodePinDirection::Output));
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("XY");
                 ValuePin->SetComponentMask(EComponentMask::RG);
-                ValuePin->InputType = EMaterialInputType::Float2;
+                ValuePin->SetInputType(EMaterialInputType::Float2);
                 
-                CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "X", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "X", ENodePinDirection::Output));
                 R->SetPinColor(IM_COL32(255, 10, 10, 255));
                 R->SetHideDuringConnection(false);
                 R->SetPinName("X");
                 R->SetComponentMask(EComponentMask::R);
 
-                CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "Y", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "Y", ENodePinDirection::Output));
                 G->SetPinColor(IM_COL32(10, 255, 10, 255));
                 G->SetHideDuringConnection(false);
                 G->SetPinName("Y");
@@ -380,26 +403,26 @@ namespace Lumina
             break;
         case EMaterialInputType::Float3:
             {
-                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGB", ENodePinDirection::Output, EMaterialInputType::Float3));
+                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGB", ENodePinDirection::Output));
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("RGB");
                 ValuePin->SetComponentMask(EComponentMask::RGB);
-                ValuePin->InputType = EMaterialInputType::Float3;
-                
-                CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
+                ValuePin->SetInputType(EMaterialInputType::Float3);
+
+                CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output));
                 R->SetPinColor(IM_COL32(255, 10, 10, 255));
                 R->SetHideDuringConnection(false);
                 R->SetPinName("R");
                 R->SetComponentMask(EComponentMask::R);
 
-                CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output));
                 G->SetPinColor(IM_COL32(10, 255, 10, 255));
                 G->SetHideDuringConnection(false);
                 G->SetPinName("G");
                 G->SetComponentMask(EComponentMask::G);
 
-                CMaterialOutput* B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output, EMaterialInputType::Float2));
+                CMaterialOutput* B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output));
                 B->SetPinColor(IM_COL32(10, 10, 255, 255));
                 B->SetHideDuringConnection(false);
                 B->SetPinName("B");
@@ -409,49 +432,41 @@ namespace Lumina
             break;
         case EMaterialInputType::Float4:
             {
-                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGBA", ENodePinDirection::Output, EMaterialInputType::Float4));
+                CMaterialOutput* ValuePin = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "RGBA", ENodePinDirection::Output));
                 ValuePin->SetShouldDrawEditor(true);
                 ValuePin->SetHideDuringConnection(false);
                 ValuePin->SetPinName("RGBA");
                 ValuePin->SetComponentMask(EComponentMask::RGBA);
-                ValuePin->InputType = EMaterialInputType::Float4;
-
+                ValuePin->SetInputType(EMaterialInputType::Float4);
                 
-                CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output));
                 R->SetPinColor(IM_COL32(255, 10, 10, 255));
                 R->SetHideDuringConnection(false);
                 R->SetPinName("R");
                 R->SetComponentMask(EComponentMask::R);
 
-                CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output));
                 G->SetPinColor(IM_COL32(10, 255, 10, 255));
                 G->SetHideDuringConnection(false);
                 G->SetPinName("G");
                 G->SetComponentMask(EComponentMask::G);
 
-                CMaterialOutput* B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output));
                 B->SetPinColor(IM_COL32(10, 10, 255, 255));
                 B->SetHideDuringConnection(false);
                 B->SetPinName("B");
                 B->SetComponentMask(EComponentMask::B);
 
-                CMaterialOutput* A = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "A", ENodePinDirection::Output, EMaterialInputType::Float));
+                CMaterialOutput* A = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "A", ENodePinDirection::Output));
                 A->SetHideDuringConnection(false);
                 A->SetPinName("A");
                 A->SetComponentMask(EComponentMask::A);
 
             }
             break;
-        case EMaterialInputType::Wildcard:
-            break;
         }
     }
-
-    uint32 CMaterialExpression_ConstantFloat::GenerateExpression(FMaterialCompiler& Compiler)
-    {
-        return 0;
-    }
-
+    
     void CMaterialExpression_ConstantFloat::GenerateDefinition(FMaterialCompiler& Compiler)
     {
         if (bDynamic)
@@ -469,12 +484,7 @@ namespace Lumina
         ImGui::SetNextItemWidth(126.0f);
         ImGui::DragFloat("##", glm::value_ptr(Value), 0.01f);
     }
-
-    uint32 CMaterialExpression_ConstantFloat2::GenerateExpression(FMaterialCompiler& Compiler)
-    {
-        return 0;
-    }
-
+    
     void CMaterialExpression_ConstantFloat2::GenerateDefinition(FMaterialCompiler& Compiler)
     {
         if (bDynamic)
@@ -493,12 +503,6 @@ namespace Lumina
         ImGui::DragFloat2("##", glm::value_ptr(Value), 0.01f);
     }
 
-
-    uint32 CMaterialExpression_ConstantFloat3::GenerateExpression(FMaterialCompiler& Compiler)
-    {
-        return 0;
-    }
-
     void CMaterialExpression_ConstantFloat3::GenerateDefinition(FMaterialCompiler& Compiler)
     {
         if (bDynamic)
@@ -515,12 +519,6 @@ namespace Lumina
     {
         ImGui::SetNextItemWidth(126.0f);
         ImGui::ColorPicker3("##", glm::value_ptr(Value));
-    }
-
-
-    uint32 CMaterialExpression_ConstantFloat4::GenerateExpression(FMaterialCompiler& Compiler)
-    {
-        return 0;
     }
     
     void CMaterialExpression_ConstantFloat4::GenerateDefinition(FMaterialCompiler& Compiler)
@@ -546,12 +544,12 @@ namespace Lumina
     {
         CMaterialExpression_Math::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -567,17 +565,17 @@ namespace Lumina
     {
         CMaterialExpression_Math::BuildNode();
 
-        X = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        X = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         X->SetPinName("X");
         X->SetShouldDrawEditor(true);
         X->SetIndex(0);
         
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input));
         A->SetPinName("A");
         A->SetShouldDrawEditor(true);
         A->SetIndex(1);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input));
         B->SetPinName("B");
         B->SetShouldDrawEditor(true);
         B->SetIndex(2);
@@ -592,7 +590,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
@@ -607,7 +605,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
@@ -622,12 +620,12 @@ namespace Lumina
     {
         Super::BuildNode();
         
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -642,7 +640,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
@@ -657,17 +655,17 @@ namespace Lumina
     {
         CMaterialExpression_Math::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Edge0", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Edge0", ENodePinDirection::Input));
         A->SetPinName("Edge0");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Edge1", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Edge1", ENodePinDirection::Input));
         B->SetPinName("Edge1");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
 
-        C = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        C = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         C->SetPinName("X");
         C->SetShouldDrawEditor(true);
         C->SetIndex(2);
@@ -682,12 +680,12 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -703,12 +701,12 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -723,7 +721,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
     }
@@ -737,7 +735,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
     }
@@ -751,7 +749,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
     }
@@ -765,7 +763,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
     }
@@ -779,7 +777,7 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         
@@ -794,12 +792,12 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(3);
@@ -815,12 +813,12 @@ namespace Lumina
     {
         Super::BuildNode();
         
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -830,12 +828,12 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -845,12 +843,12 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -860,12 +858,12 @@ namespace Lumina
     {
         Super::BuildNode();
         
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
 
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -881,17 +879,17 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
 
-        C = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input, EMaterialInputType::Float));
+        C = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input));
         C->SetPinName("A");
         C->SetShouldDrawEditor(true);
         C->SetIndex(2);
@@ -921,12 +919,12 @@ namespace Lumina
     {
         Super::BuildNode();
         
-        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input, EMaterialInputType::Float));
+        A = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "X", ENodePinDirection::Input));
         A->SetPinName("X");
         A->SetShouldDrawEditor(true);
         A->SetIndex(0);
         
-        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input, EMaterialInputType::Float));
+        B = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Y", ENodePinDirection::Input));
         B->SetPinName("Y");
         B->SetShouldDrawEditor(true);
         B->SetIndex(1);
@@ -939,12 +937,12 @@ namespace Lumina
     
     void CMaterialExpression_BreakFloat2::BuildNode()
     {
-        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Vec2", ENodePinDirection::Input, EMaterialInputType::Float2));
+        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Vec2", ENodePinDirection::Input));
         InputPin->SetPinName("Vec2");
         InputPin->SetShouldDrawEditor(true);
         InputPin->SetIndex(0);
 
-        R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
+        R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output));
         R->SetShouldDrawEditor(true);
         R->SetHideDuringConnection(false);
         R->SetPinName("R");
@@ -952,7 +950,7 @@ namespace Lumina
         R->SetComponentMask(EComponentMask::R);
         R->InputType = EMaterialInputType::Float;
 
-        G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output, EMaterialInputType::Float));
+        G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output));
         G->SetShouldDrawEditor(true);
         G->SetHideDuringConnection(false);
         G->SetPinName("G");
@@ -967,12 +965,12 @@ namespace Lumina
     }
     void CMaterialExpression_BreakFloat3::BuildNode()
     {
-        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Vec3", ENodePinDirection::Input, EMaterialInputType::Float3));
+        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Vec3", ENodePinDirection::Input));
         InputPin->SetPinName("Vec3");
         InputPin->SetShouldDrawEditor(true);
         InputPin->SetIndex(0);
 
-        R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
+        R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output));
         R->SetShouldDrawEditor(true);
         R->SetHideDuringConnection(false);
         R->SetPinName("R");
@@ -980,7 +978,7 @@ namespace Lumina
         R->SetComponentMask(EComponentMask::R);
         R->InputType = EMaterialInputType::Float;
 
-        G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output, EMaterialInputType::Float));
+        G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output));
         G->SetShouldDrawEditor(true);
         G->SetHideDuringConnection(false);
         G->SetPinName("G");
@@ -988,7 +986,7 @@ namespace Lumina
         G->SetComponentMask(EComponentMask::G);
         G->InputType = EMaterialInputType::Float;
 
-        B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output, EMaterialInputType::Float));
+        B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output));
         B->SetShouldDrawEditor(true);
         B->SetHideDuringConnection(false);
         B->SetPinName("B");
@@ -1002,12 +1000,12 @@ namespace Lumina
     }
     void CMaterialExpression_BreakFloat4::BuildNode()
     {
-        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Vec4", ENodePinDirection::Input, EMaterialInputType::Float4));
+        InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Vec4", ENodePinDirection::Input));
         InputPin->SetPinName("Vec4");
         InputPin->SetShouldDrawEditor(true);
         InputPin->SetIndex(0);
 
-        R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output, EMaterialInputType::Float));
+        R = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "R", ENodePinDirection::Output));
         R->SetShouldDrawEditor(true);
         R->SetHideDuringConnection(false);
         R->SetPinName("R");
@@ -1015,7 +1013,7 @@ namespace Lumina
         R->SetComponentMask(EComponentMask::R);
         R->InputType = EMaterialInputType::Float;
 
-        G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output, EMaterialInputType::Float));
+        G = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "G", ENodePinDirection::Output));
         G->SetShouldDrawEditor(true);
         G->SetHideDuringConnection(false);
         G->SetPinName("G");
@@ -1023,7 +1021,7 @@ namespace Lumina
         G->SetComponentMask(EComponentMask::G);
         G->InputType = EMaterialInputType::Float;
 
-        B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output, EMaterialInputType::Float));
+        B = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "B", ENodePinDirection::Output));
         B->SetShouldDrawEditor(true);
         B->SetHideDuringConnection(false);
         B->SetPinName("B");
@@ -1031,7 +1029,7 @@ namespace Lumina
         B->SetComponentMask(EComponentMask::B);
         B->InputType = EMaterialInputType::Float;
 
-        A = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "A", ENodePinDirection::Output, EMaterialInputType::Float));
+        A = Cast<CMaterialOutput>(CreatePin(CMaterialOutput::StaticClass(), "A", ENodePinDirection::Output));
         A->SetShouldDrawEditor(true);
         A->SetHideDuringConnection(false);
         A->SetPinName("A");

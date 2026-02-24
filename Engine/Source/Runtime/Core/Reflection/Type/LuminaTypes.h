@@ -115,6 +115,8 @@ namespace Lumina
         NODISCARD bool IsScript()       const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Script); }
         NODISCARD bool IsVisible()      const       { return EnumHasAnyFlags(Flags, EPropertyFlags::ReadOnly | EPropertyFlags::Editable); }
         NODISCARD bool IsTrivial()      const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Trivial); }
+        NODISCARD bool IsBuiltin()      const       { return EnumHasAnyFlags(Flags, EPropertyFlags::Builtin); }
+        NODISCARD bool CanBeBulkSerialized() const  { return EnumHasAnyFlags(Flags, EPropertyFlags::BulkSerialize); }
 
         
         FName GetMetadata(const FName& Key) const { return Metadata.GetMetadata(Key); }

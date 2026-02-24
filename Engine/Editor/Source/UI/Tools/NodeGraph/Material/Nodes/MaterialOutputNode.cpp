@@ -21,40 +21,40 @@ namespace Lumina
     void CMaterialOutputNode::BuildNode()
     {
         // Base Color (Albedo)
-        BaseColorPin = CreatePin(CMaterialInput::StaticClass(), "Base Color (RGBA)", ENodePinDirection::Input, EMaterialInputType::Float3);
+        BaseColorPin = CreatePin(CMaterialInput::StaticClass(), "Base Color (RGBA)", ENodePinDirection::Input);
         BaseColorPin->SetPinName("Base Color (RGBA)");
     
         // Metallic (Determines if the material is metal or non-metal)
-        MetallicPin = CreatePin(CMaterialInput::StaticClass(), "Metallic", ENodePinDirection::Input, EMaterialInputType::Float);
+        MetallicPin = CreatePin(CMaterialInput::StaticClass(), "Metallic", ENodePinDirection::Input);
         MetallicPin->SetPinName("Metallic");
         
         // Roughness (Controls how smooth or rough the surface is)
-        RoughnessPin = CreatePin(CMaterialInput::StaticClass(), "Roughness", ENodePinDirection::Input, EMaterialInputType::Float);
+        RoughnessPin = CreatePin(CMaterialInput::StaticClass(), "Roughness", ENodePinDirection::Input);
         RoughnessPin->SetPinName("Roughness");
 
         // Specular (Affects intensity of reflections for non-metals)
-        SpecularPin = CreatePin(CMaterialInput::StaticClass(), "Specular", ENodePinDirection::Input, EMaterialInputType::Float);
+        SpecularPin = CreatePin(CMaterialInput::StaticClass(), "Specular", ENodePinDirection::Input);
         SpecularPin->SetPinName("Specular");
 
         // Emissive (Self-illumination, for glowing objects)
-        EmissivePin = CreatePin(CMaterialInput::StaticClass(), "Emissive", ENodePinDirection::Input, EMaterialInputType::Float3);
+        EmissivePin = CreatePin(CMaterialInput::StaticClass(), "Emissive", ENodePinDirection::Input);
         EmissivePin->SetPinName("Emissive (RGB)");
 
         // Ambient Occlusion (Shadows in crevices to add realism)
-        AOPin = CreatePin(CMaterialInput::StaticClass(), "Ambient Occlusion", ENodePinDirection::Input, EMaterialInputType::Float);
+        AOPin = CreatePin(CMaterialInput::StaticClass(), "Ambient Occlusion", ENodePinDirection::Input);
         AOPin->SetPinName("Ambient Occlusion");
 
         // Normal Map (For surface detail)
-        NormalPin = CreatePin(CMaterialInput::StaticClass(), "Normal Map (XYZ)", ENodePinDirection::Input, EMaterialInputType::Float3);
+        NormalPin = CreatePin(CMaterialInput::StaticClass(), "Normal Map (XYZ)", ENodePinDirection::Input);
         NormalPin->SetPinName("Normal Map (XYZ)");
         
         // Opacity (For transparent materials)
-        OpacityPin = CreatePin(CMaterialInput::StaticClass(), "Opacity", ENodePinDirection::Input, EMaterialInputType::Float);
+        OpacityPin = CreatePin(CMaterialInput::StaticClass(), "Opacity", ENodePinDirection::Input);
         OpacityPin->SetPinName("Opacity");
 
         // Opacity (For transparent materials)
-        WorldPositionOffsetPin = CreatePin(CMaterialInput::StaticClass(), "World Position Offset (WPO)", ENodePinDirection::Input, EMaterialInputType::Float3);
-        WorldPositionOffsetPin->SetPinName("World Position Offset (WPO)");
+        //WorldPositionOffsetPin = CreatePin(CMaterialInput::StaticClass(), "World Position Offset (WPO)", ENodePinDirection::Input);
+        //WorldPositionOffsetPin->SetPinName("World Position Offset (WPO)");
     }
 
     void CMaterialOutputNode::GenerateDefinition(FMaterialCompiler& Compiler)
@@ -62,19 +62,18 @@ namespace Lumina
         FString Output;
         Output += "\n\n";
     
-        Output += "FMaterialInputs GetMaterialInputs()\n{\n";
-        Output += "\tFMaterialInputs Input;\n";
+        Output += "\tFMaterialPixelInputs Material;\n";
     
         auto EmitMaterialInput = [&](const FString& InputName, CEdNodeGraphPin* Pin, const FString& DefaultValue, int32 RequiredComponents)
         {
-            Output += "\tInput." + InputName + " = ";
+            Output += "\tMaterial." + InputName + " = ";
             
             if (Pin->HasConnection())
             {
                 CMaterialOutput* ConnectedPin = Pin->GetConnection<CMaterialOutput>(0);
                 FString NodeName = ConnectedPin->GetOwningNode()->GetNodeFullName();
                 
-                int32 ConnectedComponents = Compiler.GetComponentCount(ConnectedPin->GetComponentMask());
+                int32 ConnectedComponents = FMaterialCompiler::GetComponentCount(ConnectedPin->GetComponentMask());
                 
                 FString Swizzle = GetSwizzleForMask(ConnectedPin->GetComponentMask());
                 
@@ -122,11 +121,11 @@ namespace Lumina
                     }
                     else if (ConnectedComponents == 2)
                     {
-                        Output += "vec3(" + Value + ", 0.0);\n";
+                        Output += "float3(" + Value + ", 0.0);\n";
                     }
                     else
                     {
-                        Output += "vec3(" + Value + ");\n";
+                        Output += "float3(" + Value + ");\n";
                     }
                 }
                 else
@@ -140,18 +139,17 @@ namespace Lumina
             }
         };
     
-        EmitMaterialInput("Diffuse", BaseColorPin, "vec3(1.0, 1.0, 1.0)", 3);
+        EmitMaterialInput("Diffuse", BaseColorPin, "float3(1.0, 1.0, 1.0)", 3);
         EmitMaterialInput("Metallic", MetallicPin, "0.0", 1);
         EmitMaterialInput("Roughness", RoughnessPin, "1.0", 1);
         EmitMaterialInput("Specular", SpecularPin, "0.5", 1);
-        EmitMaterialInput("Emissive", EmissivePin, "vec3(0.0, 0.0, 0.0)", 3);
+        EmitMaterialInput("Emissive", EmissivePin, "float3(0.0, 0.0, 0.0)", 3);
         EmitMaterialInput("AmbientOcclusion", AOPin, "1.0", 1);
-        EmitMaterialInput("Normal", NormalPin, "vec3(0.0, 0.0, 1.0)", 3);
+        EmitMaterialInput("Normal", NormalPin, "float3(0.0, 0.0, 1.0)", 3);
         EmitMaterialInput("Opacity", OpacityPin, "1.0", 1);
-        EmitMaterialInput("WorldPositionOffset", WorldPositionOffsetPin, "vec3(0.0)", 3);
-    
-        Output += "\treturn Input;\n}\n";
-    
+        //EmitMaterialInput("WorldPositionOffset", WorldPositionOffsetPin, "float3(0.0)", 3);
+        
+        
         Compiler.AddRaw(Output);
     }
 }

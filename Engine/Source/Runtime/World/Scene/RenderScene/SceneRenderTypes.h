@@ -338,11 +338,11 @@ namespace Lumina
 
     struct alignas(16) FInstanceData
     {
-        glm::mat3x4     Transform;
+        glm::mat4       Transform;
         glm::vec4       SphereBounds;
         
-        glm::uvec2      VertexBufferAddress;
-        glm::uvec2      IndexBufferAddress;
+        uint64          VBAddress;
+        uint64          IBAddress;
 
         uint32          EntityID;
         uint32          DrawIDAndFlags;

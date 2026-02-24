@@ -1,21 +1,17 @@
 ﻿#include "pch.h"
 #include "Material.h"
-
 #include "Assets/AssetTypes/Textures/Texture.h"
-#include "Core/Engine/Engine.h"
-#include "Core/Templates/AsBytes.h"
 #include "Paths/Paths.h"
 #include "Platform/Filesystem/FileHelper.h"
 #include "Renderer/RenderContext.h"
 #include "Renderer/RenderManager.h"
 #include "Renderer/RHIGlobals.h"
-
 #include "Renderer/ShaderCompiler.h"
 #include "Types/Byte.h"
 
 namespace Lumina
 {
-    CMaterial* CMaterial::DefaultMaterial = nullptr;
+    static CMaterial* DefaultMaterial = nullptr;
     
     CMaterial::CMaterial()
     {
@@ -26,7 +22,6 @@ namespace Lumina
     void CMaterial::Serialize(FArchive& Ar)
     {
         CMaterialInterface::Serialize(Ar);
-        Ar << PixelShaderBinaries;
     }
 
     void CMaterial::PostCreateCDO()
@@ -39,18 +34,19 @@ namespace Lumina
 
     void CMaterial::PostLoad()
     {
-        if (!PixelShaderBinaries.empty())
+        if (!PixelShaderBinaries.empty() && !VertexShaderBinaries.empty())
         {
-            FShaderHeader Header;
-            StaticVertexShader = FShaderLibrary::GetVertexShader("GeometryPass.vert");
+            FShaderHeader VertexHeader;
+            VertexHeader.DebugName      = GetName().ToString() + "_VertexShader";
+            VertexHeader.Hash           = Hash::GetHash64(VertexShaderBinaries.data(), VertexShaderBinaries.size() * sizeof(uint32));
+            VertexHeader.Binaries       = VertexShaderBinaries;
+            VertexShader                = GRenderContext->CreateVertexShader(VertexHeader);
             
-            TVector<FString> Defs{"SKINNED_VERTEX"};
-            SkinnedVertexShader = FShaderLibrary::GetVertexShader("GeometryPass.vert", Defs);
-            
-            Header.DebugName = GetName().ToString() + "_PixelShader";
-            Header.Hash = Hash::GetHash64(PixelShaderBinaries.data(), PixelShaderBinaries.size() * sizeof(uint32));
-            Header.Binaries = PixelShaderBinaries;
-            PixelShader = GRenderContext->CreatePixelShader(Header);
+            FShaderHeader PixelHeader;
+            PixelHeader.DebugName       = GetName().ToString() + "_PixelShader";
+            PixelHeader.Hash            = Hash::GetHash64(PixelShaderBinaries.data(), PixelShaderBinaries.size() * sizeof(uint32));
+            PixelHeader.Binaries        = PixelShaderBinaries;
+            PixelShader                 = GRenderContext->CreatePixelShader(PixelHeader);
 
             FBindingSetDesc SetDesc;
 
@@ -152,14 +148,9 @@ namespace Lumina
         return const_cast<CMaterial*>(this);
     }
     
-    FRHIVertexShader* CMaterial::GetVertexShader(EVertexFormat Format) const
+    FRHIVertexShader* CMaterial::GetVertexShader() const
     {
-        switch (Format)
-        {
-            case EVertexFormat::Static: return StaticVertexShader;
-            case EVertexFormat::Skinned: return SkinnedVertexShader;
-        }
-        UNREACHABLE();
+        return VertexShader;
     }
 
     FRHIPixelShader* CMaterial::GetPixelShader() const
@@ -178,8 +169,9 @@ namespace Lumina
 
         ShaderCompiler->Flush();
 
-        FString FragmentPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/ForwardBasePass.frag";
-        
+        FString PixelPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/BasePixelPass.slang";
+        FString VertexPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/BaseVertexPass.slang";
+
         if (DefaultMaterial)
         {
             DefaultMaterial->RemoveFromRoot();
@@ -190,51 +182,58 @@ namespace Lumina
         DefaultMaterial = NewObject<CMaterial>(nullptr, "DefaultMaterial");
         DefaultMaterial->AddToRoot();
         
-        FString LoadedString;
-        if (!FileHelper::LoadFileIntoString(LoadedString, FragmentPath))
+        FString LoadedPixelString;
+        if (!FileHelper::LoadFileIntoString(LoadedPixelString, PixelPath))
         {
-            LOG_ERROR("Failed to find ForwardBasePass.frag!");
+            LOG_ERROR("Failed to find BasePixelPass.slang!");
             return;
         }
 
         const char* Token = "$MATERIAL_INPUTS";
-        size_t Pos = LoadedString.find(Token);
+        size_t PixelPos = LoadedPixelString.find(Token);
 
-        FString Replacement;
+        FString PixelReplacement;
         
-        Replacement += "FMaterialInputs GetMaterialInputs()\n{\n";
-        Replacement += "\tFMaterialInputs Input;\n";
-
-        Replacement += "Input.Diffuse = vec3(1.0);\n";
-        Replacement += "Input.Metallic = 0.0;\n";
-        Replacement += "Input.Roughness = 1.0;\n";
-        Replacement += "Input.Specular = 0.5;\n";
-        Replacement += "Input.Emissive = vec3(0.0);\n";
-        Replacement += "Input.AmbientOcclusion = 1.0;\n";
-        Replacement += "Input.Normal = vec3(0.0, 0.0, 1.0);\n";
-        Replacement += "Input.Opacity = 1.0;\n";
-        Replacement += "Input.WorldPositionOffset = vec3(0.0);\n";
-
-        Replacement += "\treturn Input;\n}\n";
+        PixelReplacement += "\tFMaterialPixelInputs Material;\n";
+        PixelReplacement += "\tMaterial.Diffuse               = float3(1.0);\n";
+        PixelReplacement += "\tMaterial.Metallic              = 0.0;\n";
+        PixelReplacement += "\tMaterial.Roughness             = 1.0;\n";
+        PixelReplacement += "\tMaterial.Specular              = 0.5;\n";
+        PixelReplacement += "\tMaterial.Emissive              = float3(0.0);\n";
+        PixelReplacement += "\tMaterial.AmbientOcclusion      = 1.0;\n";
+        PixelReplacement += "\tMaterial.Normal                = float3(0.0, 0.0, 1.0);\n";
+        PixelReplacement += "\tMaterial.Opacity               = 1.0;\n";
         
-        if (Pos != FString::npos)
+        if (PixelPos != FString::npos)
         {
-            LoadedString.replace(Pos, strlen(Token), Replacement);
+            LoadedPixelString.replace(PixelPos, strlen(Token), PixelReplacement);
         }
         else
         {
             LOG_ERROR("Missing [$MATERIAL_INPUTS] in base shader!");
         }
         
-        ShaderCompiler->CompilerShaderRaw(LoadedString, {}, [](const FShaderHeader& Header) mutable 
+        FString LoadedVertexString;
+        if (!FileHelper::LoadFileIntoString(LoadedVertexString, VertexPath))
+        {
+            LOG_ERROR("Failed to find BaseVertPass.slang!");
+            return;
+        }
+        
+        ShaderCompiler->CompilerShaderRaw(Move(LoadedPixelString), {}, [](const FShaderHeader& Header) mutable 
         {
             DefaultMaterial->PixelShader = GRenderContext->CreatePixelShader(Header);
-            DefaultMaterial->StaticVertexShader = GRenderContext->GetShaderLibrary()->GetShader("GeometryPass.vert").As<FRHIVertexShader>();
-
             DefaultMaterial->PixelShaderBinaries.assign(Header.Binaries.begin(), Header.Binaries.end());
             GRenderContext->OnShaderCompiled(DefaultMaterial->PixelShader, false, true);
         });
-
+        
+        ShaderCompiler->CompilerShaderRaw(Move(LoadedVertexString), {}, [](const FShaderHeader& Header) mutable 
+        {
+            DefaultMaterial->VertexShader = GRenderContext->CreateVertexShader(Header);
+            DefaultMaterial->VertexShaderBinaries.assign(Header.Binaries.begin(), Header.Binaries.end());
+            GRenderContext->OnShaderCompiled(DefaultMaterial->PixelShader, false, true);
+        });
+        
         ShaderCompiler->Flush();
 
         DefaultMaterial->PostLoad();

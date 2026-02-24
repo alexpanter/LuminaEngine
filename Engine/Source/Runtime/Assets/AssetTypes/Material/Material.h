@@ -37,7 +37,7 @@ namespace Lumina
         FMaterialUniforms* GetMaterialUniforms() override { return &MaterialUniforms; }
         
         CMaterial* GetMaterial() const override;
-        FRHIVertexShader* GetVertexShader(EVertexFormat Format) const override;
+        FRHIVertexShader* GetVertexShader() const override;
         FRHIPixelShader* GetPixelShader() const override;
         static CMaterial* GetDefaultMaterial();
 
@@ -64,19 +64,20 @@ namespace Lumina
         PROPERTY()
         TVector<TObjectPtr<CTexture>>           Textures;
         
+        PROPERTY()
         TVector<uint32>                         PixelShaderBinaries;
 
+        PROPERTY()
+        TVector<uint32>                         VertexShaderBinaries;
+        
         PROPERTY()
         TVector<FMaterialParameter>             Parameters;
         
         FMaterialUniforms                       MaterialUniforms;
         
-        FRHIVertexShaderRef                     StaticVertexShader;
-        FRHIVertexShaderRef                     SkinnedVertexShader;
-        
+        FRHIVertexShaderRef                     VertexShader;
         FRHIPixelShaderRef                      PixelShader;
 
-        static CMaterial* DefaultMaterial;
     };
     
 }

@@ -11,13 +11,13 @@
 #include "Renderer/RenderContext.h"
 #include "Renderer/RHIGlobals.h"
 #include "Renderer/ShaderCompiler.h"
-#include "World/entity/components/lightcomponent.h"
-#include "World/entity/components/staticmeshcomponent.h"
 #include "Thumbnails/ThumbnailManager.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
 #include "UI/Tools/NodeGraph/Material/MaterialCompiler.h"
 #include "UI/Tools/NodeGraph/Material/MaterialNodeGraph.h"
 #include "world/entity/components/environmentcomponent.h"
+#include "World/entity/components/lightcomponent.h"
+#include "World/entity/components/staticmeshcomponent.h"
 
 namespace Lumina
 {
@@ -346,18 +346,30 @@ namespace Lumina
             ShaderCompiler->CompilerShaderRaw(Tree, {}, [this](const FShaderHeader& Header) mutable 
             {
                 CMaterial* Material = Cast<CMaterial>(Asset.Get());
-
                 FRHIPixelShaderRef PixelShader = GRenderContext->CreatePixelShader(Header);
-                FRHIVertexShaderRef VertexShader = GRenderContext->GetShaderLibrary()->GetVertexShader("GeometryPass.vert");
-                
-                {
-                    Material->PixelShaderBinaries.assign(Header.Binaries.begin(), Header.Binaries.end());
-                    Material->PixelShader = PixelShader;
-                }
-
+                Material->PixelShaderBinaries.assign(Header.Binaries.begin(), Header.Binaries.end());
+                Material->PixelShader = PixelShader;
                 GRenderContext->OnShaderCompiled(PixelShader, false, true);
             });
-
+            
+            
+            FString VertexPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/BaseVertexPass.slang";
+            FString LoadedVertexString;
+            if (!FileHelper::LoadFileIntoString(LoadedVertexString, VertexPath))
+            {
+                LOG_ERROR("Failed to find BaseVertPass.slang!");
+                return;
+            }
+            
+            ShaderCompiler->CompilerShaderRaw(LoadedVertexString, {}, [this](const FShaderHeader& Header) mutable 
+            {
+                CMaterial* Material = Cast<CMaterial>(Asset.Get());
+                FRHIVertexShaderRef VertexShader = GRenderContext->CreateVertexShader(Header);
+                Material->VertexShaderBinaries.assign(Header.Binaries.begin(), Header.Binaries.end());
+                Material->VertexShader = VertexShader;
+                GRenderContext->OnShaderCompiled(VertexShader, false, true);
+            });
+            
             ShaderCompiler->Flush();
 
             Compiler.GetBoundTextures(Material->Textures);

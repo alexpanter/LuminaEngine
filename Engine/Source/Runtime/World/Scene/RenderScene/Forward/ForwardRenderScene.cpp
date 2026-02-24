@@ -64,7 +64,6 @@ namespace Lumina
 
     void FForwardRenderScene::Shutdown()
     {
-        GRenderContext->WaitIdle();
         GRenderContext->ClearCommandListCache();
         GRenderContext->ClearBindingCaches();
 
@@ -241,7 +240,7 @@ namespace Lumina
                         {
                             DrawCommands.emplace_back(FMeshDrawCommand
                             {
-                                .VertexShader           = Material->GetVertexShader(EVertexFormat::Static),
+                                .VertexShader           = Material->GetVertexShader(),
                                 .PixelShader            = Material->GetPixelShader(),
                                 .IndirectDrawOffset     = 0,
                                 .DrawArgumentIndexMap   = {},
@@ -271,8 +270,8 @@ namespace Lumina
                         {
                             .Transform                  = TransformMatrix,
                             .SphereBounds               = SphereBounds,
-                            .VertexBufferAddress        = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
-                            .IndexBufferAddress         = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .VBAddress                  = Mesh->GetVertexBuffer()->GetAddress(),
+                            .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
                             .EntityID                   = entt::to_integral(Entity),
                             .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
                             .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(0, (uint16)Material->GetMaterialIndex())
@@ -347,7 +346,7 @@ namespace Lumina
                         {
                             DrawCommands.emplace_back(FMeshDrawCommand
                             {
-                                .VertexShader           = Material->GetVertexShader(EVertexFormat::Skinned),
+                                .VertexShader           = Material->GetVertexShader(),
                                 .PixelShader            = Material->GetPixelShader(),
                                 .IndirectDrawOffset     = 0,
                                 .DrawArgumentIndexMap   = {},
@@ -373,13 +372,12 @@ namespace Lumina
 
                         IndirectDrawArguments[DrawIt->second].InstanceCount++;
                         
-                        
                         InstanceData.emplace_back(FInstanceData
                         {
                             .Transform                  = TransformMatrix,
                             .SphereBounds               = SphereBounds,
-                            .VertexBufferAddress        = RenderUtils::SplitAddress(Mesh->GetVertexBuffer()->GetAddress()),
-                            .IndexBufferAddress         = RenderUtils::SplitAddress(Mesh->GetIndexBuffer()->GetAddress()),
+                            .VBAddress                  = Mesh->GetVertexBuffer()->GetAddress(),
+                            .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
                             .EntityID                   = entt::to_integral(Entity),
                             .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
                             .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(BoneDataOffset, (uint16)Material->GetMaterialIndex())
@@ -426,9 +424,9 @@ namespace Lumina
 
                 for (FInstanceData& Instance : InstanceData)
                 {
-                    uint32 Flags = Instance.DrawIDAndFlags & 0xFF000000;
-                    uint32 NewDrawID = IndexRemap[Instance.DrawIDAndFlags & 0x00FFFFFF];
-                    Instance.DrawIDAndFlags = (NewDrawID & 0x00FFFFFF) | Flags;
+                    uint32 Flags = Instance.DrawIDAndFlags & 0xFF000000u;
+                    uint32 NewDrawID = IndexRemap[Instance.DrawIDAndFlags & 0x00FFFFFFu];
+                    Instance.DrawIDAndFlags = (NewDrawID & 0x00FFFFFFu) | Flags;
                 }
             
                 RenderStats.NumBatches = DrawCommands.size();
@@ -952,7 +950,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Cull Pass", tracy::Color::Pink2);
                 
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("MeshCull.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("MeshCull.slang");
 
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
@@ -999,7 +997,7 @@ namespace Lumina
                 .SetDepthStencilState(FDepthStencilState().SetDepthFunc(EComparisonFunc::Greater))
                 .SetRasterState(FRasterState().EnableDepthClip());
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("DepthPrePass.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("DepthPrePass.slang");
             
             for (const FMeshDrawCommand& Batch : DrawCommands)
             {
@@ -1039,7 +1037,7 @@ namespace Lumina
             LUMINA_PROFILE_SECTION_COLORED("Depth Pyramid Pass", tracy::Color::Orange);
 
             FRHIImage* DepthPyramid = GetNamedImage(ENamedImage::DepthPyramid);
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("DepthPyramidMips.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("DepthPyramidMips.slang");
             int MipCount = DepthPyramid->GetDescription().NumMips;
 
             CmdList.SetEnableUavBarriersForImage(DepthPyramid, false);
@@ -1114,7 +1112,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Cluster Build Pass", tracy::Color::Pink2);
                 
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("ClusterBuild.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("ClusterBuild.slang");
 
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
@@ -1154,7 +1152,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Light Cull Pass", tracy::Color::Pink2);
                 
-            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("LightCull.comp");
+            FRHIComputeShaderRef ComputeShader = FShaderLibrary::GetComputeShader("LightCull.slang");
 
             FComputePipelineDesc PipelineDesc;
             PipelineDesc.SetComputeShader(ComputeShader);
@@ -1190,7 +1188,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Point Light Shadow Pass", tracy::Color::DeepPink2);
             
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMapping.frag");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMappingPixel.slang");
             
             FRenderState RenderState; RenderState
                     .SetDepthStencilState(FDepthStencilState()
@@ -1220,7 +1218,7 @@ namespace Lumina
             
             const TVector<FLightShadow>& PointShadows = PackedShadows[(uint32)ELightType::Point];
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMapping.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMappingVert.slang");
             
             for (const FLightShadow& LightShadow : PointShadows)
             {
@@ -1289,7 +1287,7 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Spot Shadow Pass", tracy::Color::DeepPink4);
             
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMapping.frag");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ShadowMappingPixel.slang");
             
             FRenderState RenderState; RenderState
                 .SetDepthStencilState(FDepthStencilState()
@@ -1302,7 +1300,7 @@ namespace Lumina
             
             const TVector<FLightShadow>& SpotShadows = PackedShadows[(uint32)ELightType::Spot];
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMapping.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMappingVert.slang");
 
             for (const FLightShadow& Shadow : SpotShadows)
             {
@@ -1405,7 +1403,7 @@ namespace Lumina
                 .SetRenderArea(glm::uvec2(GCSMResolution, GCSMResolution));
             
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMapping.vert");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("ShadowMappingVert.slang");
             
             for (const FMeshDrawCommand& Batch : DrawCommands)
             {
@@ -1517,8 +1515,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Billboard Pass", tracy::Color::Red);
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("Billboard.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Billboard.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("BillboardVert.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("BillboardPixel.slang");
             
             FRenderPassDesc::FAttachment RenderTarget;
             RenderTarget.SetImage(GetNamedImage(ENamedImage::HDR));
@@ -1585,8 +1583,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Environment Pass", tracy::Color::Green3);
         
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Environment.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Environment.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1641,8 +1639,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Batched Line Draw", tracy::Color::Red2);
     
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("SimpleElement.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SimpleElement.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("SimpleElementVertex.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SimpleElementPixel.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1724,8 +1722,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Selection Post Process Pass", tracy::Color::Red2);
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SelectionPostProcess.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("SelectionPostProcess.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1794,8 +1792,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Tone Mapping Pass", tracy::Color::Red2);
             
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ToneMapping.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("ToneMapping.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;
@@ -1860,8 +1858,8 @@ namespace Lumina
         {
             LUMINA_PROFILE_SECTION_COLORED("Debug Draw Pass", tracy::Color::Red2);
         
-            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.vert");
-            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Debug.frag");
+            FRHIVertexShaderRef VertexShader = FShaderLibrary::GetVertexShader("FullscreenQuad.slang");
+            FRHIPixelShaderRef PixelShader = FShaderLibrary::GetPixelShader("Debug.slang");
             if (!VertexShader || !PixelShader)
             {
                 return;

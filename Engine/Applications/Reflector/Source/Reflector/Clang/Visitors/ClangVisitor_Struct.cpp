@@ -78,6 +78,11 @@ namespace Lumina::Reflection::Visitor
 			Info.PropertyFlags |= EPropertyFlags::Trivial;
 		}
 		
+		if (FieldType.kind >= CXType_FirstBuiltin && FieldType.kind <= CXType_LastBuiltin)
+		{
+			Info.PropertyFlags |= EPropertyFlags::Builtin;
+		}
+		
 		Info.Flags			= PropFlags;
 		Info.Type			= FieldType;
 		Info.Name			= CursorName;
@@ -129,6 +134,11 @@ namespace Lumina::Reflection::Visitor
 		if (clang_isPODType(FieldType))
 		{
 			Info.PropertyFlags |= EPropertyFlags::Trivial;
+		}
+		
+		if (FieldType.kind >= CXType_FirstBuiltin && FieldType.kind <= CXType_LastBuiltin)
+		{
+			Info.PropertyFlags |= EPropertyFlags::Builtin;
 		}
 		
 		Info.Flags			= PropFlags;

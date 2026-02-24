@@ -55,7 +55,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Add"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -72,7 +71,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Clamp"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         CMaterialInput* X = nullptr;
@@ -91,7 +89,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Saturate"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -108,7 +105,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Normalize"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -125,7 +121,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Distance"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -142,7 +137,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Abs"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -159,7 +153,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "SmoothStep"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         CMaterialInput* C = nullptr;
@@ -182,7 +175,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Subtract"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     };
 
@@ -197,7 +189,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Multiply"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     };
     
@@ -213,7 +204,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Sin"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -229,7 +219,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Cosin"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -245,7 +234,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Floor"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -261,7 +249,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Fract"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -277,7 +264,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Ceil"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -293,7 +279,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Power"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -309,7 +294,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Mod"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -325,7 +309,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Min"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -341,7 +324,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Max"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
     };
@@ -357,7 +339,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Step"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -372,7 +353,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Lerp"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         PROPERTY(Editable, Category = "Value")
@@ -393,7 +373,6 @@ namespace Lumina
 
         FString GetNodeDisplayName() const override { return "Divide"; }
         void* GetNodeDefaultValue() override { return &ConstA; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
     };
@@ -412,7 +391,6 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override;
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         ImVec2 GetMinNodeTitleBarSize() const override;
 
@@ -448,7 +426,6 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "Append"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         
@@ -465,9 +442,8 @@ namespace Lumina
         void BuildNode() override;
 
         FFixedString GetNodeCategory() const override { return "Utility"; }
-        FString GetNodeDisplayName() const override { return "MakeVec2"; }
+        FString GetNodeDisplayName() const override { return "MakeFloat2"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
 
@@ -484,9 +460,8 @@ namespace Lumina
         void BuildNode() override;
 
         FFixedString GetNodeCategory() const override { return "Utility"; }
-        FString GetNodeDisplayName() const override { return "MakeVec3"; }
+        FString GetNodeDisplayName() const override { return "MakeFloat3"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
 
@@ -504,9 +479,8 @@ namespace Lumina
         void BuildNode() override;
 
         FFixedString GetNodeCategory() const override { return "Utility"; }
-        FString GetNodeDisplayName() const override { return "MakeVec4"; }
+        FString GetNodeDisplayName() const override { return "MakeFloat4"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
 
@@ -525,9 +499,8 @@ namespace Lumina
         void BuildNode() override;
 
         FFixedString GetNodeCategory() const override { return "Utility"; }
-        FString GetNodeDisplayName() const override { return "BreakVec2"; }
+        FString GetNodeDisplayName() const override { return "BreakFloat2"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
 
@@ -545,9 +518,8 @@ namespace Lumina
         void BuildNode() override;
 
         FFixedString GetNodeCategory() const override { return "Utility"; }
-        FString GetNodeDisplayName() const override { return "BreakVec3"; }
+        FString GetNodeDisplayName() const override { return "BreakFloat3"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
 
@@ -563,9 +535,8 @@ namespace Lumina
         void BuildNode() override;
 
         FFixedString GetNodeCategory() const override { return "Utility"; }
-        FString GetNodeDisplayName() const override { return "BreakVec4"; }
+        FString GetNodeDisplayName() const override { return "BreakFloat4"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
 
@@ -583,7 +554,6 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "WorldPosition"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     };
 
@@ -598,7 +568,6 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "CameraPosition"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     };
 
@@ -613,7 +582,6 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "EntityID"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     };
 
@@ -628,8 +596,32 @@ namespace Lumina
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "VertexNormal"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
+    };
+    
+    REFLECT()
+    class CMaterialExpression_Panner : public CMaterialExpression
+    {
+        GENERATED_BODY()
+    public:
+        
+        void BuildNode() override;
+
+        FFixedString GetNodeCategory() const override { return "Utility"; }
+        FString GetNodeDisplayName() const override { return "Panner"; }
+        void* GetNodeDefaultValue() override { return nullptr; }
+        void GenerateDefinition(FMaterialCompiler& Compiler) override;
+        
+        
+        CMaterialInput* UV = nullptr;
+        CMaterialInput* Time = nullptr;
+        CMaterialInput* Speed = nullptr;
+
+        PROPERTY(Editable)
+        float SpeedX = 1.0f;
+        
+        PROPERTY(Editable)
+        float SpeedY = 1.0f;
     };
 
     REFLECT()
@@ -638,12 +630,9 @@ namespace Lumina
         GENERATED_BODY()
     public:
         
-        void BuildNode() override;
-
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "TexCoords"; }
         void* GetNodeDefaultValue() override { return nullptr; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override { return 0; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         
         PROPERTY(Editable)
@@ -679,7 +668,7 @@ namespace Lumina
         PROPERTY(Editable, Color, Category = "Value")
         glm::vec4           Value = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
         
-        EMaterialInputType  ValueType = EMaterialInputType::Wildcard;
+        EMaterialInputType  ValueType = EMaterialInputType::Float;
     };
 
     REFLECT()
@@ -694,7 +683,6 @@ namespace Lumina
         }
 
         FString GetNodeDisplayName() const override { return "Float"; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override;
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         void DrawNodeBody() override;
@@ -712,8 +700,7 @@ namespace Lumina
             ValueType = EMaterialInputType::Float2;
         }
         
-        FString GetNodeDisplayName() const override { return "Vec2"; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override;
+        FString GetNodeDisplayName() const override { return "Float2"; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         void DrawNodeBody() override;
@@ -731,8 +718,7 @@ namespace Lumina
             ValueType = EMaterialInputType::Float3;
         }
 
-        FString GetNodeDisplayName() const override { return "Vec3"; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override;
+        FString GetNodeDisplayName() const override { return "Float3"; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         void DrawNodeBody() override;
@@ -750,8 +736,7 @@ namespace Lumina
             ValueType = EMaterialInputType::Float4;
         }
 
-        FString GetNodeDisplayName() const override { return "Vec4"; }
-        uint32 GenerateExpression(FMaterialCompiler& Compiler) override;
+        FString GetNodeDisplayName() const override { return "Float4"; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
 
         void DrawNodeBody() override;

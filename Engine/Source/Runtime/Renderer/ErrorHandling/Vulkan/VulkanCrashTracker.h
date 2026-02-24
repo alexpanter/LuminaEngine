@@ -1,13 +1,7 @@
 ﻿#pragma once
 
-#include <mutex>
-#include <string>
-#include <volk/volk.h>
 #include "Containers/Name.h"
 #include "Renderer/ErrorHandling/CrashTracker.h"
-#if defined(WITH_AFTERMATH)
-#include <NvidiaAftermath/GFSDK_Aftermath_GpuCrashDump.h>
-#endif
 #include "VkBootstrap.h"
 
 namespace Lumina::RHI
@@ -16,10 +10,11 @@ namespace Lumina::RHI
     {
     public:
         
-        FVulkanCrashTracker() = default;
-        ~FVulkanCrashTracker() override;
+        FVulkanCrashTracker();
+        ~FVulkanCrashTracker() override = default;
+        LE_NO_COPYMOVE(FVulkanCrashTracker);
         
-        void Initialize(RHIDevice device, RHIPhysicalDevice physicalDevice) override;
+        void Initialize(RHIDevice InDevice, RHIPhysicalDevice InPhysicalDevice) override;
         void Shutdown() override;
 
         void OnDeviceLost() override;
@@ -33,45 +28,14 @@ namespace Lumina::RHI
         void EndMarker(RHICommandBuffer cmdBuffer) override;
         void PollCrashDumps() override;
         
-    private:
-        struct FShaderInfo
-        {
-            TVector<uint32> SPIRV;
-            FName Name;
-        };
+        const FString& GetCrashDumpDirectory() const { return CrashDumpDirectory; }
         
-        struct FMarkerData
-        {
-            FString Name;
-            uint64 MarkerValue;
-        };
+    private:
         
         VkDevice Device = VK_NULL_HANDLE;
         VkPhysicalDevice PhysicalDevice = VK_NULL_HANDLE;
         
-        FMutex ShaderMutex;
-        TVector<FShaderInfo> RegisteredShaders;
-        
-        FMutex MarkerMutex;
-        TVector<FMarkerData> Markers;
-        uint64 NextMarkerValue = 1;
-        
         FString CrashDumpDirectory;
-        bool bInitialized = false;
-        
-        // Aftermath callbacks
-        static void GpuCrashDumpCallback(const void* GpuCrashDump, uint32 gpuCrashDumpSize, void* UserData);
-        static void ShaderDebugInfoCallback(const void* ShaderDebugInfo, uint32 shaderDebugInfoSize, void* UserData);
-#if defined(WITH_AFTERMATH)
-        static void CrashDumpDescriptionCallback(PFN_GFSDK_Aftermath_AddGpuCrashDumpDescription addDescription, void* UserData);
-        static void ResolveMarkerCallback(const void* MarkerData, uint32 MarkerDataSize, void* UserData, PFN_GFSDK_Aftermath_ResolveMarker ResolveMarker);
-#endif
-
-        void WriteCrashDump(const void* data, uint32_t size);
-        void DecodeAndLogCrashDump(const std::string& dumpPath);
-        //std::string GetShaderNameFromHash(const GFSDK_Aftermath_ShaderBinaryHash& hash);
-        FString GetMarkerName(uint64_t markerValue);
-        void SaveShaderDebugInfo(const void* data, uint32_t size);
     };
     
 }

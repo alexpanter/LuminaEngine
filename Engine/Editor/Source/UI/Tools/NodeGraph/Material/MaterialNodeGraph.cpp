@@ -120,6 +120,7 @@ namespace Lumina
         //RegisterGraphNode(CMaterialExpression_ComponentMask::StaticClass());
         RegisterGraphNode(CMaterialExpression_VertexNormal::StaticClass());
         RegisterGraphNode(CMaterialExpression_TexCoords::StaticClass());
+        RegisterGraphNode(CMaterialExpression_Panner::StaticClass());
         RegisterGraphNode(CMaterialNodeGetTime::StaticClass());
         RegisterGraphNode(CMaterialExpression_CameraPos::StaticClass());
         RegisterGraphNode(CMaterialExpression_WorldPos::StaticClass());
@@ -177,23 +178,7 @@ namespace Lumina
             
             return;
         }
-
-        for (int i = 0; i < SortedNodes.size(); ++i)
-        {
-            CEdGraphNode* Node = SortedNodes[i];
-            
-            Node->SetDebugExecutionOrder(i);
-            if (Node == Nodes[0].Get())
-            {
-                continue; 
-            }
-
-            if (CMaterialGraphNode* MaterialGraphNode = Cast<CMaterialGraphNode>(Node))
-            {
-                MaterialGraphNode->GenerateExpression(Compiler);
-            }
-        }
-
+        
         Compiler.NewLine();
         Compiler.NewLine();
 

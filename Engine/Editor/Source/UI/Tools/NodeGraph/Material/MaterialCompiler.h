@@ -82,6 +82,7 @@ namespace Lumina
         // Built-in inputs
         void VertexNormal(const FString& ID);
         void TexCoords(const FString& ID, uint32 Index, float UTiling, float VTiling);
+        void Panner(CMaterialInput* UV, CMaterialInput* Time, CMaterialInput* Speed);
         void WorldPos(const FString& ID);
         void CameraPos(const FString& ID);
         void EntityID(const FString& ID);
@@ -121,16 +122,13 @@ namespace Lumina
         FORCEINLINE void AddError(const EdNodeGraph::FError& Error) { Errors.push_back(Error); }
         FORCEINLINE const TVector<EdNodeGraph::FError>& GetErrors() const { return Errors; }
 
-        FString GetVectorType(EMaterialInputType Type) const;
-        FString GetVectorType(int32 ComponentCount) const;
-        int32 GetComponentCount(EComponentMask Mask) const;
-        int32 GetComponentCount(EMaterialInputType Type) const;
-        EMaterialInputType GetTypeFromComponentCount(int32 Count) const;
-
-
         
         FInputValue GetTypedInputValue(CMaterialInput* Input, float DefaultValue = 0.0f);
         FInputValue GetTypedInputValue(CMaterialInput* Input, const FString& DefaultValueStr);
+
+        static int32 GetComponentCount(EComponentMask Mask);
+        static int32 GetComponentCount(EMaterialInputType Type);
+
     private:
         
         
