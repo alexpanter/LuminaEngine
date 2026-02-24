@@ -135,6 +135,8 @@ namespace Lumina
         
         void DrawScriptsDirectoryContextMenu();
         void DrawContentDirectoryContextMenu();
+        
+        float                       ContentBrowserTileSize = 84.0f;
 
         FDeferredActionRegistry     ActionRegistry;
         FDirectoryWatcher           Watcher;

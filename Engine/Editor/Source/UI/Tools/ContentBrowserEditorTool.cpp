@@ -45,6 +45,7 @@
 #include "Thumbnails/ThumbnailManager.h"
 #include <LuminaEditor.h>
 
+#include "Config/Config.h"
 #include "Tools/Import/ImportHelpers.h"
 
 namespace Lumina
@@ -100,6 +101,9 @@ namespace Lumina
     {
         (void)FAssetRegistry::Get().GetOnAssetRegistryUpdated().AddMember(this, &FContentBrowserEditorTool::RefreshContentBrowser);
         (void)GEditorEngine->GetProjectLoadedDelegate().AddMember(this, &FContentBrowserEditorTool::OnProjectLoaded);
+        
+        ContentBrowserTileSize = GConfig->Get("Editor.ContentBrowser.TileSize", 86.0f);
+        ContentBrowserTileView.SetTileSize(ContentBrowserTileSize);
 
         if (GEditorEngine->HasLoadedProject())
         {
@@ -600,10 +604,10 @@ namespace Lumina
 		if (ImGui::BeginMenu(LE_ICON_COGS " View Options"))
         {
             ImGui::SetNextItemWidth(128.0f);
-            float TileSize = ContentBrowserTileView.GetTileSize();
-            if (ImGui::SliderFloat("##Zoom", &TileSize, 46.0f, 256.0f, "Tile: %.1fx"))
+            if (ImGui::SliderFloat("##Zoom", &ContentBrowserTileSize, 46.0f, 256.0f, "Tile: %.1fx"))
             {
-                ContentBrowserTileView.SetTileSize(TileSize);
+                GConfig->Set("Editor.ContentBrowser.TileSize", ContentBrowserTileSize);
+                ContentBrowserTileView.SetTileSize(ContentBrowserTileSize);
             }
             
             ImGui::EndMenu();
