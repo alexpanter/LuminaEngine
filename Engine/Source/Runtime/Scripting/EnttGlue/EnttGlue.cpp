@@ -14,6 +14,7 @@ namespace Lumina::Scripting::Glue
         using namespace entt::literals;
 
         EnttModule.new_usertype<entt::entity>("Entity",
+        "IsNull",   [] (entt::entity Self) { return Self == entt::null; },
         sol::meta_function::to_string, [](const entt::entity& e)
         {
             return std::to_string(static_cast<uint32>(e));

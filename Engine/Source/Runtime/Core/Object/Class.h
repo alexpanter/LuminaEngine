@@ -89,7 +89,7 @@ namespace Lumina
     /** Base class for any data structure that holds fields */
     class CStruct : public CField
     {
-        friend void ConstructCStruct(CStruct** OutStruct, const FStructParams& Params);
+        friend RUNTIME_API void ConstructCStruct(CStruct** OutStruct, const FStructParams& Params);
         
         DECLARE_CLASS(Lumina, CStruct, CField, "/Script/Engine", RUNTIME_API)
         DEFINE_CLASS_FACTORY(CStruct)

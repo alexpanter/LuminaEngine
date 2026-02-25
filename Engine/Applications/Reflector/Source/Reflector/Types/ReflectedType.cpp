@@ -314,6 +314,11 @@ namespace Lumina::Reflection
             {
                 Stream += "\t\t::Lumina::Meta::RegisterECSSystem<" + QualifiedName + ">();\n";
             }
+            
+            if (Data.Key == "Event")
+            {
+                Stream += "\t\t::Lumina::Meta::RegisterECSEvent<" + QualifiedName + ">();\n";
+            }
         }
         
         Stream += "\t}\n";

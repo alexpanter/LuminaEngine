@@ -492,6 +492,17 @@ namespace Lumina
         ActionRegistry.ProcessAllOf<FPendingDestroy>([&] (const FPendingDestroy& Destroy)
         {
             CObject* AliveObject = nullptr;
+            
+            if (VFS::HasExtension(Destroy.PendingDestroy, ".lua"))
+            {
+                if (VFS::Remove(Destroy.PendingDestroy))
+                {
+                    bWroteSomething = true;
+                    ImGuiX::Notifications::NotifySuccess("Deleted Script {0}", Destroy.PendingDestroy);
+                }
+                return;
+            }
+            
             if (VFS::HasExtension(Destroy.PendingDestroy, ".lasset"))
             {
                 if (const FAssetData* Data = FAssetRegistry::Get().GetAssetByPath(Destroy.PendingDestroy))

@@ -52,10 +52,8 @@ namespace Lumina
     public:
         FMaterialCompiler();
 
-        FString BuildTree(size_t& StartReplacement, size_t& EndReplacement);
+        FString BuildTree(size_t& StartReplacement, size_t& EndReplacement) const;
         
-        void ValidateConnections(CMaterialInput* A, CMaterialInput* B);
-
         // Parameter definitions
         void DefineFloatParameter(const FString& NodeID, const FName& ParamID, float Value);
         void DefineFloat2Parameter(const FString& NodeID, const FName& ParamID, float Value[2]);

@@ -28,6 +28,7 @@
 #include "World/Entity/Components/TransformComponent.h"
 #include "world/entity/components/velocitycomponent.h"
 #include "World/Entity/Events/ImpulseEvent.h"
+#include "World/Subsystems/WorldSettings.h"
 
 using namespace JPH::literals;
 
@@ -273,7 +274,7 @@ namespace Lumina::Physics
         FJoltPhysicsContext::GetDebugRenderer()->NextFrame();
     }
     
-    void FJoltPhysicsScene::OnWorldSimulate()
+    void FJoltPhysicsScene::Simulate()
     {
         entt::registry& Registry = World->GetEntityRegistry();
         
@@ -312,7 +313,7 @@ namespace Lumina::Physics
         Dispatcher.sink<SSetGravityFactorEvent>().connect<&FJoltPhysicsScene::OnSetGravityFactorEvent>(this);
     }
 
-    void FJoltPhysicsScene::OnWorldStopSimulate()
+    void FJoltPhysicsScene::StopSimulate()
     {
         entt::registry& Registry = World->GetEntityRegistry();
 
@@ -332,8 +333,6 @@ namespace Lumina::Physics
         Dispatcher.sink<SAddImpulseAtPositionEvent>().disconnect<&FJoltPhysicsScene::OnAddImpulseAtPositionEvent>(this);
         Dispatcher.sink<SAddForceAtPositionEvent>().disconnect<&FJoltPhysicsScene::OnAddForceAtPositionEvent>(this);
         Dispatcher.sink<SSetGravityFactorEvent>().disconnect<&FJoltPhysicsScene::OnSetGravityFactorEvent>(this);
-        
-        
 
         auto View = Registry.view<SRigidBodyComponent>();
         View.each([&] (entt::entity EntityID, SRigidBodyComponent&)
@@ -360,13 +359,14 @@ namespace Lumina::Physics
         BodyInterface.SetMotionType(JPH::BodyID(BodyID), JoltUtils::ToJoltMotionType(NewType), JPH::EActivation::Activate);
     }
 
-    void FJoltPhysicsScene::SyncTransforms()
+    void FJoltPhysicsScene::SyncTransforms() const
     {
         LUMINA_PROFILE_SCOPE();
 
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         entt::registry& Registry = World->GetEntityRegistry();
 
+        float KillHeight = World->GetDefaultWorldSettings().WorldKillHeight;
         auto View = Registry.view<SRigidBodyComponent, STransformComponent>();
         View.each([&](entt::entity EntityID, const SRigidBodyComponent& BodyComponent, STransformComponent& TransformComponent)
         {
@@ -377,6 +377,13 @@ namespace Lumina::Physics
             }
             
             JPH::RVec3 Pos          = Body->GetPosition();
+            
+            if (Pos.GetY() < KillHeight)
+            {
+                Registry.destroy(EntityID);
+                return;
+            }
+            
             JPH::Quat Rot           = Body->GetRotation();
             
             TransformComponent.SetLocation(JoltUtils::FromJPHRVec3(Pos));

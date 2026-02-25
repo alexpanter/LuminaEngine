@@ -107,7 +107,7 @@ namespace Lumina
         }
 
         ImGui::Separator();
-        ImGui::Text("Messages: %zu / %zu", FilteredMessageCount, PreviousMessageSize);
+        ImGui::Text("Messages: %u / %zu", FilteredMessageCount, PreviousMessageSize);
     }
 
     void FConsoleLogEditorTool::DrawLogWindow(bool bIsFocused)
@@ -298,9 +298,7 @@ namespace Lumina
         ImGui::SetNextItemWidth(-1);
        
 
-        ImGuiInputTextFlags InputFlags =
-            ImGuiInputTextFlags_EnterReturnsTrue |
-            ImGuiInputTextFlags_EscapeClearsAll;
+        ImGuiInputTextFlags InputFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_EscapeClearsAll;
 
         bool bExecuteCommand = ImGui::InputTextWithHint("##CommandInput", "> Enter command or console variable...", CurrentCommand.data(), CurrentCommand.max_size(), InputFlags);
         CurrentCommand = FFixedString(CurrentCommand.data(), strlen(CurrentCommand.data()));
@@ -461,6 +459,7 @@ namespace Lumina
 
     void FConsoleLogEditorTool::ClearConsole()
     {
+        Logging::ClearLogQueue();
         PreviousMessageSize = 0;
         FilteredMessageCount = 0;
         bNeedsScrollToBottom = false;

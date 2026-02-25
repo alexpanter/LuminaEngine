@@ -51,7 +51,7 @@ VSOutput VertexMain(uint VertexIndex: SV_VulkanVertexID, uint InstanceIndex: SV_
     Output.FragPos          = ViewPos;
     Output.NormalVS         = float4(NormalVS, 1.0);
     Output.NormalWS         = float4(NormalWS, 1.0);
-    Output.InstanceIndex    = DrawIDToInstanceID(InstanceIndex);
+    Output.InstanceIndex    = InstanceIndex;
     Output.FragColor        = VertexData.Color;
     Output.Position         = mul(Projection, ViewPos);
     

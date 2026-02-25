@@ -5,10 +5,10 @@ namespace Lumina::ECS
 {
     enum class ETraits : uint8
     {
-        None,
-        System,
-        Component,
-        Event,
+        None        = 0,
+        System      = BIT(0),
+        Component   = BIT(1),
+        Event       = BIT(2),
     };
     
     ENUM_CLASS_FLAGS(ETraits);

@@ -21,6 +21,7 @@
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
 #include "Subsystems/FCameraManager.h"
+#include "Subsystems/WorldSettings.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/entity/systems/EntitySystem.h"
 
@@ -68,9 +69,16 @@ namespace Lumina
 
         EntityRegistry.ctx().emplace<entt::dispatcher&>(SingletonDispatcher);
         
+        for (auto Entity : EntityRegistry.view<SDefaultWorldSettings>())
+        {
+            SingletonEntity = Entity;
+            break;
+        }
+        
         if (!EntityRegistry.valid(SingletonEntity))
         {
             SingletonEntity = EntityRegistry.create();
+            EntityRegistry.emplace<SDefaultWorldSettings>(SingletonEntity);
         }
         
         LineBatcherComponent = &EntityRegistry.emplace<FLineBatcherComponent>(SingletonEntity);
@@ -86,6 +94,11 @@ namespace Lumina
         
         CreateRenderer();
         RegisterSystems();
+        
+        if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+        {
+            PhysicsScene->Simulate();
+        }
         
         ForEachUniqueSystem([&](const FSystemVariant& System)
         {
@@ -109,12 +122,14 @@ namespace Lumina
         auto ScriptView = EntityRegistry.view<SScriptComponent>(entt::exclude<SDisabledTag>);
         ScriptView.each([&](entt::entity Entity, SScriptComponent&)
         {
-           OnScriptComponentCreated(EntityRegistry, Entity); 
+            OnScriptComponentCreated(EntityRegistry, Entity); 
         });
         
         auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
-        RootView.each([&](entt::entity RootEntity, SScriptComponent& ScriptComponent)
+        RootView.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
         {
+            ScriptComponent.Script->Environment["Entity"]   = Entity;
+            ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
             ScriptComponent.InvokeScriptFunction("OnReady");
         });
         
@@ -127,12 +142,15 @@ namespace Lumina
                 {
                     if (SScriptComponent* ScriptComp = EntityRegistry.try_get<SScriptComponent>(Descendant))
                     {
+                        ScriptComp->Script->Environment["Entity"]   = Descendant;
+                        ScriptComp->Script->Environment["Context"]  = std::ref(SystemContext);
                         ScriptComp->InvokeScriptFunction("OnReady");
                     }
                 });
                 
+                Script.Script->Environment["Entity"]   = Entity;
+                Script.Script->Environment["Context"]  = std::ref(SystemContext);
                 Script.InvokeScriptFunction("OnReady");
-
             }
         });
         
@@ -149,14 +167,18 @@ namespace Lumina
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);
         EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentCreated>(this);
         
-        RegistryPending.clear<>();
-        EntityRegistry.clear<>();
-        
         ForEachUniqueSystem([&](const FSystemVariant& System)
         {
             eastl::visit([&](const auto& Sys) { Sys.Teardown(SystemContext); }, System);
         });
         
+        if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+        {
+            PhysicsScene->StopSimulate();
+        }
+        
+        RegistryPending.clear<>();
+        EntityRegistry.clear<>();
         PhysicsScene.reset();
         DestroyRenderer();
         
@@ -330,16 +352,11 @@ namespace Lumina
         SetActiveCamera(Event.NewActiveEntity);
     }
 
-    void CWorld::SimulateWorld()
+    SDefaultWorldSettings& CWorld::GetDefaultWorldSettings()
     {
-        PhysicsScene->OnWorldSimulate();
+        return EntityRegistry.get<SDefaultWorldSettings>(SingletonEntity);
     }
 
-    void CWorld::StopSimulation()
-    {
-        PhysicsScene->OnWorldStopSimulate();
-    }
-    
     void CWorld::CreateRenderer()
     {
         if (!RenderScene)

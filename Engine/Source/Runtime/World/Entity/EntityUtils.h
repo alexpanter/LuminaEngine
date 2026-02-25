@@ -42,8 +42,7 @@ namespace Lumina::ECS::Utils
             case sol::type::userdata:   return GetTypeID(Obj.template as<sol::userdata>());
             case sol::type::string:     return GetTypeID(Obj.template as<const char*>());
         }
-
-        UNREACHABLE();
+        LOG_ERROR("Failed to deduce id_type as a non-supported type: {}", (int)Obj.get_type());
         return entt::id_type{};
     }
     

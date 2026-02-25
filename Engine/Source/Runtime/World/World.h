@@ -20,6 +20,7 @@
 
 namespace Lumina
 {
+    struct SDefaultWorldSettings;
     struct FLineBatcherComponent;
 }
 
@@ -78,13 +79,12 @@ namespace Lumina
         
         void OnChangeCameraEvent(const FSwitchActiveCameraEvent& Event);
         
-        void SimulateWorld();
-        void StopSimulation();
-        
         double GetWorldDeltaTime() const { return DeltaTime; }
         double GetTimeSinceWorldCreation() const { return TimeSinceCreation; }
         
         NODISCARD EWorldType GetWorldType() const { return WorldType; }
+        
+        NODISCARD SDefaultWorldSettings& GetDefaultWorldSettings();
         
         void CreateRenderer();
         void DestroyRenderer();
@@ -158,8 +158,6 @@ namespace Lumina
         
         FLineBatcherComponent*                              LineBatcherComponent;
         
-        EWorldType                                          WorldType = EWorldType::None;
-        
         int64                                               WorldIndex = -1;
         double                                              DeltaTime = 0.0;
         double                                              TimeSinceCreation = 0.0;
@@ -168,6 +166,7 @@ namespace Lumina
         uint32                                              bActive:1 = true;
         
         
+        EWorldType                                          WorldType = EWorldType::None;
         bool                                                bInitializing = true;
     };
     

@@ -167,6 +167,7 @@ namespace Lumina
         TQueue<FComponentDestroyRequest>        ComponentDestroyRequests;
         TQueue<entt::entity>                    EntityDestroyRequests;
         TVector<TUniquePtr<FPropertyTable>>     PropertyTables;
+        TUniquePtr<FPropertyTable>              WorldSettingsPropertyTable;
         
 
         float                                   GuizmoSnapTranslate = 0.1f;

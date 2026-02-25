@@ -6,7 +6,6 @@
 #include "Core/Math/Color.h"
 #include "Events/KeyCodes.h"
 #include "FileSystem/FileSystem.h"
-#include "GLFW/glfw3.h"
 #include "Input/InputProcessor.h"
 #include "Memory/SmartPtr.h"
 #include "Paths/Paths.h"
@@ -310,7 +309,9 @@ namespace Lumina::Scripting
 	        sol::meta_function::index, [](const FName &s, size_t i) { return s.At(i - 1); }
 	    );
         
+        static entt::entity NullEntity = entt::null;
         auto EnttModule = State["entt"].get_or_create<sol::table>();
+        EnttModule["null"] = NullEntity;
         
         Glue::RegisterRegistry(EnttModule);
         Glue::RegisterRuntimeView(EnttModule);
@@ -564,7 +565,6 @@ namespace Lumina::Scripting
 
     void FScriptingContext::SetupInput()
     {
-        
         sol::table InputTable = State.create_named_table("Input");
         InputTable.set_function("GetMouseX",            [] () { return FInputProcessor::Get().GetMouseX(); });
         InputTable.set_function("GetMouseY",            [] () { return FInputProcessor::Get().GetMouseY(); });

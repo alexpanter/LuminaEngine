@@ -63,10 +63,6 @@ bool ProjectSphere(float3 C, float R, float ZNear, float P00, float P11, out flo
     return true;
 }
 
-// ============================================================================
-//  Main
-// ============================================================================
-
 [shader("compute")]
 [numthreads(LOCAL_SIZE, 1, 1)]
 void ComputeMain(uint3 GlobalID : SV_DispatchThreadID)
@@ -89,6 +85,7 @@ void ComputeMain(uint3 GlobalID : SV_DispatchThreadID)
 
     bool bSkipCull = uInstanceData[GID].HasFlag(EInstanceFlags::NoCull);
 
+    #if 0
     if (!bSkipCull && bVisible && uSceneData.CullData.bOcclusionCull != 0)
     {
         float4 SphereBounds = uInstanceData[GID].SphereBounds;
@@ -119,7 +116,7 @@ void ComputeMain(uint3 GlobalID : SV_DispatchThreadID)
             bVisible = bVisible && DepthSphere >= Depth;
         }
     }
-
+#endif
     if (bVisible)
     {
         uint BatchID            = uInstanceData[GID].DrawID;

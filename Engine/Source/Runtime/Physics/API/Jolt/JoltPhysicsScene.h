@@ -131,14 +131,14 @@ namespace Lumina::Physics
         void PreUpdate() override;
         void Update(double DeltaTime) override;
         void PostUpdate() override;
-        void OnWorldSimulate() override;
-        void OnWorldStopSimulate() override;
+        void Simulate() override;
+        void StopSimulate() override;
     	
     	void ActivateBody(uint32 BodyID) override;
     	void DeactivateBody(uint32 BodyID) override;
     	void ChangeBodyMotionType(uint32 BodyID, EBodyType NewType) override;
     	
-    	void SyncTransforms();
+    	void SyncTransforms() const;
     	
     	TOptional<FRayResult> CastRay(const FRayCastSettings& Settings) override;
 		TVector<FRayResult> CastSphere(const FSphereCastSettings& Settings) override;

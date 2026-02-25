@@ -1,15 +1,13 @@
 ﻿#include "pch.h"
 #include "EntityUtils.h"
-#include "Scripting/ScriptTypes.h"
 #include "Components/DirtyComponent.h"
 #include "Components/EditorComponent.h"
 #include "components/entitytags.h"
 #include "Components/RelationshipComponent.h"
-#include "Components/ScriptComponent.h"
-#include "Components/SingletonEntityComponent.h"
 #include "components/tagcomponent.h"
 #include "Components/TransformComponent.h"
 #include "Core/Object/Class.h"
+#include "Scripting/ScriptTypes.h"
 
 using namespace entt::literals; 
 
@@ -65,12 +63,6 @@ namespace Lumina::ECS::Utils
                         int64 StartOfComponentData = Ar.Tell();
 
                         StructType->SerializeTaggedProperties(Ar, ComponentPointer);
-                        
-                        if (StructType == SScriptComponent::StaticStruct())
-                        {
-                            SScriptComponent* ScriptComponent = static_cast<SScriptComponent*>(ComponentPointer);
-                            Ar << ScriptComponent->CustomData;
-                        }
 
                         int64 EndOfComponentData = Ar.Tell();
 
@@ -123,14 +115,7 @@ namespace Lumina::ECS::Utils
 
                 if (CStruct* Struct = FindObject<CStruct>(TypeName))
                 {
-                    if (Struct == SScriptComponent::StaticStruct())
-                    {
-                        SScriptComponent NewScriptComponent;
-                        Struct->SerializeTaggedProperties(Ar, &NewScriptComponent);
-                        Ar << NewScriptComponent.CustomData;
-                        Registry.emplace<SScriptComponent>(Entity, NewScriptComponent);
-                    }
-                    else if (Struct == STagComponent::StaticStruct())
+                    if (Struct == STagComponent::StaticStruct())
                     {
                         STagComponent NewTagComponent;
                         Struct->SerializeTaggedProperties(Ar, &NewTagComponent);
@@ -164,7 +149,7 @@ namespace Lumina::ECS::Utils
         if (Ar.IsWriting())
         {
             Registry.compact<>();
-            auto View = Registry.view<entt::entity>(entt::exclude<FEditorComponent, FSingletonEntityTag>);
+            auto View = Registry.view<entt::entity>(entt::exclude<FEditorComponent>);
 
             int64 PreSerializePos = Ar.Tell();
     

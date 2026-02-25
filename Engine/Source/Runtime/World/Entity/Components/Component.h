@@ -209,18 +209,6 @@ namespace Lumina
             
             return Function.lua_state(), std::make_unique<FScriptListener>(Dispatcher, Function);
         }
-
-        template <typename TEvent>
-        void TriggerEvent_Lua(entt::dispatcher& Dispatcher, const sol::object& Event) 
-        {
-            Dispatcher.trigger(Event.as<TEvent>());
-        }
-        
-        template <typename TEvent>
-        void EnqueueEvent_Lua(entt::dispatcher& Dispatcher, const sol::object& Event) 
-        {
-            Dispatcher.enqueue(Event.as<TEvent>());
-        }
         
         // End lua variants
         
@@ -250,9 +238,7 @@ namespace Lumina
                 Meta.template func<&PatchComponent<TComponent>>("patch"_hs);
                 Meta.template func<&Serialize<TComponent>>("serialize"_hs);
                 Meta.template func<&ConnectListener_Lua<TComponent>>("connect_listener_lua"_hs);
-                Meta.template func<&TriggerEvent_Lua<TComponent>>("trigger_event_lua"_hs);
             }
-            
         }
     }
 }

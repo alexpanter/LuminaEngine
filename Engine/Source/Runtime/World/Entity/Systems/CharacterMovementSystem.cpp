@@ -1,8 +1,6 @@
 ﻿#include "pch.h"
 #include "CharacterMovementSystem.h"
-
 #include <glm/gtx/quaternion.hpp>
-
 #include "Physics/API/Jolt/JoltPhysics.h"
 #include "Physics/API/Jolt/JoltPhysicsScene.h"
 #include "Physics/API/Jolt/JoltUtils.h"
@@ -68,7 +66,7 @@ namespace Lumina
             {
                 bHasMovementInput = true;
     
-                glm::vec3 Forward   = RenderUtils::GetForwardVector(Controller.LookInput.x, Controller.LookInput.y);
+                glm::vec3 Forward   = RenderUtils::GetForwardVector(Controller.LookInput.x, 0.0f);
                 glm::vec3 Right     = RenderUtils::GetRightVector(Controller.LookInput.x);
                 glm::vec3 Up        = glm::cross(Right, Forward);
     
@@ -130,6 +128,18 @@ namespace Lumina
             Movement.Velocity.x = HorizontalVelocity.x;
             Movement.Velocity.z = HorizontalVelocity.z;
         
+            if (Movement.bGrounded)
+            {
+                JPH::Vec3 GroundVelocity    = Character->GetGroundVelocity();
+                Movement.Velocity.x         += GroundVelocity.GetX();
+                Movement.Velocity.y          = GroundVelocity.GetY();
+                Movement.Velocity.z         += GroundVelocity.GetZ();
+            }
+            else
+            {
+                Movement.Velocity.y += Movement.Gravity * DeltaTime;
+            }
+            
             if (Controller.bJumpPressed)
             {
                 Controller.bJumpPressed = false;
@@ -141,19 +151,8 @@ namespace Lumina
                 }
             }
         
-            if (Movement.bGrounded)
-            {
-                JPH::Vec3 GroundVelocity    = Character->GetGroundVelocity();
-                Movement.Velocity.x         += GroundVelocity.GetX();
-                Movement.Velocity.z         += GroundVelocity.GetZ();
-            }
-            else
-            {
-                Movement.Velocity.y += Movement.Gravity * DeltaTime;
-            }
-        
             Character->SetRotation(JoltUtils::ToJPHQuat(TargetRotation));
-            Character->SetLinearVelocity(JoltUtils::ToJPHRVec3(Movement.Velocity));
+            Character->SetLinearVelocity(JoltUtils::ToJPHVec3(Movement.Velocity));
         
             JPH::CharacterVirtual::ExtendedUpdateSettings UpdateSettings;
             UpdateSettings.mStickToFloorStepDown    = JPH::Vec3(0.0f, -0.5f, 0.0f);

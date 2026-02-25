@@ -12,9 +12,7 @@ namespace Lumina
         : World(InWorld)
         , Registry(InWorld->EntityRegistry)
         , Dispatcher(InWorld->SingletonDispatcher)
-    {
-        
-    }
+    {}
 
     void FSystemContext::RegisterWithLua(sol::state& Lua)
     {
@@ -188,7 +186,7 @@ namespace Lumina
 
     void FSystemContext::DrawDebugBox(const glm::vec3& Center, const glm::vec3& Extents, const glm::quat& Rotation, const glm::vec4& Color, float Thickness, float Duration)
     {
-        World->DrawBox(Center, Extents, Rotation, Color, true, Duration);
+        World->DrawBox(Center, Extents, Rotation, Color, Thickness, true, Duration);
     }
 
     void FSystemContext::DrawDebugSphere(const glm::vec3& Center, float Radius, const glm::vec4& Color, uint8 Segments, float Thickness, float Duration)

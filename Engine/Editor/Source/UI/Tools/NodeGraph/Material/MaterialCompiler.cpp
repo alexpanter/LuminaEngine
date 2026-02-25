@@ -14,7 +14,7 @@ namespace Lumina
 		ShaderChunks.reserve(2000);
 	}
 
-	FString FMaterialCompiler::BuildTree(size_t& StartReplacement, size_t& EndReplacement)
+	FString FMaterialCompiler::BuildTree(size_t& StartReplacement, size_t& EndReplacement) const
 	{
 		FString FragmentPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/BasePixelPass.slang";
 
@@ -41,11 +41,6 @@ namespace Lumina
 		}
 
 		return LoadedString;
-	}
-
-	void FMaterialCompiler::ValidateConnections(CMaterialInput* A, CMaterialInput* B)
-	{
-		// Could add type compatibility checking here
 	}
 
 	static FString GetVectorType(EMaterialInputType Type)
@@ -200,11 +195,7 @@ namespace Lumina
 		
 		return ResultType;
 	}
-
-	// ========================================================================
-	// Parameter Definitions
-	// ========================================================================
-
+	
 	void FMaterialCompiler::DefineFloatParameter(const FString& NodeID, const FName& ParamID, float Value)
 	{
 		if (ScalarParameters.find(ParamID) == ScalarParameters.end())
@@ -252,10 +243,6 @@ namespace Lumina
 		FString IndexString = eastl::to_string(VectorParameters[ParamID].Index);
 		ShaderChunks.append("float4 " + NodeID + " = GetMaterialVec4(" + IndexString + ");\n");
 	}
-
-	// ========================================================================
-	// Constant Definitions
-	// ========================================================================
 
 	void FMaterialCompiler::DefineConstantFloat(const FString& ID, float Value)
 	{
@@ -486,11 +473,7 @@ namespace Lumina
 		
 		ShaderChunks.append(VectorType + " " + OwningNode->GetNodeFullName() + " = " + Value.Value + Swizzle + ";\n");
 	}
-
-	// ========================================================================
-	// Texture Operations
-	// ========================================================================
-
+	
 	void FMaterialCompiler::DefineTextureSample(const FString& ID)
 	{
 		return;
@@ -531,10 +514,6 @@ namespace Lumina
 
 		ShaderChunks.append("float4 " + ID + " = uGlobalTextures[GetMaterialTexture(MaterialIndex, " + eastl::to_string(Index) + ")].Sample(" + UVStr + ");\n");
 	}
-
-	// ========================================================================
-	// Built-in Inputs
-	// ========================================================================
 
 	void FMaterialCompiler::NewLine()
 	{
