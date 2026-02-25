@@ -246,6 +246,12 @@ namespace Lumina::Reflection
         
         eastl::string FriendlyName = ClangUtils::MakeCodeFriendlyNamespace(QualifiedName);
         
+        Stream += "\tstatic Lumina::FStructOps* GetStructOps()\n";
+        Stream += "\t{\n";
+        Stream += "\t\treturn Lumina::MakeStructOps<" + QualifiedName + ">();\n";
+        Stream += "\t}\n";
+        
+        
         if (!Metadata.empty())
         {
             Stream += "\tstatic constexpr Lumina::FMetaDataPairParam " + FriendlyName +  + "_Metadata[] = {\n";
@@ -359,6 +365,9 @@ namespace Lumina::Reflection
         {
             Stream += "\t" + QualifiedName + "::" + "Super::StaticStruct,\n";
         }
+        
+        Stream += "&GetStructOps,\n";
+        
         Stream += "\t\"" + DisplayName + "\",\n";
         
         if (!Props.empty())

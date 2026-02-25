@@ -19,12 +19,6 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
         {
             { Sys.Startup(Context) } noexcept -> std::same_as<void>;
         };
-    
-        template<typename TSystem>
-        concept HasBeginPlay = requires(TSystem Sys, const FSystemContext& Context)
-        {
-            { Sys.BeginPlay(Context) } noexcept -> std::same_as<void>;
-        };
         
         template<typename TSystem>
         concept HasUpdate = requires(TSystem Sys, const FSystemContext& Context)
@@ -33,19 +27,13 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
         };
         
         template<typename TSystem>
-        concept HasEndPlay = requires(TSystem Sys, const FSystemContext& Context)
-        {
-            { Sys.HasEndPlay(Context) } noexcept -> std::same_as<void>;
-        };
-    
-        template<typename TSystem>
         concept HasTeardown = requires(TSystem Sys, const FSystemContext& Context)
         {
             { Sys.Teardown(Context) } noexcept -> std::same_as<void>;
         };
     
         template<typename TSystem>
-        concept IsSystem = HasStartup<TSystem> || HasUpdate<TSystem> || HasTeardown<TSystem> || HasBeginPlay<TSystem> || HasEndPlay<TSystem>;
+        concept IsSystem = HasStartup<TSystem> || HasUpdate<TSystem> || HasTeardown<TSystem>;
     
         template<typename TSystem>
         void RegisterECSSystem()
@@ -61,19 +49,9 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
                 Meta.template func<&TSystem::Startup>("Startup"_hs);
             }
             
-            if constexpr (HasBeginPlay<TSystem>)
-            {
-                Meta.template func<&TSystem::BeginPlay>("BeginPlay"_hs);
-            }
-        
             if constexpr (HasUpdate<TSystem>)
             {
                 Meta.template func<&TSystem::Update>("Update"_hs);
-            }
-            
-            if constexpr (HasEndPlay<TSystem>)
-            {
-                Meta.template func<&TSystem::EndPlay>("EndPlay"_hs);
             }
         
             if constexpr (HasTeardown<TSystem>)

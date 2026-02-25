@@ -3,9 +3,11 @@
 #include "Containers/Array.h"
 #include "Containers/String.h"
 #include "Core/Object/ObjectHandleTyped.h"
+#include "Renderer/CustomPrimitiveData.h"
 
 namespace Lumina
 {
+    class CMaterialExpression_CustomPrimitiveData;
     class CTexture;
     class FMaterialNodePin;
     class CMaterialGraphNode;
@@ -75,6 +77,8 @@ namespace Lumina
         void MakeFloat3(CMaterialInput* R, CMaterialInput* G, CMaterialInput* B);
         void MakeFloat4(CMaterialInput* R, CMaterialInput* G, CMaterialInput* B, CMaterialInput* A);
         
+        void ComponentMask(CMaterialInput* A);
+        
         // Texture operations
         void DefineTextureSample(const FString& ID);
         void TextureSample(const FString& ID, CTexture* Texture, CMaterialInput* Input);
@@ -87,6 +91,7 @@ namespace Lumina
         void CameraPos(const FString& ID);
         void EntityID(const FString& ID);
         void Time(const FString& ID);
+        void CustomPrimitiveData(CMaterialExpression_CustomPrimitiveData* Node, ECustomPrimitiveDataType Type);
 
         // Math operations
         void Multiply(CMaterialInput* A, CMaterialInput* B);
@@ -137,6 +142,7 @@ namespace Lumina
         NODISCARD EMaterialInputType EmitBinaryOp(const FString& Op, CMaterialInput* A, CMaterialInput* B, float DefaultA, float DefaultB, bool IsComponentWise = true);
 
     private:
+        
         FString ShaderChunks;
         TVector<TObjectPtr<CTexture>> BoundImages;
         TVector<EdNodeGraph::FError> Errors;

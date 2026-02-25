@@ -24,7 +24,6 @@
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "world/entity/components/entitytags.h"
-#include "World/Entity/Components/LineBatcherComponent.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
@@ -840,7 +839,7 @@ namespace Lumina
         {
             ImGui::BeginGroup();
             
-            if (IsAssetEditorTool())
+            if (IsAssetEditorTool() || bSimulatingWorld || bGamePreviewRunning)
             {
                 DrawSimulationControls(ButtonSize);
         
@@ -1949,6 +1948,7 @@ namespace Lumina
     {
         if (bShouldSimulate != bSimulatingWorld && bShouldSimulate == true)
         {
+            PropertyTables.clear();
             bSimulatingWorld = true;
             
             STransformComponent TransformCopy = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
@@ -1993,6 +1993,7 @@ namespace Lumina
         }
         else if (bShouldSimulate != bSimulatingWorld && bShouldSimulate == false)
         {
+            PropertyTables.clear();
             World->StopSimulation();
             bSimulatingWorld = false;
 

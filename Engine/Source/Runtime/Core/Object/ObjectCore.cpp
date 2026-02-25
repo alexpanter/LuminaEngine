@@ -469,6 +469,7 @@ namespace Lumina
         CStruct* FinalClass = (CStruct*)StaticAllocateObject(ObjectParms);
         FinalClass->Size = Params.SizeOf;
         FinalClass->Alignment = Params.AlignOf;
+        FinalClass->StructOps.reset(Params.StructOpsFn());
         
         *OutStruct = FinalClass;
         

@@ -1,0 +1,26 @@
+﻿#pragma once
+#include "materialnodeexpression.h"
+#include "Core/Object/ObjectMacros.h"
+#include "Renderer/CustomPrimitiveData.h"
+#include "MaterialNode_PrimitiveData.generated.h"
+
+namespace Lumina
+{
+    REFLECT()
+    class CMaterialExpression_CustomPrimitiveData : public CMaterialExpression
+    {
+        GENERATED_BODY()
+        
+    public:
+        
+        ImVec2 GetMinNodeTitleBarSize() const override { return ImVec2(60, 28); }
+        FFixedString GetNodeCategory() const override { return "Utility"; }
+        FString GetNodeDisplayName() const override { return "CustomPrimitiveData"; }
+        FString GetNodeTooltip() const override;
+        void GenerateDefinition(FMaterialCompiler& Compiler) override;
+        
+        PROPERTY(Editable)
+        ECustomPrimitiveDataType Type = ECustomPrimitiveDataType::Float;
+        
+    };
+}

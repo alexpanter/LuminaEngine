@@ -25,7 +25,12 @@
 namespace Lumina
 {
     static TConsoleVar CVarSelectionThickness("r.SelectionThickness", 5, "Changes thickness of entity selection.");
-
+    
+    static uint32 PackCustomData(glm::vec4 Data)
+    {
+        return ((uint32)Data.w << 24) | ((uint32)Data.z << 16) | ((uint32)Data.y << 8) | (uint32)Data.x;
+    }
+    
     FForwardRenderScene::FForwardRenderScene(CWorld* InWorld)
         : World(InWorld)
         , LightData()
@@ -279,7 +284,8 @@ namespace Lumina
                             .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
                             .EntityID                   = entt::to_integral(Entity),
                             .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
-                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(0, (uint16)Material->GetMaterialIndex())
+                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(0, (uint16)Material->GetMaterialIndex()),
+                            .CustomData                 = MeshComponent.CustomPrimitiveData.Data.Packed  
                         });
                     }
                 });
@@ -385,7 +391,8 @@ namespace Lumina
                             .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
                             .EntityID                   = entt::to_integral(Entity),
                             .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
-                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(BoneDataOffset, (uint16)Material->GetMaterialIndex())
+                            .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(BoneDataOffset, (uint16)Material->GetMaterialIndex()),
+                            .CustomData                 = MeshComponent.CustomPrimitiveData.Data.Packed 
                         });
                     }
                 });

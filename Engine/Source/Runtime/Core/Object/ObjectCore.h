@@ -12,6 +12,7 @@
 
 namespace Lumina
 {
+    struct FStructOps;
     class CPackage;
     class CStruct;
     class CObjectBase;
@@ -337,6 +338,7 @@ namespace Lumina
     struct FStructParams
     {
         CStruct*                        (*SuperFunc)();
+        FStructOps*                     (*StructOpsFn)();
         const char*                     Name;
         const FPropertyParams* const*   Params;
         uint32                          NumProperties;

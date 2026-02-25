@@ -161,17 +161,29 @@ struct FMaterialUniforms
     uint    Textures[MAX_TEXTURES];
 };
 
+struct FCustomPrimitiveData
+{
+    uint Packed;
+
+    property float  AsFloat { get { return asfloat(Packed); } }
+    property int    AsInt   { get { return asint(Packed); } }
+    property uint   AsUInt  { get { return Packed; } }
+    property bool   AsBool  { get { return Packed != 0; } }
+    property float4 AsBytes { get { return float4(unpack_u8u32(Packed)) / 255.0; } }
+}
+
 struct FInstanceData
 {
-    float4x4            ModelMatrix;
-    float4              SphereBounds;
+    float4x4                ModelMatrix;
+    float4                  SphereBounds;
 
-    uint*               VBAddress;
-    uint*               IBAddress;
+    uint*                   VBAddress;
+    uint*                   IBAddress;
 
-    uint                EntityID;
-    private uint        DrawIDAndFlags;
-    private uint        BoneOffsetAndMaterialIndex;
+    uint                    EntityID;
+    private uint            DrawIDAndFlags;
+    private uint            BoneOffsetAndMaterialIndex;
+    FCustomPrimitiveData    CustomData;
 
     bool HasFlag(EInstanceFlags Flag)
     {

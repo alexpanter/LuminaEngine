@@ -2,10 +2,12 @@
 
 #include "Lumina.h"
 #include "Object.h"
+#include "Class/StructTraits.h"
 #include "Containers/Function.h"
 #include "Core/Reflection/Type/Metadata/PropertyMetadata.h"
 #include "Core/Templates/Align.h"
 #include "Initializer/ObjectInitializer.h"
+#include "Memory/SmartPtr.h"
 
 namespace Lumina
 {
@@ -87,7 +89,8 @@ namespace Lumina
     /** Base class for any data structure that holds fields */
     class CStruct : public CField
     {
-
+        friend void ConstructCStruct(CStruct** OutStruct, const FStructParams& Params);
+        
         DECLARE_CLASS(Lumina, CStruct, CField, "/Script/Engine", RUNTIME_API)
         DEFINE_CLASS_FACTORY(CStruct)
 
@@ -100,11 +103,9 @@ namespace Lumina
             : CField(Package, InName, InSize, InAlignment, InFlags)
         {}
         //~ End Internal Use Only Constructors
-
         
         virtual void SetSuperStruct(CStruct* InSuper);
         
-
         void RegisterDependencies() override;
         
         /** Struct this inherits from, may be null */
@@ -151,6 +152,8 @@ namespace Lumina
         
     private:
 
+        TUniquePtr<FStructOps> StructOps;
+        
         /** Parent struct */
         CStruct* SuperStruct = nullptr;
         

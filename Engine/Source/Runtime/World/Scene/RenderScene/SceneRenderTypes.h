@@ -349,6 +349,7 @@ namespace Lumina
         uint32          EntityID;
         uint32          DrawIDAndFlags;
         uint32          BoneOffsetAndMaterialIndex;
+        uint32          CustomData;
     };
     
     VERIFY_SSBO_ALIGNMENT(FInstanceData)

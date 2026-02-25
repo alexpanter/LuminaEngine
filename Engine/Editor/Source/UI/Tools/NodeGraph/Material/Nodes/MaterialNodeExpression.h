@@ -394,11 +394,6 @@ namespace Lumina
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
         ImVec2 GetMinNodeTitleBarSize() const override;
 
-        FString BuildSwizzleMask() const;
-        int32 GetSelectedComponentCount() const;
-        EComponentMask GetOutputMask() const;
-        FString GetDefaultValueForMask() const;
-
         CMaterialInput* InputPin = nullptr;
         
         PROPERTY(Editable)
@@ -551,6 +546,7 @@ namespace Lumina
         
         void BuildNode() override;
 
+        uint32 GetNodeTitleColor() const override { return IM_COL32(25, 25, 255, 255); }
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "WorldPosition"; }
         void* GetNodeDefaultValue() override { return nullptr; }
@@ -565,6 +561,7 @@ namespace Lumina
         
         void BuildNode() override;
 
+        uint32 GetNodeTitleColor() const override { return IM_COL32(25, 25, 255, 255); }
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "CameraPosition"; }
         void* GetNodeDefaultValue() override { return nullptr; }
@@ -579,12 +576,13 @@ namespace Lumina
         
         void BuildNode() override;
 
+        uint32 GetNodeTitleColor() const override { return IM_COL32(25, 25, 255, 255); }
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "EntityID"; }
         void* GetNodeDefaultValue() override { return nullptr; }
         void GenerateDefinition(FMaterialCompiler& Compiler) override;
     };
-
+    
     REFLECT()
     class CMaterialExpression_VertexNormal : public CMaterialExpression
     {
@@ -593,6 +591,7 @@ namespace Lumina
         
         void BuildNode() override;
 
+        uint32 GetNodeTitleColor() const override { return IM_COL32(25, 25, 255, 255); }
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "VertexNormal"; }
         void* GetNodeDefaultValue() override { return nullptr; }

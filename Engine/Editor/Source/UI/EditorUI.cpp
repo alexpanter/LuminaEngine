@@ -58,13 +58,15 @@
 #include "Memory/Memory.h"
 #include "Platform/Process/PlatformProcess.h"
 #include "Properties/Customizations/CoreTypeCustomization.h"
+#include "Properties/Customizations/CustomPrimitiveDataCustomization.h"
 #include "Properties/Customizations/ScriptComponentCustomization.h"
+#include "Renderer/CustomPrimitiveData.h"
+#include "Renderer/CustomPrimitiveData.h"
 #include "Renderer/RenderContext.h"
 #include "Renderer/RenderDocImpl.h"
 #include "Renderer/RenderManager.h"
 #include "Renderer/RHIGlobals.h"
 #include "Renderer/ShaderCompiler.h"
-#include "Scripting/ScriptPath.h"
 #include "Scripting/Lua/Scripting.h"
 #include "Tools/ConsoleLogEditorTool.h"
 #include "Tools/ContentBrowserEditorTool.h"
@@ -84,7 +86,6 @@
 #include "Tools/UI/ImGui/ImGuiDesignIcons.h"
 #include "Tools/UI/ImGui/ImGuiRenderer.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
-#include "World/WorldManager.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "World/Scene/RenderScene/RenderScene.h"
 
@@ -136,6 +137,10 @@ namespace Lumina
            return FScriptComponentPropertyCustomization::MakeInstance(); 
         });
         
+        PropertyCustomizationRegistry->RegisterPropertyCustomization(SCustomPrimitiveData::StaticStruct()->GetName(), []
+        {
+           return FCustomPrimDataPropertyCustomization::MakeInstance(); 
+        });
         
         EditorWindowClass.ClassId                       = ImHashStr("EditorWindowClass");
         EditorWindowClass.DockingAllowUnclassed         = false;
@@ -577,6 +582,11 @@ namespace Lumina
             Tool->EndFrame();
         }
 
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftShift) && ImGui::IsKeyPressed(ImGuiKey_F1))
+        {
+            FInputProcessor::Get().SetMouseMode(EMouseMode::Normal);
+        }
+        
         if (ImGui::IsKeyPressed(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_LeftShift) && ImGui::IsKeyPressed(ImGuiKey_Z))
         {
             TransactionManager.Redo();
