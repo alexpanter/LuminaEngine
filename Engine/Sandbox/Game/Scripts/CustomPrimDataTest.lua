@@ -9,7 +9,7 @@ function CustomPrimDataTest:Update()
     local Mesh = Context:Get(Entity, SStaticMeshComponent)
 
     if Mesh then
-        Mesh.CustomPrimitiveData:SetAsFloat(math.sin(Context:GetTime()))
+        Mesh.CustomPrimitiveData:SetAsFloat4(Color.Blue * 255.0)
     end
 end
 

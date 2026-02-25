@@ -600,8 +600,8 @@ namespace Lumina
 		case ECustomPrimitiveDataType::UInt:
 			ShaderChunks.append("uint " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsUInt;\n");
 			break;
-		case ECustomPrimitiveDataType::Bytes:
-			ShaderChunks.append("float4 " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsBytes;\n");
+		case ECustomPrimitiveDataType::Float4:
+			ShaderChunks.append("float4 " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsFloat4;\n");
 			Node->Output->SetInputType(EMaterialInputType::Float4);
 			Node->Output->SetComponentMask(EComponentMask::RGBA);
 			break;

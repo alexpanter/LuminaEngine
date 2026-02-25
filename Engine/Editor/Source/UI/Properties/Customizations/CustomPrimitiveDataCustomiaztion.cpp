@@ -65,7 +65,7 @@ namespace Lumina
                 break;
             }
     
-            case ECustomPrimitiveDataType::Bytes:
+            case ECustomPrimitiveDataType::Float4:
             {
                 int32 R = Value.Data.Bytes.r;
                 int32 G = Value.Data.Bytes.g;

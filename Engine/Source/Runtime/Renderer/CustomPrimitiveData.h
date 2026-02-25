@@ -11,7 +11,7 @@ namespace Lumina
         Float,
         Int,
         UInt,
-        Bytes,
+        Float4,
         Bool,
     };
     
@@ -52,7 +52,7 @@ namespace Lumina
             return D;
         }
 
-        static ECustomPrimitiveDataUnion FromBytes(glm::u8vec4 Bytes)
+        static ECustomPrimitiveDataUnion FromFloat4(glm::u8vec4 Bytes)
         {
             ECustomPrimitiveDataUnion D;
             D.Bytes = Bytes;
@@ -76,11 +76,11 @@ namespace Lumina
 
             switch (Type)
             {
-                case ECustomPrimitiveDataType::Float: Ar << Data.Float; break;
-                case ECustomPrimitiveDataType::Int:   Ar << Data.Int;   break;
-                case ECustomPrimitiveDataType::UInt:  Ar << Data.UInt;  break;
-                case ECustomPrimitiveDataType::Bool:  Ar << Data.UInt;  break;
-                case ECustomPrimitiveDataType::Bytes: Ar << Data.Bytes; break;
+                case ECustomPrimitiveDataType::Float:   Ar << Data.Float; break;
+                case ECustomPrimitiveDataType::Int:     Ar << Data.Int;   break;
+                case ECustomPrimitiveDataType::UInt:    Ar << Data.UInt;  break;
+                case ECustomPrimitiveDataType::Bool:    Ar << Data.UInt;  break;
+                case ECustomPrimitiveDataType::Float4:  Ar << Data.Bytes; break;
             }
 
             return true;
@@ -96,7 +96,7 @@ namespace Lumina
         bool AsBool() const { return Data.Bool; }
         
         FUNCTION(Script)
-        glm::vec4 AsBytes() const { return Data.Bytes; }
+        glm::vec4 AsFloat4() const { return Data.Bytes; }
         
         FUNCTION(Script)
         void SetAsFloat(float X)
@@ -110,7 +110,6 @@ namespace Lumina
         {
             Type = ECustomPrimitiveDataType::Int;
             Data.Int = X;
-            
         }
         
         FUNCTION(Script)
@@ -121,9 +120,9 @@ namespace Lumina
         }
         
         FUNCTION(Script)
-        void SetAsBytes(glm::vec4 Bytes)
+        void SetAsFloat4(glm::vec4 Bytes)
         {
-            Type = ECustomPrimitiveDataType::Bytes;
+            Type = ECustomPrimitiveDataType::Float4;
             Data.Bytes = Bytes;
         }
     };

@@ -165,11 +165,11 @@ struct FCustomPrimitiveData
 {
     uint Packed;
 
-    property float  AsFloat { get { return asfloat(Packed); } }
-    property int    AsInt   { get { return asint(Packed); } }
-    property uint   AsUInt  { get { return Packed; } }
-    property bool   AsBool  { get { return Packed != 0; } }
-    property float4 AsBytes { get { return float4(unpack_u8u32(Packed)) / 255.0; } }
+    property float  AsFloat     { get { return asfloat(Packed); } }
+    property int    AsInt       { get { return asint(Packed); } }
+    property uint   AsUInt      { get { return Packed; } }
+    property bool   AsBool      { get { return Packed != 0; } }
+    property float4 AsFloat4    { get { return float4(unpack_u8u32(Packed)) / 255.0; } }
 }
 
 struct FInstanceData

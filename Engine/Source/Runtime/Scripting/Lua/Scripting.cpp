@@ -492,6 +492,24 @@ namespace Lumina::Scripting
             "FrameEnd",         EUpdateStage::FrameEnd,
             "Paused",           EUpdateStage::Paused);
         
+        sol::table ColorTable = State.create_named_table("Color");
+        ColorTable.set_function("RandomColor4", []() -> glm::vec4 { return FColor::MakeRandom(1); });
+        ColorTable.set_function("RandomColor3", []() -> glm::vec3 { return FColor::MakeRandom(1); });
+        
+        ColorTable["Red"]     = glm::vec4(1, 0, 0, 1);
+        ColorTable["Green"]   = glm::vec4(0, 1, 0, 1);
+        ColorTable["Blue"]    = glm::vec4(0, 0, 1, 1);
+        ColorTable["White"]   = glm::vec4(1, 1, 1, 1);
+        ColorTable["Black"]   = glm::vec4(0, 0, 0, 1);
+        ColorTable["Yellow"]  = glm::vec4(1, 1, 0, 1);
+        ColorTable["Cyan"]    = glm::vec4(0, 1, 1, 1);
+        ColorTable["Magenta"] = glm::vec4(1, 0, 1, 1);
+        ColorTable["Orange"]  = glm::vec4(1.0f,  0.65f, 0.0f,  1);
+        ColorTable["Purple"]  = glm::vec4(0.5f,  0.0f,  0.5f,  1);
+        ColorTable["Pink"]    = glm::vec4(1.0f,  0.75f, 0.8f,  1);
+        ColorTable["Gray"]    = glm::vec4(0.5f,  0.5f,  0.5f,  1);
+        ColorTable["Brown"]   = glm::vec4(0.65f, 0.16f, 0.16f, 1);
+
         sol::table GLMTable = State.create_named_table("glm");
         
         // Vector operations
@@ -537,11 +555,7 @@ namespace Lumina::Scripting
 
         // Quaternion interpolation
         GLMTable.set_function("QuatSlerp", [](glm::quat A, glm::quat B, float t) { return glm::slerp(A, B, t); });
-
-
-        sol::table ColorTable = State.create_named_table("Color");
-        ColorTable.set_function("RandomColor4", []() ->glm::vec4 { return FColor::MakeRandom(1); });
-        ColorTable.set_function("RandomColor3", []() ->glm::vec3 { return FColor::MakeRandom(1); });
+        
         
         
         FSystemContext::RegisterWithLua(State);
