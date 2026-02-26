@@ -70,11 +70,17 @@ namespace Lumina
         CEnum() = default;
 
         RUNTIME_API FName GetNameAtValue(uint64 Value);
-        RUNTIME_API uint64 GetEnumValueByName(FName Name);
+        RUNTIME_API uint64 GetEnumValueByName(const FName& Name);
+        RUNTIME_API FFixedString GetValueOrBitFieldAsString(int64 Value);
+        
+        RUNTIME_API FName GetNameAtIndex(int64 Index) const  { return Names[Index].first; }
+        RUNTIME_API uint64 GetValueAtIndex(int64 Index) const { return Names[Index].second; }
+        
         void AddEnum(FName Name, uint64 Value);
-
         void ForEachEnum(TFunction<void(const TPair<FName, uint64>&)> Functor);
         FFixedString MakeDisplayName() const override;
+        
+        NODISCARD bool IsBitmaskEnum() const { return HasMeta("BitMask"); }
 
         TVector<TPair<FName, uint64>> Names;
         

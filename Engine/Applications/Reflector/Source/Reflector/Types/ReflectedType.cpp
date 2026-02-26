@@ -142,11 +142,8 @@ namespace Lumina::Reflection
         eastl::string FriendlyName = ClangUtils::MakeCodeFriendlyNamespace(QualifiedName);
         Stream += "\t{ Construct_CEnum_" + FriendlyName + ", TEXT(\"" + DisplayName + "\") },\n";
     }
-
-
-    //---------------------------------------------------------------------------------------------------------------------
-
     
+    //---------------------------------------------------------------------------------------------------------------------
     
     FReflectedStruct::~FReflectedStruct()
     {
@@ -371,7 +368,7 @@ namespace Lumina::Reflection
             Stream += "\t" + QualifiedName + "::" + "Super::StaticStruct,\n";
         }
         
-        Stream += "&GetStructOps,\n";
+        Stream += "\t&GetStructOps,\n";
         
         Stream += "\t\"" + DisplayName + "\",\n";
         

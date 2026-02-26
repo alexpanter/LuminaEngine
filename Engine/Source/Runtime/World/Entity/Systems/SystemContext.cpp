@@ -211,6 +211,8 @@ namespace Lumina
     
     entt::entity FSystemContext::Create(glm::vec3 Location) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         entt::entity EntityID = Registry.create();
         Registry.emplace<STransformComponent>(EntityID).SetLocation(Location);
         Registry.emplace<SNameComponent>(EntityID).Name = "Entity";
@@ -220,6 +222,8 @@ namespace Lumina
     
     entt::entity FSystemContext::Create() const
     {
+        LUMINA_PROFILE_SCOPE();
+        
         entt::entity EntityID = Registry.create();
         Registry.emplace<STransformComponent>(EntityID);
         Registry.emplace<SNameComponent>(EntityID).Name = "Entity";
@@ -239,6 +243,8 @@ namespace Lumina
 
     void FSystemContext::Lua_DispatchEvent(const sol::object& Event) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         using namespace entt::literals;
 
         if (const entt::id_type EventID = ECS::Utils::DeduceType(Event))
@@ -249,6 +255,8 @@ namespace Lumina
 
     entt::meta_any FSystemContext::Lua_ConnectEvent(const sol::object& Event, const sol::function& Listener) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         using namespace entt::literals;
         
         if (!Listener.valid())
@@ -266,6 +274,8 @@ namespace Lumina
 
     entt::meta_any FSystemContext::Lua_OnConstruct(const sol::object& Event, const sol::function& Listener) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         using namespace entt::literals;
         
         if (!Listener.valid())
@@ -283,6 +293,8 @@ namespace Lumina
 
     bool FSystemContext::Lua_HasAllOf(entt::entity Entity, const sol::variadic_args& Args) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         return eastl::all_of(Args.cbegin(), Args.cend(), [&](const sol::object& Object)
         {
             return Lua_Has(Entity, Object);
@@ -291,6 +303,8 @@ namespace Lumina
 
     bool FSystemContext::Lua_HasAnyOf(entt::entity Entity, const sol::variadic_args& Args) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         return eastl::any_of(Args.cbegin(), Args.cend(), [&](const sol::object& Object)
         {
             return Lua_Has(Entity, Object);
@@ -299,6 +313,8 @@ namespace Lumina
 
     bool FSystemContext::Lua_Has(entt::entity Entity, const sol::object& Type) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         using namespace entt::literals;
         entt::meta_any Any = ECS::Utils::InvokeMetaFunc(ECS::Utils::DeduceType(Type), "has"_hs, entt::forward_as_meta(Registry), Entity);
         return Any ? Any.cast<bool>() : false;
@@ -306,6 +322,8 @@ namespace Lumina
 
     entt::runtime_view FSystemContext::Lua_View(const sol::variadic_args& Args) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         const THashSet<entt::id_type>& Types = ECS::Utils::CollectTypes(Args);
         return CreateRuntimeView(Types);
     }
@@ -397,16 +415,22 @@ namespace Lumina
 
     entt::entity FSystemContext::Lua_GetEntityByTag(const char* Tag) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         return World->GetEntityByTag(Tag);
     }
 
     entt::entity FSystemContext::Lua_GetEntityByName(const char* Name) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         return World->GetEntityByName(Name);
     }
 
     entt::entity FSystemContext::Lua_GetFirstEntityWith(const sol::object& Component) const
     {
+        LUMINA_PROFILE_SCOPE();
+
         return World->GetFirstEntityWith(ECS::Utils::DeduceType(Component));
     }
 }

@@ -175,11 +175,15 @@ namespace Lumina
             NameComponent.Name = NewName;
 		};
         
-        OutlinerContext.ItemSelectedFunction = [this](FTreeListView& Tree, entt::entity Item)
+        OutlinerContext.ItemSelectedFunction = [this](FTreeListView& Tree, entt::entity Item, bool bShouldClear)
         {
-            if (Item == entt::null)
+            if (bShouldClear)
             {
                 ClearSelectedEntities();
+            }
+
+            if (Item == entt::null)
+            {
                 return;
             }
             
@@ -191,7 +195,6 @@ namespace Lumina
                 return;
             }
             
-            ClearSelectedEntities();
             AddSelectedEntity(Data.Entity, false);
             
             RebuildPropertyTables(Data.Entity);
@@ -3077,7 +3080,8 @@ namespace Lumina
     void FWorldEditorTool::RebuildPropertyTables(entt::entity Entity)
     {
         using namespace entt::literals;
-        
+        WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
+
         PropertyTables.clear();
 
         if (World->GetEntityRegistry().valid(Entity))

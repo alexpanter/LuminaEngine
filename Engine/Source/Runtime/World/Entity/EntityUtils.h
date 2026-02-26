@@ -53,7 +53,6 @@ namespace Lumina::ECS::Utils
     template<typename ... TArgs>
     entt::meta_any InvokeMetaFunc(const entt::meta_type& MetaType, entt::id_type FunctionID, TArgs&&... Args)
     {
-        LUMINA_PROFILE_SCOPE();
         if (!MetaType)
         {
             return entt::meta_any{};

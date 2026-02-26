@@ -1,6 +1,6 @@
 #include "pch.h"
-
 #include "ImGuiFonts.h"
+#include "Platform/GenericPlatform.h"
 
 namespace Lumina::ImGuiX::Font
 {

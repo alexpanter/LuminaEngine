@@ -125,7 +125,7 @@ namespace Lumina
             }
         };
 
-        BoneListContext.ItemSelectedFunction = [this] (FTreeListView& Tree, entt::entity Item)
+        BoneListContext.ItemSelectedFunction = [this] (FTreeListView& Tree, entt::entity Item, bool)
         {
             if (Item == entt::null)
             {

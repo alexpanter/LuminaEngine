@@ -1,19 +1,19 @@
 #include "pch.h"
 #include "JoltPhysics.h"
-
+#include <Core/Console/ConsoleVariable.h>
 #include "JoltPhysicsScene.h"
 #include "Core/Threading/Thread.h"
 #include "Jolt/RegisterTypes.h"
 #include "Jolt/Core/Factory.h"
-#include "World/World.h"
 #include "Physics/API/Jolt/JoltUtils.h"
-#include <Core/Console/ConsoleVariable.h>
+#include "World/World.h"
 
+static_assert(sizeof(JPH::ObjectLayer) == 4);
 
 namespace Lumina::Physics
 {
     static TUniquePtr<FJoltData> JoltData;
-
+    #if JPH_EXTERNAL_PROFILE
     static JPH::BodyManager::DrawSettings DebugDrawSettings;
 
     static TConsoleVar CVarJoltDebug("Jolt.Debug.Draw", false, "Toggles debug drawing for Jolt Physics, has severe performance impact.");
@@ -62,7 +62,9 @@ namespace Lumina::Physics
         {
             DebugDrawSettings.mDrawGetSupportingFace = eastl::get<bool>(Var);
         });
+    #endif
     
+    #if JPH_ASSERT
     static void JoltTraceCallback(const char* format, ...)
     {
         va_list list;
@@ -76,6 +78,7 @@ namespace Lumina::Physics
         }
         LOG_TRACE("Jolt Physics - {}", buffer);
     }
+    #endif
 
     void* JPHCustomAllocate(size_t size)
     {
@@ -110,9 +113,11 @@ namespace Lumina::Physics
     
     void FJoltPhysicsContext::Initialize()
     {
+        #if JPH_ASSERT
         JPH::Trace              = JoltTraceCallback;
         JPH::AssertFailed       = JoltAssertionFailed;
-
+        #endif
+        
         JPH::Reallocate         = JPHCustomReallocate;
         JPH::Allocate           = JPHCustomAllocate;
         JPH::Free               = JPHCustomFree;
@@ -120,11 +125,14 @@ namespace Lumina::Physics
         JPH::AlignedFree        = JPHCustomAlignedFree;
 
         JoltData = MakeUnique<FJoltData>();
+        #if JPH_DEBUG_RENDERER
 		JoltData->DebugRenderer = MakeUnique<FJoltDebugRenderer>();
-
+        #endif
         JPH::Factory::sInstance = Memory::New<JPH::Factory>();
+        
+        #if JPH_DEBUG_RENDERER
         JPH::DebugRenderer::sInstance = JoltData->DebugRenderer.get();
-
+        #endif
         JPH::RegisterTypes();
         
         JoltData->JobThreadPool = MakeUnique<JPH::JobSystemThreadPool>(2048, 8, Threading::GetNumThreads() - 1);
@@ -135,7 +143,11 @@ namespace Lumina::Physics
     {
         JPH::UnregisterTypes();
         JoltData.reset();
+        
+        #if JPH_DEBUG_RENDERER
 		JPH::DebugRenderer::sInstance = nullptr;
+        #endif
+        
         Memory::Delete(JPH::Factory::sInstance);
     }
 
@@ -149,6 +161,7 @@ namespace Lumina::Physics
         return JoltData->JobThreadPool.get();
     }
 
+    #if JPH_DEBUG_RENDERER
     FJoltDebugRenderer* FJoltPhysicsContext::GetDebugRenderer()
     {
         return JoltData->DebugRenderer.get();
@@ -167,13 +180,17 @@ namespace Lumina::Physics
         if (SCameraComponent* Camera = World->GetActiveCamera())
         {
             SetCameraPos(JoltUtils::ToJPHRVec3(Camera->GetPosition()));
+            #if JPH_DEBUG_RENDERER
             System->DrawBodies(DebugDrawSettings, this);
+            #endif
         }
     }
+    #endif
 }
 
 namespace JPH
 {
+    #if JPH_EXTERNAL_PROFILE
     ExternalProfileMeasurement::ExternalProfileMeasurement(const char* inName, uint32 inColor /* = 0 */)
         : mUserData{}
     {
@@ -184,4 +201,5 @@ namespace JPH
     {
         
     }
+    #endif
 }

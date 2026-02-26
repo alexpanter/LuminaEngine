@@ -10,20 +10,57 @@ namespace Lumina
 
     void FEnumProperty::Serialize(FArchive& Ar, void* Value)
     {
+        bool bIsBitmaskEnum = Enum->IsBitmaskEnum();
+        
         if (Ar.IsReading())
         {
-            FName EnumName;
-            Ar << EnumName;
-            
-            int64 EnumValue = (int64)Enum->GetEnumValueByName(EnumName);
-            InnerProperty->SetIntPropertyValue(Value, EnumValue);
+            if (bIsBitmaskEnum)
+            {
+                FName BitfieldString;
+                Ar << BitfieldString;
+                
+                int64 EnumValue = 0;
 
+                FString Str(BitfieldString.c_str());
+                FString Delimiter(" | ");
+                size_t Start = 0;
+                size_t End = 0;
+
+                while ((End = Str.find(Delimiter, Start)) != eastl::string::npos)
+                {
+                    FName Token(Str.substr(Start, End - Start).c_str());
+                    EnumValue |= (int64)Enum->GetEnumValueByName(Token);
+                    Start = End + Delimiter.size();
+                }
+
+                FName Token(Str.substr(Start).c_str());
+                EnumValue |= (int64)Enum->GetEnumValueByName(Token);
+
+                InnerProperty->SetIntPropertyValue(Value, EnumValue);
+            }
+            else
+            {
+                FName EnumName;
+                Ar << EnumName;
+
+                int64 EnumValue = (int64)Enum->GetEnumValueByName(EnumName);
+                InnerProperty->SetIntPropertyValue(Value, EnumValue);
+            }
         }
         else
         {
             const int64 IntValue = InnerProperty->GetSignedIntPropertyValue(Value);
-            FName EnumName = Enum->GetNameAtValue(IntValue);
-            Ar << EnumName;
+
+            if (bIsBitmaskEnum)
+            {
+                FName BitfieldString = Enum->GetValueOrBitFieldAsString(IntValue);
+                Ar << BitfieldString;
+            }
+            else
+            {
+                FName EnumName = Enum->GetNameAtValue(IntValue);
+                Ar << EnumName;
+            }
         }
     }
 

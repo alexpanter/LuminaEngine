@@ -11,6 +11,8 @@
 
 namespace Lumina
 {
+    constexpr uint64 DEDICATED_MEMORY_THRESHOLD = 2048llu * 2048;
+
     FVulkanMemoryAllocator::FVulkanMemoryAllocator(FVulkanRenderContext* InCxt, VkInstance Instance, VkPhysicalDevice PhysicalDevice, VkDevice Device)
     {
         VmaVulkanFunctions Functions = {};
@@ -39,12 +41,12 @@ namespace Lumina
     VmaAllocation FVulkanMemoryAllocator::AllocateBuffer(const VkBufferCreateInfo* CreateInfo, VmaAllocationCreateFlags Flags, VkBuffer* vkBuffer, const char* AllocationName) const
     {
         LUMINA_PROFILE_SCOPE();
-    
+        
         VmaAllocationCreateInfo Info = {};
         Info.usage = VMA_MEMORY_USAGE_AUTO;
         Info.flags = Flags;
         
-        if (CreateInfo->size > 256llu * 1024 * 1024) // 256MB
+        if (CreateInfo->size > DEDICATED_MEMORY_THRESHOLD)
         {
             Info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
             Info.priority = 1.0f;
@@ -54,11 +56,9 @@ namespace Lumina
         {
             Info.flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
         }
-        
     
         VmaAllocation Allocation = nullptr;
         VmaAllocationInfo AllocationInfo;
-
         
         VK_CHECK(vmaCreateBuffer(Allocator, CreateInfo, &Info, vkBuffer, &Allocation, &AllocationInfo));
         DEBUG_ASSERT(Allocation, "Vulkan failed to allocate buffer memory!");
@@ -75,8 +75,6 @@ namespace Lumina
     
     VmaAllocation FVulkanMemoryAllocator::AllocateImage(const VkImageCreateInfo* CreateInfo, VmaAllocationCreateFlags Flags, VkImage* vkImage, const char* AllocationName) const
     {
-        constexpr uint64 DEDICATED_MEMORY_THRESHOLD = 2048llu * 2048;
-
         LUMINA_PROFILE_SCOPE();
     
         ASSERT(CreateInfo->extent.depth != 0);
@@ -87,7 +85,7 @@ namespace Lumina
         
         VkDeviceSize ImageSize = (uint64)CreateInfo->extent.width * CreateInfo->extent.height * CreateInfo->extent.depth * CreateInfo->arrayLayers;
         
-        if (ImageSize > DEDICATED_MEMORY_THRESHOLD || CreateInfo->usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT || CreateInfo->usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT)
+        if (ImageSize > DEDICATED_MEMORY_THRESHOLD)
         {
             Info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
             Info.priority = 0.75f;

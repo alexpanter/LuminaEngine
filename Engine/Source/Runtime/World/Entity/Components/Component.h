@@ -14,24 +14,28 @@ namespace Lumina
         template<typename TComponent>
         bool HasComponent(entt::registry& Registry, entt::entity Entity)
         {
+            LUMINA_PROFILE_SCOPE();
             return Registry.any_of<TComponent>(Entity);
         }
 
         template<typename TComponent>
         auto RemoveComponent(entt::registry& Registry, entt::entity Entity)
         {
+            LUMINA_PROFILE_SCOPE();
             return Registry.remove<TComponent>(Entity);
         }
 
         template<typename TComponent>
         void ClearComponent(entt::registry& Registry)
         {
+            LUMINA_PROFILE_SCOPE();
             Registry.clear<TComponent>();
         }
 
         template<typename TComponent>
         decltype(auto) EmplaceComponent(entt::registry& Registry, entt::entity Entity, const entt::meta_any& Any)
         {
+            LUMINA_PROFILE_SCOPE();
             if constexpr (eastl::is_empty_v<TComponent>)
             {
                 Registry.emplace<TComponent>(Entity);
@@ -45,6 +49,7 @@ namespace Lumina
         template<typename TComponent>
         TComponent& PatchComponent(entt::registry& Registry, entt::entity Entity, const entt::meta_any& Any)
         {
+            LUMINA_PROFILE_SCOPE();
             return Registry.patch<TComponent>(Entity, [&](TComponent& Type)
             {
                 Type = Any.cast<const TComponent&>();
@@ -54,12 +59,14 @@ namespace Lumina
         template<typename TComponent>
         TComponent& GetComponent(entt::registry& Registry, entt::entity Entity)
         {
+            LUMINA_PROFILE_SCOPE();
             return Registry.get<TComponent>(Entity);
         }
 
         template<typename TComponent>
         void Serialize(FArchive& Ar, entt::meta_any& Any)
         {
+            LUMINA_PROFILE_SCOPE();
             CStruct* Struct = TComponent::StaticStruct();
             TComponent& Instance = Any.cast<TComponent&>();
             Struct->SerializeTaggedProperties(Ar, &Instance);
@@ -76,6 +83,7 @@ namespace Lumina
         template<typename TComponent>
         sol::reference EmplaceComponentLua(entt::registry& Registry, entt::entity Entity, const sol::table& Instance, sol::state_view S)
         {
+            LUMINA_PROFILE_SCOPE();
             auto& Component = Registry.emplace<TComponent>(Entity, Instance.valid() ? Move(Instance.as<TComponent&&>()) : TComponent{});
             return sol::make_reference(S, std::ref(Component));
         }
@@ -83,6 +91,7 @@ namespace Lumina
         template<typename TComponent>
         sol::reference PatchComponentLua(entt::registry& Registry, entt::entity Entity, const sol::table& Instance, sol::state_view S)
         {
+            LUMINA_PROFILE_SCOPE();
             TComponent& Component = Registry.emplace<TComponent>(Entity, Move(Instance.as<TComponent&&>()));
             Registry.patch<TComponent>(Entity, [&](TComponent& Type)
             {
@@ -102,6 +111,7 @@ namespace Lumina
         template<typename TComponent>
         sol::object TryGetComponentLua(entt::registry& Registry, entt::entity Entity, sol::state_view S)
         {
+            LUMINA_PROFILE_SCOPE();
             auto* Component = Registry.try_get<TComponent>(Entity);
             return Component ? sol::make_reference(S, std::ref(*Component)) : sol::nil;
         }
@@ -109,6 +119,7 @@ namespace Lumina
         template<typename TComponent>
         auto OnConstruct_Lua(entt::registry& Registry, const sol::function& Function)
         {
+            LUMINA_PROFILE_SCOPE();
             struct FScriptListener
             {
                 FScriptListener(entt::registry& Registry, const sol::function& Function)
@@ -144,6 +155,7 @@ namespace Lumina
         template<typename TComponent>
         auto OnDestroy_Lua(entt::registry& Registry, const sol::function& Function)
         {
+            LUMINA_PROFILE_SCOPE();
             struct FScriptListener
             {
                 FScriptListener(entt::registry& Registry, const sol::function& Function)
@@ -179,6 +191,7 @@ namespace Lumina
         template<typename TEvent>
         auto ConnectListener_Lua(entt::dispatcher& Dispatcher, const sol::function& Function)
         {
+            LUMINA_PROFILE_SCOPE();
             struct FScriptListener
             {
                 FScriptListener(entt::dispatcher& Dispatcher, const sol::function& Function)

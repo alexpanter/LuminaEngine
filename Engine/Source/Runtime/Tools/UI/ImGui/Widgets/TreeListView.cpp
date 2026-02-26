@@ -60,9 +60,7 @@ namespace Lumina
             ImGui::EndTable();
         }
 
-        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) &&
-            ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-            !ImGui::IsAnyItemHovered())
+        if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows) && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered())
         {
             ClearSelections(Context);
         }
@@ -282,7 +280,9 @@ namespace Lumina
 
         if(bTreeNodeClicked && !bMouseOverVisibilityButton)
         {
-            SetSelection(Entity, Context);
+            const bool bShift = ImGui::GetIO().KeyShift;
+            const bool bCtrl  = ImGui::GetIO().KeyCtrl;
+            SetSelection(Entity, Context, !bCtrl);
 		}
         
         if (State.bExpanded)
@@ -339,7 +339,7 @@ namespace Lumina
         return NewNode;
     }
 
-    void FTreeListView::SetSelection(entt::entity Item, const FTreeListViewContext& Context)
+    void FTreeListView::SetSelection(entt::entity Item, const FTreeListViewContext& Context, bool bShouldClear)
     {
         auto View = Registry.view<FTreeNodeState>();
         View.each([&](entt::entity ViewEntity, FTreeNodeState& State)
@@ -349,7 +349,7 @@ namespace Lumina
                 State.bSelected = true;
                 if (Context.ItemSelectedFunction)
                 {
-                    Context.ItemSelectedFunction(*this, Item);
+                    Context.ItemSelectedFunction(*this, Item, bShouldClear);
                 }
                 return;
             }

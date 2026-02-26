@@ -18,7 +18,8 @@ namespace Lumina
         
         if (!RelationshipGroup.empty())
         {
-            TVector<entt::entity> DirtyEntities;
+            TFixedVector<entt::entity, 2000> DirtyEntities;
+            DirtyEntities.reserve(RelationshipGroup.size());
             for (auto entity : RelationshipGroup)
             {
                 DirtyEntities.push_back(entity);

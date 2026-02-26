@@ -13,26 +13,26 @@ local CubeMesh = nil
 
 local function Shoot(Forward, Distance)
 
-    local Projectile    = Context:Create(TransformComponent:GetLocation() + vec3(0, 2, 0) + Forward * 5)
-    Context:Get(Projectile, STransformComponent):SetScale(vec3(0.15, 0.15, 0.15))
+    for i = 1, 100 do
 
-    local BoxCollider   = SBoxColliderComponent()
+        local Projectile    = Context:Create(TransformComponent:GetLocation() + vec3(0, i, 0) + Forward * 5)
+        Context:Get(Projectile, STransformComponent):SetScale(vec3(0.15, 0.15, 0.15))
+        --local BoxCollider   = SBoxColliderComponent()
+        --BoxCollider.HalfExtent = vec3(1, 1, 1)
     
-    BoxCollider.HalfExtent = vec3(1.0, 1.0, 1.0)
+        local BoxMesh       = SStaticMeshComponent()
+        BoxMesh:SetStaticMesh(CubeMesh)
 
-    local BoxMesh       = SStaticMeshComponent()
-    BoxMesh:SetStaticMesh(CubeMesh)
+        Context:Emplace(Projectile, BoxMesh)
+        --Context:Emplace(Projectile, BoxCollider)
 
-    Context:Emplace(Projectile, BoxMesh)
-    Context:Emplace(Projectile, BoxCollider)
+        --local RigidBody = Context:Get(Projectile, SRigidBodyComponent)
 
-    local RigidBody = Context:Get(Projectile, SRigidBodyComponent)
-
-    local ImpulseEvent = SImpulseEvent()
-    ImpulseEvent.Impulse = Forward * Distance * 5
-    ImpulseEvent.BodyID = RigidBody.BodyID
-    Context:DispatchEvent(ImpulseEvent)
-
+        --local ImpulseEvent = SImpulseEvent()
+        --ImpulseEvent.Impulse = Forward * Distance * 0.1
+        --ImpulseEvent.BodyID = RigidBody.BodyID
+        --Context:DispatchEvent(ImpulseEvent)
+    end
 
     local RayEnd = Forward * Distance
     local HitResult = Context:CastRay(TransformComponent:GetLocation() + vec3(0, 2, 0), RayEnd, false, 1.0, 0, BodyID)

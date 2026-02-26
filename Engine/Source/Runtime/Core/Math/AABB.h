@@ -37,23 +37,18 @@ namespace Lumina
 
         NODISCARD FAABB ToWorld(const glm::mat4& World) const
         {
-            glm::vec3 NewMin(eastl::numeric_limits<float>::max());
-            glm::vec3 NewMax(-eastl::numeric_limits<float>::max());
+            glm::vec3 NewMin = glm::vec3(World[3]);
+            glm::vec3 NewMax = glm::vec3(World[3]);
 
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < 3; i++)
             {
-                glm::vec3 corner = glm::vec3
-                (
-                    (i & 1) ? Max.x : Min.x,
-                    (i & 2) ? Max.y : Min.y,
-                    (i & 4) ? Max.z : Min.z
-                );
+                glm::vec3 Axis = glm::vec3(World[i]);
 
-                glm::vec4 transformed = World * glm::vec4(corner, 1.0f);
-                glm::vec3 p = glm::vec3(transformed) / transformed.w;
+                glm::vec3 MinContrib = Axis * Min[i];
+                glm::vec3 MaxContrib = Axis * Max[i];
 
-                NewMin = glm::min(NewMin, p);
-                NewMax = glm::max(NewMax, p);
+                NewMin += glm::min(MinContrib, MaxContrib);
+                NewMax += glm::max(MinContrib, MaxContrib);
             }
 
             return FAABB(NewMin, NewMax);

@@ -16,22 +16,6 @@ namespace Lumina
 
 namespace Lumina::Physics
 {
-
-    namespace Layers
-    {
-        static constexpr JPH::ObjectLayer NON_MOVING = 0;
-        static constexpr JPH::ObjectLayer MOVING = 1;
-        static constexpr JPH::ObjectLayer NUM_LAYERS = 2;
-    };
-    
-    namespace BroadPhaseLayers
-    {
-        static constexpr JPH::BroadPhaseLayer NON_MOVING(0);
-        static constexpr JPH::BroadPhaseLayer MOVING(1);
-        static constexpr uint32 NUM_LAYERS(2);
-    };
-
-
 	class FJoltContactListener : public JPH::ContactListener
 	{
 	public:
@@ -80,43 +64,6 @@ namespace Lumina::Physics
 		entt::dispatcher& EventDispatcher;
 		const JPH::BodyLockInterfaceNoLock* BodyLockInterface = nullptr;
 	};
-    
-    class FLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface
-    {
-    public:
-        FLayerInterfaceImpl()
-        {
-            // Create a mapping table from object to broad phase layer
-            ObjectToBroadPhase[Layers::NON_MOVING] = BroadPhaseLayers::NON_MOVING;
-            ObjectToBroadPhase[Layers::MOVING] = BroadPhaseLayers::MOVING;
-        }
-
-        virtual uint32 GetNumBroadPhaseLayers() const override
-        {
-            return BroadPhaseLayers::NUM_LAYERS;
-        }
-
-        virtual JPH::BroadPhaseLayer GetBroadPhaseLayer(JPH::ObjectLayer inLayer) const override
-        {
-            JPH_ASSERT(inLayer < Layers::NUM_LAYERS);
-            return ObjectToBroadPhase[inLayer];
-        }
-
-#if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
-        virtual const char *			GetBroadPhaseLayerName(JPH::BroadPhaseLayer inLayer) const override
-        {
-            switch ((JPH::BroadPhaseLayer::Type)inLayer)
-            {
-            case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::NON_MOVING:	return "NON_MOVING";
-            case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::MOVING:		return "MOVING";
-            default:													    JPH_ASSERT(false); return "INVALID";
-            }
-        }
-#endif // JPH_EXTERNAL_PROFILE || JPH_PROFILE_ENABLED
-
-    private:
-        JPH::BroadPhaseLayer					ObjectToBroadPhase[Layers::NUM_LAYERS];
-    };
     
     class FJoltPhysicsScene : public IPhysicsScene
     {
@@ -169,7 +116,6 @@ namespace Lumina::Physics
     	JPH::TempAllocatorImpl				Allocator;
     	TUniquePtr<FJoltContactListener>	ContactListener;
         TUniquePtr<JPH::PhysicsSystem>		JoltSystem;
-        TUniquePtr<FLayerInterfaceImpl>		JoltInterfaceLayer;
         CWorld*								World = nullptr;
 
         double FixedTimeStep = 1.0 / 60.0;

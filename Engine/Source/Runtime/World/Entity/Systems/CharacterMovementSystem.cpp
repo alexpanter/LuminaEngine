@@ -162,8 +162,8 @@ namespace Lumina
             Character->ExtendedUpdate(DeltaTime,
                 JPH::Vec3(0.0f, Movement.Gravity, 0.0f),
                 UpdateSettings,
-                JPHSystem->GetDefaultBroadPhaseLayerFilter(Layers::MOVING),
-                JPHSystem->GetDefaultLayerFilter(Layers::MOVING),
+                JPHSystem->GetDefaultBroadPhaseLayerFilter(JoltUtils::PackToObjectLayer(Physics.CollisionProfile)),
+                JPHSystem->GetDefaultLayerFilter(JoltUtils::PackToObjectLayer(Physics.CollisionProfile)),
                 {},
                 {},
                 Allocator);

@@ -186,10 +186,8 @@ namespace Lumina
         
                     const FMeshResource& Resource = Mesh->GetMeshResource();
                     
-                    
                     RenderStats.NumVertices += Resource.GetNumVertices();
                     RenderStats.NumTriangles += Resource.GetNumTriangles();
-                    
                     
                     glm::mat4 TransformMatrix = TransformComponent.GetMatrix();
                     
@@ -198,14 +196,6 @@ namespace Lumina
                     glm::vec3 Extents       = BoundingBox.Max - Center;
                     float Radius            = glm::length(Extents);
                     glm::vec4 SphereBounds  = glm::vec4(Center, Radius);
-
-                    float DistSq = glm::dot(Center - glm::vec3(SceneGlobalData.CameraData.Location), Center - glm::vec3(SceneGlobalData.CameraData.Location));
-                    float CullDist = Radius + MeshComponent.MaxDrawDistance;
-
-                    if (MeshComponent.MaxDrawDistance > 0.0f && DistSq > CullDist * CullDist)
-                    {
-                        return;
-                    }
                     
                     EInstanceFlags Flags = EInstanceFlags::None;
                     if (World->IsSelected(Entity))

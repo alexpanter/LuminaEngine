@@ -15,10 +15,6 @@ project "Runtime"
         "LUMINA_RENDERER_VULKAN",
         "VK_NO_PROTOTYPES",
         "LUMINA_RPMALLOC",
-        "JPH_DEBUG_RENDERER",
-        "JPH_FLOATING_POINT_EXCEPTIONS_ENABLED",
-        "JPH_EXTERNAL_PROFILE",
-        "JPH_ENABLE_ASSERTS",
         --"WITH_AFTERMATH",
     }
 

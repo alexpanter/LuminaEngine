@@ -1,11 +1,7 @@
 #pragma once
 #include "Core/DisableAllWarnings.h"
-#include "Platform/GenericPlatform.h"
-#include "Platform/Platform.h"
 
 PRAGMA_DISABLE_ALL_WARNINGS
-#ifndef REFLECTION_PARSER
-#endif
 #include "EASTL/fixed_string.h"
 #include "EASTL/string.h"
 #include <ostream>
@@ -31,9 +27,9 @@ namespace Lumina
     
     namespace StringUtils
     {
-        FORCEINLINE FWString ToWideString(FStringView str) { return FWString(FWString::CtorConvert(), str.begin(), str.end()); }
-        FORCEINLINE FWString ToWideString(const char* pStr) { return FWString(FWString::CtorConvert(), pStr); }
-        FORCEINLINE FString FromWideString(const FWString& Str) { return FString(FString::CtorConvert(), Str); }
+        inline FWString ToWideString(FStringView str) { return FWString(FWString::CtorConvert(), str.begin(), str.end()); }
+        inline FWString ToWideString(const char* pStr) { return FWString(FWString::CtorConvert(), pStr); }
+        inline FString FromWideString(const FWString& Str) { return FString(FString::CtorConvert(), Str); }
     }
 }
 

@@ -457,7 +457,7 @@ namespace Lumina
             AddChildrenRecursive(RootItem, "/Engine/Resources/Content");
         };
 
-        DirectoryContext.ItemSelectedFunction = [this] (FTreeListView& Tree, entt::entity Item)
+        DirectoryContext.ItemSelectedFunction = [this] (FTreeListView& Tree, entt::entity Item, bool)
         {
             if (Item == entt::null)
             {

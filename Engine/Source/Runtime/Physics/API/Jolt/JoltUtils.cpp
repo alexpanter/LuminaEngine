@@ -1,11 +1,16 @@
 ﻿#include "pch.h"
 #include "JoltUtils.h"
-
 #include <glm/detail/type_quat.hpp>
+#include "Jolt/Physics/Collision/ObjectLayer.h"
 
 
 namespace Lumina::JoltUtils
 {
+    JPH::ObjectLayer PackToObjectLayer(const FCollisionProfile& Profile)
+    {
+        return ((uint32)Profile.Mask << 16) | (uint32)Profile.Layer;
+    }
+
     JPH::Vec3 ToJPHVec3(const glm::vec3& Vec)
     {
         return JPH::Vec3(Vec.x, Vec.y, Vec.z);

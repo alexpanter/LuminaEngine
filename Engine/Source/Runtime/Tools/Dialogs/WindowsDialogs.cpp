@@ -2,6 +2,7 @@
 #ifdef LE_PLATFORM_WINDOWS
 #include <windows.h>
 #include "Dialogs.h"
+#include "Platform/GenericPlatform.h"
 
 namespace Lumina::Dialogs
 {
