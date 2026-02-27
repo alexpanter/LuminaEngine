@@ -85,7 +85,6 @@ project "Runtime"
         "EA",
         "Tracy",
 
-        "Luau.Analysis",
         "Luau.Compiler",
         "Luau.Config",
         "Luau.VM",

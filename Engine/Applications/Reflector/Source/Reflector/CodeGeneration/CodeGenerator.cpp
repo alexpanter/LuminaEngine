@@ -425,7 +425,7 @@ namespace Lumina::Reflection
 
 			if (bIsStructure)
 			{
-				Stream += "\t\tsol::call_constructor, sol::constructors<" + Type->Namespace + "::" + Type->DisplayName + "()>(),\n";
+				Stream += "\t\tsol::constructors<" + Type->Namespace + "::" + Type->DisplayName + "()>(),\n";
 			}
 
 			if (!StructType->Parent.empty())

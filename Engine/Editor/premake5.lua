@@ -47,7 +47,6 @@ project "Editor"
 		"EnkiTS",
 		"Tracy",
 		
-        "Luau.Analysis",
         "Luau.Compiler",
         "Luau.Config",
         "Luau.VM",

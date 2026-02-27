@@ -319,7 +319,6 @@ namespace Lumina::Scripting
         Glue::RegisterRuntimeView(EnttModule);
         
         State.new_usertype<FGuid>("FGuid",
-            sol::call_constructor,
             sol::constructors<FGuid()>(),
             "IsValid", &FGuid::IsValid,
             "Hash", &FGuid::Hash,
@@ -331,7 +330,6 @@ namespace Lumina::Scripting
 
         // vec2
         State.new_usertype<glm::vec2>("vec2",
-            sol::call_constructor,
             sol::constructors<glm::vec2(), glm::vec2(float), glm::vec2(float, float)>(),
             "x", &glm::vec2::x,
             "y", &glm::vec2::y,
@@ -368,7 +366,6 @@ namespace Lumina::Scripting
         
         // vec3
         State.new_usertype<glm::vec3>("vec3",
-            sol::call_constructor,
             sol::constructors<glm::vec3(), glm::vec3(float), glm::vec3(float, float, float)>(),
             "x", &glm::vec3::x,
             "y", &glm::vec3::y,
@@ -409,7 +406,6 @@ namespace Lumina::Scripting
         
         // vec4
         State.new_usertype<glm::vec4>("vec4",
-            sol::call_constructor,
             sol::constructors<glm::vec4(), glm::vec4(float), glm::vec4(float, float, float, float), glm::vec4(const glm::vec3&, float)>(),
             "x", &glm::vec4::x,
             "y", &glm::vec4::y,
@@ -448,7 +444,6 @@ namespace Lumina::Scripting
         
         // quat
         State.new_usertype<glm::quat>("quat",
-            sol::call_constructor,
             sol::constructors<
                 glm::quat(), 
                 glm::quat(float, float, float, float),
