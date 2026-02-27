@@ -414,7 +414,7 @@ namespace Lumina::Reflection
 			bool bIsStructure = Type->Type == FReflectedType::EType::Structure;
 			bool bIsClass = Type->Type == FReflectedType::EType::Class;
 
-			if (!(bIsStructure))
+			if (!(bIsClass || bIsStructure))
 			{
 				continue;
 			}
@@ -427,10 +427,14 @@ namespace Lumina::Reflection
 			{
 				Stream += "\t\tsol::constructors<" + Type->Namespace + "::" + Type->DisplayName + "()>(),\n";
 			}
+			else
+			{
+				Stream += "\t\tsol::no_constructor,\n";
+			}
 
 			if (!StructType->Parent.empty())
 			{
-				Stream += "\t\tsol::base_classes, sol::bases<" + Type->Namespace + "::" + StructType->Parent + ">(),\n";
+				//Stream += "\t\tsol::base_classes, sol::bases<" + Type->Namespace + "::" + StructType->Parent + ">(),\n";
 			}
 			
 			Stream += "\t\t\"__type\", sol::readonly_property([]() { return \"" + Type->DisplayName + "\"_hs; })";
