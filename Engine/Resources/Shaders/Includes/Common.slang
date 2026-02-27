@@ -172,7 +172,7 @@ struct FCustomPrimitiveData
     property float4 AsFloat4    { get { return float4(unpack_u8u32(Packed)) / 255.0; } }
 }
 
-struct FInstanceData
+struct FGPUInstance
 {
     float4x4                ModelMatrix;
     float4                  SphereBounds;

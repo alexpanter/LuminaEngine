@@ -206,6 +206,7 @@ namespace Lumina::Reflection
 		Stream += "#include \"World/Entity/Components/Component.h\"\n";
 		Stream += "#include \"World/Entity/Events/ECSEvent.h\"\n";
 		Stream += "#include \"Core/Object/Class.h\"\n";
+		Stream += "using namespace entt::literals;\n";
 		Stream += "\n\n";
 
 		eastl::string ProjectAPI = Header->Project->Name + "_api";
@@ -413,7 +414,7 @@ namespace Lumina::Reflection
 			bool bIsStructure = Type->Type == FReflectedType::EType::Structure;
 			bool bIsClass = Type->Type == FReflectedType::EType::Class;
 
-			if (!(bIsClass || bIsStructure))
+			if (!(bIsStructure))
 			{
 				continue;
 			}
@@ -431,8 +432,9 @@ namespace Lumina::Reflection
 			{
 				Stream += "\t\tsol::base_classes, sol::bases<" + Type->Namespace + "::" + StructType->Parent + ">(),\n";
 			}
-			Stream += "\t\t\"__type\", sol::readonly_property([]() { return \"" + Type->DisplayName + "\"; })";
-
+			
+			Stream += "\t\t\"__type\", sol::readonly_property([]() { return \"" + Type->DisplayName + "\"_hs; })";
+			
 			if (!Type->Props.empty() || !Type->Functions.empty())
 			{
 				Stream += ",";

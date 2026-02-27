@@ -524,18 +524,12 @@ namespace Lumina::ECS::Utils
 
     entt::id_type GetTypeID(const sol::table& Data)
     {
-        auto Name = Data["__type"].get<const char*>();
-        ASSERT(Name != nullptr);
-    
-        return entt::hashed_string(Name);
+        return Data["__type"].get<entt::hashed_string>();
     }
 
     entt::id_type GetTypeID(const sol::userdata& Data)
     {
-        auto Name = Data["__type"].get<const char*>();
-        ASSERT(Name != nullptr);
-    
-        return entt::hashed_string(Name);
+        return Data["__type"].get<entt::hashed_string>();
     }
 
     entt::id_type GetTypeID(FStringView Name)

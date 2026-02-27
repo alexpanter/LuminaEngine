@@ -716,8 +716,9 @@ namespace Lumina
                 if (Size > AsyncMemcpyThreshold)
                 {
                     uint64 NumChunks = (Size + ChunkSize - 1) / ChunkSize;
-                    Task::ParallelFor(NumChunks, [&](uint32 Index)
+                    Task::ParallelFor((uint32)NumChunks, [&](uint32 Index)
                     {
+                        LUMINA_PROFILE_SECTION("Memcpy");
                         uint64 ChunkOffset = Index * ChunkSize;
                         uint64 ThisChunkSize = eastl::min(ChunkSize, Size - ChunkOffset);
                         

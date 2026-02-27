@@ -34,7 +34,7 @@ namespace Lumina
         
         FUNCTION(Script)
         FORCEINLINE glm::vec3 GetCenter() const { return Min + GetSize() * 0.5f; }
-
+        
         NODISCARD FAABB ToWorld(const glm::mat4& World) const
         {
             glm::vec3 NewMin = glm::vec3(World[3]);

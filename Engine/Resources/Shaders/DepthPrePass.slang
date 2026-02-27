@@ -11,7 +11,7 @@ struct VertexOutput
 [shader("vertex")]
 VertexOutput VertexMain(uint VertexIndex: SV_VulkanVertexID, uint InstanceIndex: SV_VulkanInstanceID)
 {
-    FInstanceData InstanceData = GetInstanceData(InstanceIndex);
+    FGPUInstance InstanceData = GetInstanceData(InstanceIndex);
 
     FVertexData VertexData;
     if (InstanceData.HasFlag(EInstanceFlags::Skinned))

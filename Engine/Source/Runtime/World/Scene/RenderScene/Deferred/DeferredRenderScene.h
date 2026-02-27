@@ -172,7 +172,7 @@ namespace Lumina
         
         
         /** Packed array of per-instance data */
-        TRenderVector<FInstanceData>                  InstanceData;
+        TRenderVector<FGPUInstance>                  InstanceData;
 
         /** Packed array of all cached mesh draw commands */
         TRenderVector<FMeshDrawCommand>               MeshDrawCommands;

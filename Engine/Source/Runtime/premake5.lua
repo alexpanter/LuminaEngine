@@ -43,11 +43,24 @@ project "Runtime"
     {
         LuminaConfig.GetPublicIncludeDirectories()
     }
+
+    filter "configurations:Debug"
+	libdirs 
+	{ 
+		LuminaConfig.EnginePath("Engine/Source/ThirdParty/luau/libs/Debug"),
+	}
+	filter {}
+
+	filter "configurations:Development or Shipping"
+	libdirs
+	{
+		LuminaConfig.EnginePath("Engine/Source/ThirdParty/luau/libs/Release"),
+	}
+	filter {}
     
     libdirs
     {
         LuminaConfig.EnginePath("Engine/Source/ThirdParty/NvidiaAftermath/lib"),
-        LuminaConfig.EnginePath("Engine/Source/ThirdParty/lua"),
         LuminaConfig.EnginePath("External/SLang/lib"),
     }
 
@@ -71,7 +84,14 @@ project "Runtime"
         "ImGui",
         "EA",
         "Tracy",
-        "lua54",
+
+        "Luau.Analysis",
+        "Luau.Compiler",
+        "Luau.Config",
+        "Luau.VM",
+        "Luau.AST",
+        "Luau.Common",
+
         "EnkiTS",
         "JoltPhysics",
         "RPMalloc",

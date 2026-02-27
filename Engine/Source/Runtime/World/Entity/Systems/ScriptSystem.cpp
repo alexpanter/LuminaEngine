@@ -24,9 +24,14 @@ namespace Lumina
                 Script->Environment["Entity"] = Entity;
                 Script->Environment["Context"] = std::ref(Context);
                 
-                if (sol::optional<sol::function> BeginPlayFunc = Script->ScriptTable["Update"])
+                if (sol::protected_function UpdateFunc = Script->ScriptTable["Update"])
                 {
-                    sol::protected_function_result Result = (*BeginPlayFunc)(Script->ScriptTable, Context.GetDeltaTime());
+                    if (!UpdateFunc.valid())
+                    {
+                        return;
+                    }
+                    
+                    sol::protected_function_result Result = UpdateFunc(Script->ScriptTable);
                     if (!Result.valid())
                     {
                         sol::error Error = Result;

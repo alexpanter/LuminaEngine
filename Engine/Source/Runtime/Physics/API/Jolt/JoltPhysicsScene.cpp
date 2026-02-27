@@ -707,6 +707,7 @@ namespace Lumina::Physics
 
     void FJoltPhysicsScene::OnCharacterComponentDestroyed(entt::registry& Registry, entt::entity Entity)
     {
+        
     }
 
     void FJoltPhysicsScene::OnRigidBodyComponentUpdated(entt::registry& Registry, entt::entity Entity)
@@ -717,21 +718,13 @@ namespace Lumina::Physics
     void FJoltPhysicsScene::OnRigidBodyComponentConstructed(entt::registry& Registry, entt::entity Entity)
     {
         LUMINA_PROFILE_SCOPE();
-
-        if (!Registry.any_of<SSphereColliderComponent, SBoxColliderComponent>(Entity))
-        {
-            LOG_ERROR("Entity {} attempted to construct a rigid body without a collider!", entt::to_integral(Entity));
-            return;
-        }
-
-        SRigidBodyComponent& RigidBodyComponent = Registry.get<SRigidBodyComponent>(Entity);
-        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
         
         JPH::ShapeRefC Shape;
-
         glm::vec3 ColliderTranslationOffset(0.0f);
         glm::vec3 ColliderRotationOffset(0.0f);
 
+        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
+        
         if (SBoxColliderComponent* BC = Registry.try_get<SBoxColliderComponent>(Entity))
         {
             ColliderTranslationOffset       = BC->TranslationOffset;
@@ -761,7 +754,14 @@ namespace Lumina::Physics
             
             Shape = Result.Get();      
         }
+        else
+        {
+            LOG_ERROR("Entity {} attempted to construct a rigid body without a collider!", entt::to_integral(Entity));
+            return;
+        }
 
+        SRigidBodyComponent& RigidBodyComponent = Registry.get<SRigidBodyComponent>(Entity);
+        
         JPH::ObjectLayer Layer      = JoltUtils::PackToObjectLayer(RigidBodyComponent.CollisionProfile);
         JPH::EMotionType MotionType = ToJoltMotionType(RigidBodyComponent.BodyType);
 

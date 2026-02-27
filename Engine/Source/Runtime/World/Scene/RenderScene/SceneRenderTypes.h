@@ -111,11 +111,10 @@ namespace Lumina
         None                    = 0,
         Billboard               = BIT(0),
         Skinned                 = BIT(1),
-        Selected                = BIT(2),
-        CastShadow              = BIT(3),
-        ReceiveShadow           = BIT(4),
-		Occluder                = BIT(5),
-        IgnoreOcclusionCulling  = BIT(6),
+        CastShadow              = BIT(2),
+        ReceiveShadow           = BIT(3),
+		Occluder                = BIT(4),
+        IgnoreOcclusionCulling  = BIT(5),
     };
     
     ENUM_CLASS_FLAGS(EInstanceFlags);
@@ -338,9 +337,9 @@ namespace Lumina
         glm::uvec4 GridSize;
     };
 
-    struct alignas(16) FInstanceData
+    struct alignas(16) FGPUInstance
     {
-        glm::mat4       Transform;
+        glm::mat4x4     Transform;
         glm::vec4       SphereBounds;
         
         uint64          VBAddress;
@@ -352,7 +351,7 @@ namespace Lumina
         uint32          CustomData;
     };
     
-    VERIFY_SSBO_ALIGNMENT(FInstanceData)
+    VERIFY_SSBO_ALIGNMENT(FGPUInstance)
     
     constexpr uint32 PackDrawIDAndFlags(uint32 DrawID, EInstanceFlags Flags)
     {

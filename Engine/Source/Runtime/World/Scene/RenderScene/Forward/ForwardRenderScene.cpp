@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "ForwardRenderScene.h"
+
+#include <execution>
+
 #include "Assets/AssetTypes/Material/Material.h"
 #include "Assets/AssetTypes/Mesh/SkeletalMesh/SkeletalMesh.h"
 #include "assets/assettypes/mesh/skeleton/skeleton.h"
@@ -167,17 +170,17 @@ namespace Lumina
             const size_t EntityCount = StaticView.size_hint() + SkeletalView.size_hint();
             const size_t EstimatedProxies = EntityCount * 2;
 
-            InstanceData.reserve(EstimatedProxies * 2);
-            IndirectDrawArguments.reserve(EstimatedProxies * 2);
+            InstanceData.reserve(EstimatedProxies);
+            IndirectDrawArguments.reserve(EstimatedProxies);
 			DrawCommands.reserve(EstimatedProxies);
             
             TFixedHashMap<FDrawBatchKey, uint64, 4> BatchedDraws;
             
             {
                 LUMINA_PROFILE_SECTION("Process Static Mesh Primitives");
-
                 StaticView.each([&](entt::entity Entity, const SStaticMeshComponent& MeshComponent, const STransformComponent& TransformComponent)
                 {
+                    LUMINA_PROFILE_SECTION("Process Static Mesh");
                     CMesh* Mesh = MeshComponent.StaticMesh;
                     if (!IsValid(Mesh))
                     {
@@ -185,6 +188,8 @@ namespace Lumina
                     }
         
                     const FMeshResource& Resource = Mesh->GetMeshResource();
+                    uint64 VBAddress = Mesh->GetVertexBuffer()->GetAddress();
+                    uint64 IBAddress = Mesh->GetIndexBuffer()->GetAddress();
                     
                     RenderStats.NumVertices += Resource.GetNumVertices();
                     RenderStats.NumTriangles += Resource.GetNumTriangles();
@@ -198,23 +203,18 @@ namespace Lumina
                     glm::vec4 SphereBounds  = glm::vec4(Center, Radius);
                     
                     EInstanceFlags Flags = EInstanceFlags::None;
-                    if (World->IsSelected(Entity))
-                    {
-                        Flags |= EInstanceFlags::Selected;
-                    }
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
                     }
                     if (MeshComponent.bIgnoreOcclusionCulling)
                     {
-						Flags |= EInstanceFlags::IgnoreOcclusionCulling;
+                        Flags |= EInstanceFlags::IgnoreOcclusionCulling;
                     }
-                    
                     for (const FGeometrySurface& Surface : Resource.GeometrySurfaces)
                     {
-                        CMaterialInterface* Material = MeshComponent.GetMaterialForSlot(Surface.MaterialIndex);
-                    
+                        CMaterialInterface* Material = nullptr;
+                        Material = MeshComponent.GetMaterialForSlot(Surface.MaterialIndex);
                         if (!IsValid(Material) || !IsValid(Material->GetMaterial()) || !Material->IsReadyForRender())
                         {
                             Material = CMaterial::GetDefaultMaterial();
@@ -224,29 +224,22 @@ namespace Lumina
                         {
                             Flags |= EInstanceFlags::CastShadow;
                         }
-
-						bool bDrawInDepthPass = MeshComponent.bUseAsOccluder;
+                        
+                        bool bDrawInDepthPass = MeshComponent.bUseAsOccluder;
                         
                         FDrawBatchKey BatchKey
                         {
                             .MaterialID         = (uintptr_t)Material->GetMaterial(),
-							.bDrawInDepthPass   = bDrawInDepthPass,
-						};
+                            .bDrawInDepthPass   = bDrawInDepthPass,
+                        };
 
                         auto [BatchIt, bBatchInserted] = BatchedDraws.try_emplace(BatchKey, DrawCommands.size());
                         uint64 DrawID = BatchIt->second;
                         
                         if (bBatchInserted)
                         {
-                            DrawCommands.emplace_back(FMeshDrawCommand
-                            {
-                                .VertexShader           = Material->GetVertexShader(),
-                                .PixelShader            = Material->GetPixelShader(),
-                                .IndirectDrawOffset     = 0,
-                                .DrawArgumentIndexMap   = {},
-                                .DrawCount              = 0,
-								.bDrawInDepthPass       = bDrawInDepthPass,
-                            });
+                            TFixedHashMap<FDrawKey, uint32, 4> Map;
+                            DrawCommands.emplace_back(Move(Map), Material->GetVertexShader(), Material->GetPixelShader(), 0, 0, bDrawInDepthPass);
                         }
                         
                         auto& DrawArguments = DrawCommands[DrawID].DrawArgumentIndexMap;
@@ -255,23 +248,17 @@ namespace Lumina
                         
                         if (bDrawInserted)
                         {
-                            IndirectDrawArguments.emplace_back(FDrawIndirectArguments
-                            {
-                                .VertexCount            = (uint32)Surface.IndexCount,
-                                .InstanceCount          = 0,
-                                .StartVertexLocation    = Surface.StartIndex,
-                                .StartInstanceLocation  = 0,
-                            });
+                            IndirectDrawArguments.emplace_back(Surface.IndexCount, 0, Surface.StartIndex, 0);
                         }
 
                         IndirectDrawArguments[DrawIt->second].InstanceCount++;
                         
-                        InstanceData.emplace_back(FInstanceData
+                        InstanceData.emplace_back(FGPUInstance
                         {
                             .Transform                  = TransformMatrix,
                             .SphereBounds               = SphereBounds,
-                            .VBAddress                  = Mesh->GetVertexBuffer()->GetAddress(),
-                            .IBAddress                  = Mesh->GetIndexBuffer()->GetAddress(),
+                            .VBAddress                  = VBAddress,
+                            .IBAddress                  = IBAddress,
                             .EntityID                   = entt::to_integral(Entity),
                             .DrawIDAndFlags             = PackDrawIDAndFlags(DrawIt->second, Flags),
                             .BoneOffsetAndMaterialIndex = PackBoneOffsetAndMaterial(0, (uint16)Material->GetMaterialIndex()),
@@ -309,10 +296,6 @@ namespace Lumina
                     glm::vec4 SphereBounds  = glm::vec4(Center, Radius);
                     
                     EInstanceFlags Flags = EInstanceFlags::Skinned;
-                    if (World->IsSelected(Entity))
-                    {
-                        Flags |= EInstanceFlags::Selected;
-                    }
                     if (MeshComponent.bReceiveShadow)
                     {
                         Flags |= EInstanceFlags::ReceiveShadow;
@@ -345,15 +328,8 @@ namespace Lumina
                         
                         if (bBatchInserted)
                         {
-                            DrawCommands.emplace_back(FMeshDrawCommand
-                            {
-                                .VertexShader           = Material->GetVertexShader(),
-                                .PixelShader            = Material->GetPixelShader(),
-                                .IndirectDrawOffset     = 0,
-                                .DrawArgumentIndexMap   = {},
-                                .DrawCount              = 0,
-								.bDrawInDepthPass       = bDrawInDepthPass,
-                            });
+                            TFixedHashMap<FDrawKey, uint32, 4> Map;
+                            DrawCommands.emplace_back(Move(Map), Material->GetVertexShader(), Material->GetPixelShader(), 0, 0, bDrawInDepthPass);
                         }
                         
                         auto& DrawArguments = DrawCommands[DrawID].DrawArgumentIndexMap;
@@ -373,7 +349,7 @@ namespace Lumina
 
                         IndirectDrawArguments[DrawIt->second].InstanceCount++;
                         
-                        InstanceData.emplace_back(FInstanceData
+                        InstanceData.emplace_back(FGPUInstance
                         {
                             .Transform                  = TransformMatrix,
                             .SphereBounds               = SphereBounds,
@@ -388,8 +364,8 @@ namespace Lumina
                 });
             }
             
+            
             {
-                
                 LUMINA_PROFILE_SECTION("Reorder Instances and Draw Args");
 
                 TVector<uint32> IndexRemap(IndirectDrawArguments.size());
@@ -422,9 +398,9 @@ namespace Lumina
                     }
                 }
 
-                IndirectDrawArguments = std::move(ReorderedIndirectDrawArguments);
+                IndirectDrawArguments = Move(ReorderedIndirectDrawArguments);
 
-                for (FInstanceData& Instance : InstanceData)
+                for (FGPUInstance& Instance : InstanceData)
                 {
                     uint32 Flags = Instance.DrawIDAndFlags & 0xFF000000u;
                     uint32 NewDrawID = IndexRemap[Instance.DrawIDAndFlags & 0x00FFFFFFu];
@@ -839,7 +815,7 @@ namespace Lumina
                 SceneGlobalData.CullData.InstanceNum = (uint32)InstanceData.size();
                 
                 const SIZE_T SimpleVertexSize   = SimpleVertices.size() * sizeof(FSimpleElementVertex);
-                const SIZE_T InstanceDataSize   = InstanceData.size() * sizeof(FInstanceData);
+                const SIZE_T InstanceDataSize   = InstanceData.size() * sizeof(FGPUInstance);
                 const SIZE_T BoneDataSize       = BonesData.size() * sizeof(glm::mat4);
                 const SIZE_T IndirectArgsSize   = IndirectDrawArguments.size() * sizeof(FDrawIndirectArguments);
                 const SIZE_T ActiveLightsSize   = LightData.NumLights * sizeof(FLight);
@@ -1929,7 +1905,7 @@ namespace Lumina
 
         {
             FRHIBufferDesc BufferDesc;
-            BufferDesc.Size = sizeof(FInstanceData);
+            BufferDesc.Size = sizeof(FGPUInstance);
             BufferDesc.Usage.SetFlag(BUF_StorageBuffer);
             BufferDesc.bKeepInitialState = true;
             BufferDesc.InitialState = EResourceStates::ShaderResource;

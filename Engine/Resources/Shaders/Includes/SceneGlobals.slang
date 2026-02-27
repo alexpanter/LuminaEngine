@@ -13,7 +13,7 @@ struct SkinnedVertexBuffer
 
 [[vk::binding(0, 0)]] ConstantBuffer<FSceneGlobalData>              uSceneData;
 [[vk::binding(1, 0)]] StructuredBuffer<FLightData>                  uLightData;
-[[vk::binding(2, 0)]] RWStructuredBuffer<FInstanceData>             uInstanceData;
+[[vk::binding(2, 0)]] RWStructuredBuffer<FGPUInstance>             uInstanceData;
 [[vk::binding(3, 0)]] RWStructuredBuffer<uint>                      uMappingData;
 [[vk::binding(4, 0)]] RWStructuredBuffer<FDrawIndirectArguments>    uIndirectDrawData;
 [[vk::binding(5, 0)]] StructuredBuffer<float4x4>                    uBoneMatrices;
@@ -92,7 +92,7 @@ uint DrawIDToInstanceID(uint ID)
     return uMappingData[ID];
 }
 
-FInstanceData GetInstanceData(uint Index)
+FGPUInstance GetInstanceData(uint Index)
 {
     return uInstanceData[DrawIDToInstanceID(Index)];
 }

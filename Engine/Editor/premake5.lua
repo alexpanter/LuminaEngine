@@ -4,9 +4,22 @@ project "Editor"
 	enablereflection "true"
 	removeplatforms { "Game" }
 
+	filter "configurations:Debug"
+	libdirs 
+	{ 
+		LuminaConfig.EnginePath("Engine/Source/ThirdParty/luau/libs/Debug"),
+	}
+	filter {}
+
+	filter "configurations:Development or Shipping"
+	libdirs
+	{
+		LuminaConfig.EnginePath("Engine/Source/ThirdParty/luau/libs/Release"),
+	}
+	filter {}
+	
     libdirs
     {
-        LuminaConfig.EnginePath("Engine/Source/ThirdParty/lua"),
 		LuminaConfig.EnginePath("Engine/Source/ThirdParty/NvidiaAftermath/lib"),
     }
 
@@ -33,7 +46,14 @@ project "Editor"
     	"EA",
 		"EnkiTS",
 		"Tracy",
-		"lua54",
+		
+        "Luau.Analysis",
+        "Luau.Compiler",
+        "Luau.Config",
+        "Luau.VM",
+        "Luau.AST",
+        "Luau.Common",
+
 		"GFSDK_Aftermath_Lib",
 	}
 

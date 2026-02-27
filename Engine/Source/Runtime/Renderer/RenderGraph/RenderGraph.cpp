@@ -43,13 +43,13 @@ namespace Lumina
                 // The user has promised us this pass can now run at any time without issues, so we dispatch it and keep going.
                 if (Pass->GetDescriptor()->HasAnyFlag(ERGExecutionFlags::Async))
                 {
-                    auto Task = Task::AsyncTask(1, 1, [&CommandListMutex, &AllCommandLists, Pass](uint32, uint32, uint32)
+                    auto Task = Task::AsyncTask(1, 1, [&CommandListMutex, &ComputeCommandLists, Pass](uint32, uint32, uint32)
                     {
-                        FRHICommandListRef LocalCommandList = GRenderContext->CreateCommandList(FCommandListInfo::Graphics());
+                        FRHICommandListRef LocalCommandList = GRenderContext->CreateCommandList(FCommandListInfo::Compute());
                     
                         {
                             FScopeLock Lock(CommandListMutex);
-                            AllCommandLists.emplace_back(LocalCommandList);
+                            ComputeCommandLists.emplace_back(LocalCommandList);
                         }
             
                         LocalCommandList->Open();

@@ -128,6 +128,11 @@ namespace Lumina
         auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
         RootView.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
         {
+            if (ScriptComponent.Script == nullptr)
+            {
+                return;
+            }
+            
             ScriptComponent.Script->Environment["Entity"]   = Entity;
             ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
             ScriptComponent.InvokeScriptFunction("OnReady");
@@ -142,12 +147,21 @@ namespace Lumina
                 {
                     if (SScriptComponent* ScriptComp = EntityRegistry.try_get<SScriptComponent>(Descendant))
                     {
+                        if (ScriptComp->Script == nullptr)
+                        {
+                            return;
+                        }
+                        
                         ScriptComp->Script->Environment["Entity"]   = Descendant;
                         ScriptComp->Script->Environment["Context"]  = std::ref(SystemContext);
                         ScriptComp->InvokeScriptFunction("OnReady");
                     }
                 });
                 
+                if (Script.Script == nullptr)
+                {
+                    return;
+                }
                 Script.Script->Environment["Entity"]   = Entity;
                 Script.Script->Environment["Context"]  = std::ref(SystemContext);
                 Script.InvokeScriptFunction("OnReady");
@@ -465,17 +479,17 @@ namespace Lumina
                 {
                     (ScriptVarVisitor(Vectors), ...);
                 }, ScriptComponent.CustomData);
-            }
-            
-            if (WorldType == EWorldType::Game)
-            {
-                ScriptComponent.Script->Environment["Entity"]   = Entity;
-                ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
-                ScriptComponent.InvokeScriptFunction("OnAttach");
                 
-                if (!bInitializing)
+                if (WorldType == EWorldType::Game)
                 {
-                    ScriptComponent.InvokeScriptFunction("OnReady");
+                    ScriptComponent.Script->Environment["Entity"]   = Entity;
+                    ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
+                    ScriptComponent.InvokeScriptFunction("OnAttach");
+                
+                    if (!bInitializing)
+                    {
+                        ScriptComponent.InvokeScriptFunction("OnReady");
+                    }
                 }
             }
         }
@@ -486,7 +500,7 @@ namespace Lumina
         SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
         if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
         {
-            if (ScriptComponent.Script != nullptr || !ScriptComponent.Script->ScriptTable.valid())
+            if (ScriptComponent.Script != nullptr && ScriptComponent.Script->ScriptTable.valid())
             {
                 ScriptComponent.Script->Environment["Entity"]   = Entity;
                 ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);

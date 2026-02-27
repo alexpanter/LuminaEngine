@@ -28,6 +28,8 @@ namespace Lumina
         RUNTIME_API FORCEINLINE double GetDeltaTime() const { return DeltaTime; }
         RUNTIME_API FORCEINLINE double GetTime() const { return Time; }
         RUNTIME_API FORCEINLINE EUpdateStage GetUpdateStage() const { return UpdateStage; }
+        
+        RUNTIME_API void SetEntityLifetime(entt::entity Entity, float Lifetime) const;
 
 
         template<typename T>

@@ -62,6 +62,11 @@ namespace Lumina
         template<typename TFunc>
         void ParallelFor(uint32 Num, TFunc&& Func, uint32 MinRange = 0, ETaskPriority Priority = ETaskPriority::Medium)
         {
+            if (Num == 0)
+            {
+                return;
+            }
+            
             struct ParallelTask : ITaskSet
             {
                 ParallelTask(TFunc&& InFunc, uint32 InNum, uint32 InMinRange)
@@ -194,11 +199,10 @@ namespace Lumina
     {
         RUNTIME_API FTaskHandle AsyncTask(uint32 Num, uint32 MinRange, TaskSetFunction&& Function, ETaskPriority Priority = ETaskPriority::Medium);
 
-        template<typename TIndex, typename TFunc>
-        requires(eastl::is_integral_v<TIndex>)
-        void ParallelFor(TIndex Num, TFunc&& Func, uint32 MinRange = 0, ETaskPriority Priority = ETaskPriority::Medium)
+        template<typename TFunc>
+        void ParallelFor(uint32 Num, TFunc&& Func, uint32 MinRange = 0, ETaskPriority Priority = ETaskPriority::Medium)
         {
-            GTaskSystem->ParallelFor(static_cast<uint32>(Num), std::forward<TFunc>(Func), MinRange, Priority);
+            GTaskSystem->ParallelFor(Num, std::forward<TFunc>(Func), MinRange, Priority);
         }
 
         template<typename TIterator, typename TFunc>

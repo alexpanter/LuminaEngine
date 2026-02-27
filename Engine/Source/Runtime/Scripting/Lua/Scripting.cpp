@@ -1,12 +1,14 @@
 #include "pch.h"
 #include "Scripting.h"
-
 #include <glm/gtx/string_cast.hpp>
+
+#include "luacode.h"
 #include "Containers/Name.h"
 #include "Core/Math/Color.h"
 #include "Events/KeyCodes.h"
 #include "FileSystem/FileSystem.h"
 #include "Input/InputProcessor.h"
+#include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
 #include "Paths/Paths.h"
 #include "Scripting/DeferredScriptRegistry.h"

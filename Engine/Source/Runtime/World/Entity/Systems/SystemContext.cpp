@@ -4,6 +4,7 @@
 #include "World/World.h"
 #include "World/Entity/EntityUtils.h"
 #include "World/Entity/Components/DirtyComponent.h"
+#include "World/Entity/Components/LifetimeComponent.h"
 #include "world/entity/components/namecomponent.h"
 
 namespace Lumina
@@ -30,6 +31,7 @@ namespace Lumina
             "ActivateBody",         &FSystemContext::ActivateBody,
             "DeactivateBody",       &FSystemContext::DeactivateBody,
             "ChangeBodyMotionType", &FSystemContext::ChangeBodyMotionType,
+            "SetEntityLifetime",    &FSystemContext::SetEntityLifetime,
 
             "GetRegistry",          &FSystemContext::GetRegistry,
             "GetNumEntities",       &FSystemContext::GetNumEntities,
@@ -95,7 +97,12 @@ namespace Lumina
                 
             "CastSphere",           &FSystemContext::CastSphere);
     }
-    
+
+    void FSystemContext::SetEntityLifetime(entt::entity Entity, float Lifetime) const
+    {
+        Registry.get_or_emplace<SLifetimeComponent>(Entity).Lifetime = Lifetime;
+    }
+
     entt::runtime_view FSystemContext::CreateRuntimeView(const THashSet<entt::id_type>& Components) const
     {
         entt::runtime_view RuntimeView;
@@ -323,7 +330,7 @@ namespace Lumina
     entt::runtime_view FSystemContext::Lua_View(const sol::variadic_args& Args) const
     {
         LUMINA_PROFILE_SCOPE();
-
+        
         const THashSet<entt::id_type>& Types = ECS::Utils::CollectTypes(Args);
         return CreateRuntimeView(Types);
     }

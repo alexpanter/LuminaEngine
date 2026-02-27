@@ -240,7 +240,7 @@ float3 EvaluateLightContribution(FLight Light, float3 Position, float3 N, float3
 [shader("fragment")]
 PSOutput FragmentMain(PSInput Input)
 {
-    FInstanceData InstanceData = GetInstanceData(Input.InstanceIndex);
+    FGPUInstance InstanceData = GetInstanceData(Input.InstanceIndex);
 
     uint EntityID           = InstanceData.EntityID;
     uint MaterialIndex      = InstanceData.MaterialIndex;

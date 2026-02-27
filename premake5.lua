@@ -28,6 +28,18 @@ workspace "Lumina"
     }
 
     defaultplatform ("Editor")
+
+    filter "configurations:Debug"
+        defines
+        {
+            "JPH_DEBUG_RENDERER",
+            "JPH_FLOATING_POINT_EXCEPTIONS_ENABLED",
+            "JPH_EXTERNAL_PROFILE",
+            "JPH_ENABLE_ASSERTS",
+            "SOL_ALL_SAFETIES_ON",
+            "SOL_DEBUG_BUILD",
+        }
+    filter {}
 		
 	defines
 	{
@@ -42,6 +54,7 @@ workspace "Lumina"
 		"IMGUI_DEFINE_MATH_OPERATORS",
         "IMGUI_IMPL_VULKAN_USE_VOLK",
         
+        "SOL_USE_LUAU",
         "SOL_NO_EXCEPTIONS",
         "SOL_DEFAULT_PASS_ON_ERROR",
 
@@ -152,6 +165,7 @@ workspace "Lumina"
         include "Engine/Source/ThirdParty/MiniAudio"
         include "Engine/Source/ThirdParty/EnkiTS"
         include "Engine/Source/ThirdParty/Sol2"
+        include "Engine/Source/ThirdParty/Luau"
         include "Engine/Source/ThirdParty/SPDLog"
         include "Engine/Source/ThirdParty/JoltPhysics"
         include "Engine/Source/ThirdParty/RPMalloc"
