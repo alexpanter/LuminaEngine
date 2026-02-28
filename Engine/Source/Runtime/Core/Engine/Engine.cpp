@@ -56,7 +56,7 @@ namespace Lumina
         Audio::Initialize();
         Task::Initialize();
         Physics::Initialize();
-        Scripting::Initialize();
+        Lua::Initialize();
         
         GRenderManager = Memory::New<FRenderManager>();
         GRenderManager->Initialize();
@@ -103,7 +103,7 @@ namespace Lumina
         GRenderManager = nullptr;
 
         Physics::Shutdown();
-        Scripting::Shutdown();
+        Lua::Shutdown();
         Task::Shutdown();
         Audio::Shutdown();
         
@@ -228,7 +228,7 @@ namespace Lumina
                 
                 GRenderManager->FrameEnd(UpdateContext, RenderGraph);
                 
-                Scripting::FScriptingContext::Get().ProcessDeferredActions();
+                Lua::FScriptingContext::Get().ProcessDeferredActions();
 
                 OnUpdateStage(UpdateContext);
 

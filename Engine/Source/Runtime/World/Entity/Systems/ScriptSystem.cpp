@@ -14,30 +14,9 @@ namespace Lumina
         auto View = Context.CreateView<SScriptComponent>(entt::exclude<SDisabledTag>);
         View.each([&](entt::entity Entity, const SScriptComponent& ScriptComponent)
         {
-            if (const TSharedPtr<Scripting::FLuaScript>& Script = ScriptComponent.Script)
+            if (const TSharedPtr<Lua::FScript>& Script = ScriptComponent.Script)
             {
-                if (!Script->ScriptTable.valid())
-                {
-                    return;
-                }
-            
-                Script->Environment["Entity"] = Entity;
-                Script->Environment["Context"] = std::ref(Context);
                 
-                if (sol::protected_function UpdateFunc = Script->ScriptTable["Update"])
-                {
-                    if (!UpdateFunc.valid())
-                    {
-                        return;
-                    }
-                    
-                    sol::protected_function_result Result = UpdateFunc(Script->ScriptTable);
-                    if (!Result.valid())
-                    {
-                        sol::error Error = Result;
-                        LOG_ERROR("Script Error: {} - {}", Script->Path, Error.what());
-                    }
-                }
             }
         });
     }

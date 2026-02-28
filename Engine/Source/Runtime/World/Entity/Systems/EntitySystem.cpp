@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "EntitySystem.h"
-
 #include "World/Entity/EntityUtils.h"
 
 namespace Lumina
@@ -44,10 +43,9 @@ namespace Lumina
 
     FUpdatePriorityList FEntityScriptSystem::GetUpdatePriorityList() const
     {
-        if (const TSharedPtr<Scripting::FLuaScript>& Script = WeakScript.lock())
+        if (const TSharedPtr<Lua::FScript>& Script = WeakScript.lock())
         {
             FUpdatePriorityList PriorityList;
-            PriorityList.SetStagePriority(FUpdateStagePriority(Script->ScriptTable["Stage"], Script->ScriptTable["Priority"]));
             return PriorityList;
         }
         
@@ -56,9 +54,8 @@ namespace Lumina
 
     void FEntityScriptSystem::Startup(const FSystemContext& SystemContext) const noexcept
     {
-        if (const TSharedPtr<Scripting::FLuaScript>& Script = WeakScript.lock())
+        if (const TSharedPtr<Lua::FScript>& Script = WeakScript.lock())
         {
-            Script->ScriptTable["Startup"](std::ref(SystemContext));
         }
     }
 
@@ -66,17 +63,15 @@ namespace Lumina
     {
         LUMINA_PROFILE_SCOPE();
         
-        if (const TSharedPtr<Scripting::FLuaScript>& Script = WeakScript.lock())
+        if (const TSharedPtr<Lua::FScript>& Script = WeakScript.lock())
         {
-            Script->ScriptTable["Update"](std::ref(SystemContext));
         }
     }
 
     void FEntityScriptSystem::Teardown(const FSystemContext& SystemContext) const noexcept
     {
-        if (const TSharedPtr<Scripting::FLuaScript>& Script = WeakScript.lock())
+        if (const TSharedPtr<Lua::FScript>& Script = WeakScript.lock())
         {
-            Script->ScriptTable["Teardown"](std::ref(SystemContext));
         }
     }
 }

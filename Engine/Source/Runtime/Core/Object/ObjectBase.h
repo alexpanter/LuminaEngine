@@ -1,14 +1,13 @@
 ﻿#pragma once
 
-#include "ObjectFlags.h"
-#include "GUID/GUID.h"
-#include <sol/sol.hpp>
-#include "Initializer/ObjectInitializer.h"
+#include <Containers/Name.h>
 #include <Containers/String.h>
 #include <Core/LuminaMacros.h>
 #include <Core/Assertions/Assert.h>
-#include <Containers/Name.h>
 #include <Platform/GenericPlatform.h>
+#include "ObjectFlags.h"
+#include "GUID/GUID.h"
+#include "Initializer/ObjectInitializer.h"
 
 namespace Lumina
 {
@@ -37,8 +36,6 @@ namespace Lumina
         
         RUNTIME_API CObjectBase(EObjectFlags InFlags);
         RUNTIME_API CObjectBase(CClass* InClass, EObjectFlags InFlags, CPackage* Package, FName InName, const FGuid& GUID);
-
-        RUNTIME_API virtual sol::reference AsLua(sol::state_view S) { return sol::nil; }
         
         RUNTIME_API void BeginRegister();
         RUNTIME_API void FinishRegister(CClass* InClass, const TCHAR* InName);

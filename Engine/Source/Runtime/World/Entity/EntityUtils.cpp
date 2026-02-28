@@ -7,7 +7,7 @@
 #include "components/tagcomponent.h"
 #include "Components/TransformComponent.h"
 #include "Core/Object/Class.h"
-#include "Scripting/ScriptTypes.h"
+#include "Scripting/Lua/ScriptTypes.h"
 
 using namespace entt::literals; 
 
@@ -522,16 +522,6 @@ namespace Lumina::ECS::Utils
         return false;
     }
 
-    entt::id_type GetTypeID(const sol::table& Data)
-    {
-        return Data["__type"].get<entt::hashed_string>();
-    }
-
-    entt::id_type GetTypeID(const sol::userdata& Data)
-    {
-        return Data["__type"].get<entt::hashed_string>();
-    }
-
     entt::id_type GetTypeID(FStringView Name)
     {
         return entt::hashed_string(Name.data());
@@ -540,30 +530,6 @@ namespace Lumina::ECS::Utils
     entt::id_type GetTypeID(const CStruct* Type)
     {
         return entt::hashed_string(Type->GetName().c_str());
-    }
-
-    THashSet<entt::id_type> CollectTypes(const sol::variadic_args& Args)
-    {
-        THashSet<entt::id_type> Types;
-        
-        eastl::transform(Args.cbegin(), Args.cend(), eastl::inserter(Types, Types.begin()), [](const sol::object& Object)
-        {
-            return DeduceType(Object);
-        });
-        
-        return Types;
-    }
-
-    THashSet<entt::id_type> CollectTypes(const sol::table& Args)
-    {
-        THashSet<entt::id_type> Types;
-        
-        for (const auto& [key, value] : Args)
-        {
-            Types.insert(DeduceType(value));
-        }
-        
-        return Types;
     }
 
     void SetEntityBodyType(FEntityRegistry& Registry, entt::entity Entity)

@@ -4,22 +4,20 @@
 #include "Core/Object/Class.h"
 #include "Core/Reflection/Type/LuminaTypes.h"
 #include "Memory/SmartPtr.h"
-#include "Scripting/ScriptTypes.h"
-#include "sol/sol.hpp"
 #include "Tools/Actions/DeferredActions.h"
 #include "World/Entity/Components/Component.h"
 
+
+struct lua_State;
 
 namespace Lumina
 {
     class CStruct;
 }
 
-
-
-
-namespace Lumina::Scripting
+namespace Lumina::Lua
 {
+    struct FLuaScript;
     DECLARE_MULTICAST_DELEGATE(FScriptTransactionDelegate, FStringView);
     
     
@@ -60,9 +58,7 @@ namespace Lumina::Scripting
     public:
 
         RUNTIME_API static FScriptingContext& Get();
-
-        RUNTIME_API sol::state_view GetState() { return sol::state_view(State); }
-
+        
         void Initialize();
         void Shutdown();
         
@@ -77,26 +73,24 @@ namespace Lumina::Scripting
         RUNTIME_API TVector<TSharedPtr<FLuaScript>> GetAllRegisteredScripts();
         RUNTIME_API void RunGC();
         
-        
-        void RegisterCoreTypes();
-        void SetupInput();
-        
-        
         FScriptTransactionDelegate OnScriptLoaded;
         FScriptTransactionDelegate OnScriptDeleted;
 
+    public:
+        
+        
+        
+    
+        
     private:
         
         void ReloadScripts(FStringView Path);
-        
-        void Lua_Info(const sol::variadic_args& Args);
-        void Lua_Warning(const sol::variadic_args& Args);
-        void Lua_Error(const sol::variadic_args& Args);
     
     private:
         
+        lua_State* L = nullptr;
+        
         FSharedMutex SharedMutex;
-        sol::state State;
         FDeferredActionRegistry DeferredActions;
         
         THashMap<FName, TVector<TWeakPtr<FLuaScript>>> RegisteredScripts;
@@ -104,12 +98,4 @@ namespace Lumina::Scripting
     
 }
 
-namespace sol
-{
-    template <typename T, typename Allocator>
-    struct is_container<eastl::vector<T, Allocator>> : std::true_type {};
-
-    template <typename T>
-    struct is_container<Lumina::TVector<T>> : std::true_type {};
-    
-}
+#include "Scripting.inl"

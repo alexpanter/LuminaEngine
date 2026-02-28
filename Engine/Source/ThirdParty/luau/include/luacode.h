@@ -3,6 +3,15 @@
 
 #include <stddef.h>
 
+#ifdef LUA_BUILD_AS_DLL
+#ifdef LUA_LIB
+#define LUACODE_API __declspec(dllexport)
+#elif
+#define LUACODE_API __declspec(dllimport)
+#endif
+#endif
+
+
 // can be used to reconfigure visibility/exports for public APIs
 #ifndef LUACODE_API
 #define LUACODE_API extern

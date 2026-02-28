@@ -23,8 +23,6 @@ namespace Lumina
         FSystemContext(CWorld* InWorld);
         ~FSystemContext() = default;
         
-        static void RegisterWithLua(sol::state& Lua);
-
         RUNTIME_API FORCEINLINE double GetDeltaTime() const { return DeltaTime; }
         RUNTIME_API FORCEINLINE double GetTime() const { return Time; }
         RUNTIME_API FORCEINLINE EUpdateStage GetUpdateStage() const { return UpdateStage; }
@@ -168,25 +166,6 @@ namespace Lumina
         RUNTIME_API bool IsValidEntity(entt::entity Entity) const;
     
     private:
-        
-        void Lua_DispatchEvent(const sol::object& Event) const ;
-        entt::meta_any Lua_ConnectEvent(const sol::object& Event, const sol::function& Listener) const ;
-        entt::meta_any Lua_OnConstruct(const sol::object& Event, const sol::function& Listener) const;
-
-        bool Lua_HasAllOf(entt::entity Entity, const sol::variadic_args& Args) const;
-        bool Lua_HasAnyOf(entt::entity Entity, const sol::variadic_args& Args) const;
-        bool Lua_Has(entt::entity Entity, const sol::object& Type) const;
-        
-        entt::runtime_view Lua_View(const sol::variadic_args& Args) const;
-        void Lua_SetActiveCamera(uint32 Entity) const;
-        
-        void Lua_Remove(entt::entity Entity, const sol::object& Component) const;
-        sol::object Lua_Emplace(entt::entity Entity, const sol::table& Component) const;
-        sol::variadic_results Lua_GetUnsafe(entt::entity Entity, const sol::variadic_args& Args) const;
-        sol::variadic_results Lua_Get(entt::entity Entity, const sol::variadic_args& Args) const;
-        entt::entity Lua_GetEntityByTag(const char* Tag) const;
-        entt::entity Lua_GetEntityByName(const char* Name) const;
-        entt::entity Lua_GetFirstEntityWith(const sol::object& Component) const;
 
     private:
 

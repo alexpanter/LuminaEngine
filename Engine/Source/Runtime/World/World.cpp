@@ -133,8 +133,6 @@ namespace Lumina
                 return;
             }
             
-            ScriptComponent.Script->Environment["Entity"]   = Entity;
-            ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
             ScriptComponent.InvokeScriptFunction("OnReady");
         });
         
@@ -152,8 +150,6 @@ namespace Lumina
                             return;
                         }
                         
-                        ScriptComp->Script->Environment["Entity"]   = Descendant;
-                        ScriptComp->Script->Environment["Context"]  = std::ref(SystemContext);
                         ScriptComp->InvokeScriptFunction("OnReady");
                     }
                 });
@@ -162,8 +158,7 @@ namespace Lumina
                 {
                     return;
                 }
-                Script.Script->Environment["Entity"]   = Entity;
-                Script.Script->Environment["Context"]  = std::ref(SystemContext);
+
                 Script.InvokeScriptFunction("OnReady");
             }
         });
@@ -200,7 +195,7 @@ namespace Lumina
         
         GWorldManager->RemoveWorld(this);
         
-        Scripting::FScriptingContext::Get().RunGC();
+        Lua::FScriptingContext::Get().RunGC();
     }
     
     void CWorld::Update(const FUpdateContext& Context)
@@ -448,50 +443,7 @@ namespace Lumina
         SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
         if (!ScriptComponent.ScriptPath.Path.empty())
         {
-            if (TSharedPtr<Scripting::FLuaScript> Script = Scripting::FScriptingContext::Get().LoadUniqueScript(ScriptComponent.ScriptPath.Path))
-            {
-                ScriptComponent.Script = Script;
-                
-                auto ScriptVarVisitor = [&]<typename T>(TVector<TNamedScriptVar<T>>& Vector)
-                {
-                    for (const TNamedScriptVar<T>& Var : Vector)
-                    {
-                        const char* KeyName = Var.Name.c_str();
-                        sol::object ExistingValue = Script->ScriptTable[KeyName];
             
-                        if (!ExistingValue.valid() || !ExistingValue.is<T>())
-                        {
-                            continue;
-                        }
-                        
-                        if constexpr (eastl::is_same_v<T, FString>)
-                        {
-                            Script->ScriptTable[KeyName] = Var.Value.c_str();
-                        }
-                        else
-                        {
-                            Script->ScriptTable[KeyName] = Var.Value;
-                        }
-                    }
-                };
-        
-                eastl::apply([&](auto&... Vectors)
-                {
-                    (ScriptVarVisitor(Vectors), ...);
-                }, ScriptComponent.CustomData);
-                
-                if (WorldType == EWorldType::Game)
-                {
-                    ScriptComponent.Script->Environment["Entity"]   = Entity;
-                    ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
-                    ScriptComponent.InvokeScriptFunction("OnAttach");
-                
-                    if (!bInitializing)
-                    {
-                        ScriptComponent.InvokeScriptFunction("OnReady");
-                    }
-                }
-            }
         }
     }
 
@@ -500,10 +452,8 @@ namespace Lumina
         SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
         if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
         {
-            if (ScriptComponent.Script != nullptr && ScriptComponent.Script->ScriptTable.valid())
+            if (ScriptComponent.Script != nullptr)
             {
-                ScriptComponent.Script->Environment["Entity"]   = Entity;
-                ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
                 ScriptComponent.InvokeScriptFunction("OnDetach");
             }
         }
@@ -511,7 +461,6 @@ namespace Lumina
 
     void CWorld::RegisterSystems()
     {
-        using namespace Scripting;
         using namespace entt::literals;
 
         for (int i = 0; i < (int)EUpdateStage::Max; ++i)
@@ -532,19 +481,6 @@ namespace Lumina
                 RegisterSystem(Variant);
             }
         }
-        
-        //FScriptingContext::Get().ForEachScript([&](FName Path, const TSharedPtr<FLuaScript>& Script)
-        //{
-        //    if (!Script->ScriptTable["Type"].valid() || Script->ScriptTable["Type"] != EScriptType::WorldSystem)
-        //    {
-        //        return;
-        //    }
-        //    
-        //    FEntityScriptSystem ScriptSystem;
-        //    ScriptSystem.WeakScript = Script;
-        //    FSystemVariant Variant = Move(ScriptSystem);
-        //    RegisterSystem(Variant);
-        //});
     }
 
     void CWorld::DrawBillboard(FRHIImage* Image, const glm::vec3& Location, float Scale)

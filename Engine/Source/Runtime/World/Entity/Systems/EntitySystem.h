@@ -2,7 +2,7 @@
 
 #include "SystemContext.h"
 #include "Core/Engine/Engine.h"
-#include "Scripting/ScriptTypes.h"
+#include "Scripting/Lua/ScriptTypes.h"
 #include "World/Entity/Traits.h"
 
 
@@ -88,6 +88,6 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
 
     private:
         
-        TWeakPtr<Scripting::FLuaScript> WeakScript;
+        TWeakPtr<Lua::FScript> WeakScript;
     };
 }

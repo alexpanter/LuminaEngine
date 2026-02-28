@@ -81,7 +81,6 @@
 // ===================
 #include <glm/glm.hpp>
 #include <entt/entt.hpp>
-#include <sol/sol.hpp>
 #include <spdlog/spdlog.h>
 #include <xxhash.h>
 #include <Jolt/Jolt.h>

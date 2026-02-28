@@ -61,7 +61,6 @@
 #include "Properties/Customizations/CustomPrimitiveDataCustomization.h"
 #include "Properties/Customizations/ScriptComponentCustomization.h"
 #include "Renderer/CustomPrimitiveData.h"
-#include "Renderer/CustomPrimitiveData.h"
 #include "Renderer/RenderContext.h"
 #include "Renderer/RenderDocImpl.h"
 #include "Renderer/RenderManager.h"
@@ -1079,7 +1078,7 @@ namespace Lumina
     
         if (ImGui::Begin("Scripts", &bShowScriptsDebug, ImGuiWindowFlags_MenuBar))
         {
-            auto& Context = Scripting::FScriptingContext::Get();
+            auto& Context = Lua::FScriptingContext::Get();
             size_t MemoryUsage = Context.GetScriptMemoryUsage();
             
             ImGui::Text("Loaded Scripts: %zu", Context.GetAllRegisteredScripts().size());
@@ -1107,70 +1106,6 @@ namespace Lumina
                 ImGui::TableSetupColumn("Actions", ImGuiTableColumnFlags_WidthFixed, 150.0f);
                 ImGui::TableHeadersRow();
                 
-                for (TSharedPtr<Scripting::FLuaScript>& Script : Context.GetAllRegisteredScripts())
-                {
-                    if (!SearchFilter.PassFilter(Script->Path.c_str()))
-                    {
-                        continue;
-                    }
-                    
-                    ImGui::TableNextRow();
-                    
-                    ImGui::TableNextColumn();
-                    ImGui::PushID(Script.get());
-                    
-                    bool bNodeOpen = ImGui::TreeNodeEx(Script->Name.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
-                    
-                    ImGui::TableNextColumn();
-                    ImGui::TextDisabled("%s",Script->Path.c_str());
-                    
-                    ImGui::TableNextColumn();
-                    if (ImGui::SmallButton("Reload"))
-                    {
-                        //Scripting::FScriptingContext::Get().R
-                    }
-                    ImGui::SameLine();
-                    if (ImGui::SmallButton("Edit"))
-                    {
-                        
-                    }
-                    
-                    if (bNodeOpen)
-                    {
-                        ImGui::TableNextRow();
-                        ImGui::TableNextColumn();
-                        ImGui::Indent();
-                        
-                        if (ImGui::TreeNode("Environment"))
-                        {
-                            ImGui::Text("Global count: %zu", Script->Environment.size());
-                            
-                            for (const auto& [key, value] : Script->Environment)
-                            {
-                                sol::type ValueType = value.get_type();
-                                ImGui::BulletText("%s: %s", key.as<std::string>().c_str(), sol::type_name(value.lua_state(), ValueType).c_str());
-                            }
-                            
-                            ImGui::TreePop();
-                        }
-                        
-                        if (Script->ScriptTable.valid() && ImGui::TreeNode("Script Table"))
-                        {
-                            for (const auto& [key, value] : Script->ScriptTable)
-                            {
-                                sol::type ValueType = value.get_type();
-                                ImGui::BulletText("%s: %s",key.as<std::string>().c_str(), sol::type_name(value.lua_state(), ValueType).c_str());
-                            }
-                            
-                            ImGui::TreePop();
-                        }
-                        
-                        ImGui::Unindent();
-                        ImGui::TreePop();
-                    }
-                    
-                    ImGui::PopID();
-                }
                 
                 ImGui::EndTable();
             }

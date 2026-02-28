@@ -43,20 +43,6 @@ project "Runtime"
     {
         LuminaConfig.GetPublicIncludeDirectories()
     }
-
-    filter "configurations:Debug"
-	libdirs 
-	{ 
-		LuminaConfig.EnginePath("Engine/Source/ThirdParty/luau/libs/Debug"),
-	}
-	filter {}
-
-	filter "configurations:Development or Shipping"
-	libdirs
-	{
-		LuminaConfig.EnginePath("Engine/Source/ThirdParty/luau/libs/Release"),
-	}
-	filter {}
     
     libdirs
     {
@@ -84,13 +70,7 @@ project "Runtime"
         "ImGui",
         "EA",
         "Tracy",
-
-        "Luau.Compiler",
-        "Luau.Config",
-        "Luau.VM",
-        "Luau.AST",
-        "Luau.Common",
-
+        "Luau",
         "EnkiTS",
         "JoltPhysics",
         "RPMalloc",

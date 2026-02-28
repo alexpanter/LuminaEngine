@@ -45,6 +45,14 @@
 #define LUA_NORETURN __attribute__((__noreturn__))
 #endif
 
+#ifdef LUA_BUILD_AS_DLL
+#ifdef LUA_LIB
+#define LUA_API __declspec(dllexport)
+#elif
+#define LUA_API __declspec(dllimport)
+#endif
+#endif
+
 // Can be used to reconfigure visibility/exports for public APIs
 #ifndef LUA_API
 #define LUA_API extern
@@ -57,7 +65,7 @@
 #define LUAI_FUNC __attribute__((visibility("hidden"))) extern
 #define LUAI_DATA LUAI_FUNC
 #else
-#define LUAI_FUNC extern
+#define LUAI_FUNC LUA_API
 #define LUAI_DATA extern
 #endif
 
