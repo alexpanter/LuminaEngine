@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "Class.h"
 #include "Traits.h"
 #include "Stack.h"
 #include "Table.h"
@@ -11,22 +12,18 @@ namespace Lumina::Lua
     class FStateView : public TNamespace<FStateView>
     {
         friend class TNamespace;
-
+    
     public:
         
-        FStateView(lua_State* InLua)
-            : L(InLua)
+        FStateView(lua_State* State)
+            : L(State)
         {}
         
-        FTable CreateNamedTable(FStringView Name) const
+        template<typename T>
+        TClass<T> NewClass(FStringView Name)
         {
-            lua_newtable(L);
-            int Ref = lua_ref(L, -1);
-            lua_setglobal(L, Name.data());
-            return FTable(L, Name, Ref);
+            return TClass<T>(L, Name);
         }
-        
-    private:
         
         void RegisterValue(FStringView Name)
         {

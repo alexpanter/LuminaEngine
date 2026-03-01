@@ -25,6 +25,11 @@ namespace Lumina::Lua
         
         return Memory::Realloc(Memory, NewSize);
     }
+    
+    static int16 AtomString(lua_State* L, const char* Str, size_t Length)
+    {
+        return static_cast<int16>(Hash::GetHash32(Str, Length)); 
+    }
 
     static int LuminaLuaPrint(lua_State* L)
     {
@@ -74,7 +79,8 @@ namespace Lumina::Lua
     {
         L = lua_newstate(ScriptingMemoryAllocationFn, this);
         
-        // @TODO const lua_Callbacks* Callbacks = lua_callbacks(LuaState);
+        lua_Callbacks* Callbacks = lua_callbacks(L);
+        Callbacks->useratom = AtomString;
 
         luaL_openlibs(L);
         
@@ -82,11 +88,41 @@ namespace Lumina::Lua
         lua_setglobal(L, "print"); 
         //luaL_sandbox(LuaState);
         
+        struct FMyFoo
+        {
+            int X = 12;
+            FString GetString(int Y) const
+            {
+                return eastl::to_string(Y);
+            }
+            
+            int GetX() const
+            {
+                return X;
+            }
+
+            static FMyFoo Construct()
+            {
+                return FMyFoo{69};
+            }
+        };
+        
         FStateView View(L);
-        View.SetFunction<>()
+        View.NewClass<FMyFoo>("FMyFoo")
+            .Function<&FMyFoo::GetX>("GetX")
+            .Function<&FMyFoo::GetString>("GetString")
+            .Function<&FMyFoo::Construct>("Construct")
+            .Register();
+        
         
         const char* source = R"(
-        for i = 1, 1000 do
+        for i = 1, 10 do
+            local FooTest = FMyFoo:new()
+            print(FooTest:GetX())
+            print(FooTest:GetString(9))
+            
+            local NewFoo = FooTest:Construct()
+            print(NewFoo:GetX())
             
         end
         )";

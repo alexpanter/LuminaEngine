@@ -50,9 +50,33 @@ namespace Lumina::Lua
     template<>
     struct TStack<FString>
     {
-        static void Push(lua_State* State, const char* Value) { lua_pushstring(State, Value); }
-        static const char* Get(lua_State* State, int Index)   { return lua_tostring(State, Index); }
-        static bool Check(lua_State* State, int Index)        { return lua_type(State, Index) == LUA_TSTRING; }
+        static void Push(lua_State* State, const FString& Value)    { lua_pushstring(State, Value.c_str()); }
+        static FString Get(lua_State* State, int Index)             { return lua_tostring(State, Index); }
+        static bool Check(lua_State* State, int Index)              { return lua_type(State, Index) == LUA_TSTRING; }
+    };
+    
+    template<typename T>
+    struct TStack
+    {
+        template<typename... TArgs>
+        static void Push(lua_State* State, TArgs&&... Args)
+        {
+            void* Block = lua_newuserdata(State, sizeof(T));
+            new (Block) T(eastl::forward<TArgs>(Args)...);
+
+            lua_rawgetp(State, LUA_REGISTRYINDEX, TClassTraits<T>::MetaTableKey());
+            lua_setmetatable(State, -2);
+        }
+
+        static T* Get(lua_State* State, int Index)
+        {
+            return static_cast<T*>(lua_touserdata(State, Index));
+        }
+
+        static bool Check(lua_State* State, int Index)
+        {
+            return lua_type(State, Index) == LUA_TUSERDATA;
+        }
     };
     
 }
