@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "ConstructObjectParams.h"
+#include "lua.h"
 #include "Lumina.h"
 #include "ObjectFlags.h"
 #include "ObjectHandleTyped.h"
@@ -339,6 +340,7 @@ namespace Lumina
     {
         CStruct*                        (*SuperFunc)();
         FStructOps*                     (*StructOpsFn)();
+        void                            (*LuaRegisterFn)(lua_State*);
         const char*                     Name;
         const FPropertyParams* const*   Params;
         uint32                          NumProperties;

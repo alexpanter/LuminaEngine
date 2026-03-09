@@ -10,7 +10,6 @@
 #include "Reflector/ProjectSolution.h"
 #include "Reflector/ReflectionCore/ReflectedHeader.h"
 #include "Reflector/ReflectionCore/ReflectedProject.h"
-#include "Reflector/Types/Functions/ReflectedFunction.h"
 #include "Reflector/Types/Properties/ReflectedProperty.h"
 
 
@@ -205,8 +204,13 @@ namespace Lumina::Reflection
 		Stream += Header->HeaderPath + "\"\n";
 		Stream += "#include \"World/Entity/Components/Component.h\"\n";
 		Stream += "#include \"World/Entity/Events/ECSEvent.h\"\n";
+		Stream += "#include \"lua.h\"\n";
+		Stream += "#include \"lualib.h\"\n";
+		Stream += "#include \"Core/Math/Hash/Hash.h\"\n";
+		Stream += "#include \"Scripting/Lua/Invoker.h\"\n";
 		Stream += "#include \"Core/Object/Class.h\"\n";
 		Stream += "using namespace entt::literals;\n";
+		Stream += "using LuaMethodFn = int(*)(lua_State*);\n";
 		Stream += "\n\n";
 
 		eastl::string ProjectAPI = Header->Project->Name + "_api";

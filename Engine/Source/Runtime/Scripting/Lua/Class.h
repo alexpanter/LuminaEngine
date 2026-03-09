@@ -55,11 +55,8 @@ namespace Lumina::Lua
             lua_pop(L, 1);
 
             lua_newtable(L);
-            lua_pushstring(L, Name.data());
-            lua_pushcclosure(L, [](lua_State* State) -> int
+            lua_pushcfunction(L, [](lua_State* State) -> int
             {
-                const char* Name = lua_tostring(State, lua_upvalueindex(1));
-                
                 void* Block = lua_newuserdata(State, sizeof(T));
                 new (Block) T();
             
@@ -67,7 +64,7 @@ namespace Lumina::Lua
                 lua_setmetatable(State, -2);
             
                 return 1;
-            }, "new", 1);
+            }, "new");
             
             lua_setfield(L, -2, "new");
             lua_setglobal(L, Name.data());

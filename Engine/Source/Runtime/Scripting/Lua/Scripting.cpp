@@ -28,7 +28,7 @@ namespace Lumina::Lua
     
     static int16 AtomString(lua_State* L, const char* Str, size_t Length)
     {
-        return static_cast<int16>(Hash::GetHash32(Str, Length)); 
+        return static_cast<int16>(Hash::FNV1a::GetHash32(Str)); 
     }
 
     static int LuminaLuaPrint(lua_State* L)
@@ -87,43 +87,21 @@ namespace Lumina::Lua
         lua_pushcfunction(L, LuminaLuaPrint, "LuminaLuaPrint");
         lua_setglobal(L, "print"); 
         //luaL_sandbox(LuaState);
-        
-        struct FMyFoo
-        {
-            int X = 12;
-            FString GetString(int Y) const
-            {
-                return eastl::to_string(Y);
-            }
-            
-            int GetX() const
-            {
-                return X;
-            }
+    }
 
-            static FMyFoo Construct()
-            {
-                return FMyFoo{69};
-            }
-        };
-        
-        FStateView View(L);
-        View.NewClass<FMyFoo>("FMyFoo")
-            .Function<&FMyFoo::GetX>("GetX")
-            .Function<&FMyFoo::GetString>("GetString")
-            .Function<&FMyFoo::Construct>("Construct")
-            .Register();
-        
-        
+    void FScriptingContext::Shutdown()
+    {
+        lua_close(L);
+        L = nullptr;
+    }
+
+    void FScriptingContext::DoThing()
+    {
         const char* source = R"(
-        for i = 1, 10 do
-            local FooTest = FMyFoo:new()
-            print(FooTest:GetX())
-            print(FooTest:GetString(9))
-            
-            local NewFoo = FooTest:Construct()
-            print(NewFoo:GetX())
-            
+        local Test = SHealthComponent:new()
+        for i = 1, 100 do
+            local X: number = Test.Health
+            print(X)
         end
         )";
 
@@ -132,7 +110,6 @@ namespace Lumina::Lua
 
         if (!bytecode)
         {
-            fprintf(stderr, "Failed to compile\n");
             return;
         }
 
@@ -148,20 +125,17 @@ namespace Lumina::Lua
             return;
         }
 
+        auto start = std::chrono::steady_clock::now();
         int callResult = lua_pcall(T, 0, 0, 0);
+        auto End = std::chrono::steady_clock::now();
+        auto Duration = std::chrono::duration_cast<std::chrono::milliseconds>(End - start);
+        LOG_INFO("Duration {}", Duration.count());
 
         if (callResult != LUA_OK)
         {
             LOG_ERROR("Runtime Error {}", lua_tostring(T, -1));
             lua_pop(T, 1);
         }
-        
-    }
-
-    void FScriptingContext::Shutdown()
-    {
-        lua_close(L);
-        L = nullptr;
     }
 
     void FScriptingContext::ProcessDeferredActions()

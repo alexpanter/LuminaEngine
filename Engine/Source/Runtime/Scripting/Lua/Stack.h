@@ -58,24 +58,48 @@ namespace Lumina::Lua
     template<typename T>
     struct TStack
     {
+        using RawT = eastl::remove_cvref_t<T>;
+        
         template<typename... TArgs>
         static void Push(lua_State* State, TArgs&&... Args)
         {
-            void* Block = lua_newuserdata(State, sizeof(T));
-            new (Block) T(eastl::forward<TArgs>(Args)...);
+            void* Block = lua_newuserdata(State, sizeof(RawT));
+            new (Block) RawT(eastl::forward<TArgs>(Args)...);
 
-            lua_rawgetp(State, LUA_REGISTRYINDEX, TClassTraits<T>::MetaTableKey());
+            lua_rawgetp(State, LUA_REGISTRYINDEX, TClassTraits<RawT>::MetaTableKey());
             lua_setmetatable(State, -2);
         }
 
-        static T* Get(lua_State* State, int Index)
+        static RawT& Get(lua_State* State, int Index)
         {
-            return static_cast<T*>(lua_touserdata(State, Index));
+            return *static_cast<RawT*>(lua_touserdata(State, Index));
         }
 
         static bool Check(lua_State* State, int Index)
         {
             return lua_type(State, Index) == LUA_TUSERDATA;
+        }
+    };
+    
+    template<typename T>
+    struct TStack<T*>
+    {
+        using RawT = eastl::remove_cvref_t<T>;
+
+        template<typename... TArgs>
+        static void Push(lua_State* State, T* Ptr)
+        {
+            lua_pushlightuserdata(State, Ptr);
+        }
+
+        static RawT* Get(lua_State* State, int Index)
+        {
+            return static_cast<RawT*>(lua_touserdata(State, Index));
+        }
+
+        static bool Check(lua_State* State, int Index)
+        {
+            return lua_type(State, Index) == LUA_TLIGHTUSERDATA;
         }
     };
     

@@ -7,6 +7,17 @@
 
 namespace Lumina::Reflection
 {
+    constexpr int NextPowerOfTwo(int v)
+    {
+        v--;
+        v |= v >> 1;
+        v |= v >> 2;
+        v |= v >> 4;
+        v |= v >> 8;
+        v |= v >> 16;
+        v++;
+        return v;
+    }
 
     static bool IsManualReflectFile(const eastl::string& HeaderID)
     {
@@ -259,7 +270,7 @@ namespace Lumina::Reflection
             }
             
             Stream += "\t};\n";
-        }   
+        }
 
         for (const auto& Prop : Props)
         {
@@ -280,18 +291,126 @@ namespace Lumina::Reflection
         
         Stream += "\n";
 
+        for (const auto& Func : Functions)
+        {
+            Stream += "\tstatic const LuaMethodFn " + Func->Name + ";\n";
+        }
+        
+        Stream += "\n";
+
         for (const auto& Prop : Props)
         {
             Stream += "\tstatic const Lumina::" + eastl::string(Prop->GetPropertyParamType()) + " " + Prop->Name + ";\n";
         }
         
-        Stream += "\t//...\n\n";
-        
         Stream += "\tstatic const Lumina::FStructParams StructParams;\n";
+        
+        
+        if (!Functions.empty())
+        {
+            for (auto& Func : Functions)
+            {
+                Stream += "\tstatic constexpr int16 " + Func->Name + "_Hash = static_cast<int16>(Lumina::Hash::FNV1a::GetHash32(\"" + Func->Name + "\"));\n";
+            }
+        }
+        
         if (!Props.empty())
         {
             Stream += "\tstatic const Lumina::FPropertyParams* const PropPointers[];\n";
         }
+        
+        Stream += "\n";
+        
+        Stream += "static void SetupLuaBindings(lua_State* L)\n";
+        Stream += "{\n";
+        Stream += "\tint BindingTop = lua_gettop(L);\n";
+        Stream += "\tluaL_newmetatable(L, \"" + DisplayName + "\");\n";
+        Stream += "\tint MetaTableIdx = lua_gettop(L);\n";
+        Stream += "\tstatic uint32 TypeHash = Lumina::Hash::FNV1a::GetHash32(\"" + DisplayName + "\");\n";
+        Stream += "\tlua_pushvalue(L, MetaTableIdx);\n";
+        Stream += "\tlua_rawsetp(L, LUA_REGISTRYINDEX, &TypeHash);\n";
+        
+        if (!Functions.empty())
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tint Atom = 0;\n";
+            Stream += "\t\tlua_namecallatom(VM, &Atom);\n";
+            
+            Stream += "\t\tswitch(Atom)\n";
+            Stream += "\t\t{\n";
+
+            for (int i = 0; i < Functions.size(); ++i)
+            {
+                const auto& Func = Functions[i];
+                Stream += "\t\tcase(" + Func->Name + "_Hash): return Lumina::Lua::Invoker<&" + QualifiedName + "::" + Func->Name + ">(VM);\n";
+            }
+            
+            Stream += "\t\tdefault: return 0;\n";
+        
+            Stream += "\t\t}\n";
+        
+            Stream += "\t}, \"__namecall\");\n";
+            
+            Stream += "\tlua_setfield(L, MetaTableIdx, \"__namecall\");\n";
+            
+        }
+    
+        if (!Props.empty())
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\t" + QualifiedName + "* ThisType = static_cast<" + QualifiedName + "*>(lua_touserdata(VM, 1));\n";
+            Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
+            Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
+
+            Stream += "\t\tswitch(Hash)\n";
+            Stream += "\t\t{\n";
+            for (auto& Prop : Props)
+            {
+                if (Prop->bInner)
+                {
+                    continue;
+                }
+                
+                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
+            }
+            
+            Stream += "\t\tdefault: return 0;\n";
+            Stream += "\t\t}\n";
+        
+            Stream += "\t\treturn 1;\n";
+            Stream += "\t}, \"__index\");\n";
+            Stream += "\tlua_setfield(L, MetaTableIdx, \"__index\");\n";
+        
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\treturn 0;\n";
+            Stream += "\t}, \"__newindex\");\n";
+            Stream += "\tlua_setfield(L, MetaTableIdx, \"__newindex\");\n";
+        }
+        
+        Stream += "\tlua_pop(L, 1); // Pop metatable";
+        Stream += "\n";
+            
+        Stream += "\tlua_newtable(L);\n";
+        Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
+        Stream += "\t{\n";
+        Stream += "\t\tvoid* Block = lua_newuserdata(State, sizeof(" + QualifiedName + "));\n";
+        Stream += "\t\tnew (Block) " + QualifiedName + "{};\n";
+        Stream += "\t\tlua_rawgetp(State, LUA_REGISTRYINDEX, &TypeHash);\n";
+        Stream += "\t\tlua_setmetatable(State, -2);\n";
+        Stream += "\t\treturn 1;\n";
+        Stream += "\t}, \"new\");\n";
+            
+        Stream += "\tlua_setfield(L, -2, \"new\");\n";
+        Stream += "\tlua_setglobal(L, \"" + DisplayName + "\");\n";
+            
+        Stream += "\tDEBUG_ASSERT(BindingTop == lua_gettop(L));\n";
+        
+        Stream += "}\n";
+        
+
         Stream += "};\n\n";
         
         Stream += "Lumina::CStruct* Construct_CStruct_" + FriendlyName + "()\n";
@@ -333,6 +452,17 @@ namespace Lumina::Reflection
             Stream += "\treturn Registration_Info_CStruct_" + FriendlyName + ".OuterSingleton;\n";
             Stream += "}\n";
         }
+        
+        if (!Functions.empty())
+        {
+            for (auto& Func : Functions)
+            {
+                Stream += "const LuaMethodFn Construct_CStruct_" + FriendlyName + "_Statics::" + Func->Name + " = ";
+                Func->AppendDefinition(Stream);
+            }
+
+            Stream += "\n";
+        }
 
         if (!Props.empty())
         {
@@ -369,6 +499,7 @@ namespace Lumina::Reflection
         }
         
         Stream += "\t&GetStructOps,\n";
+        Stream += "\t&SetupLuaBindings,\n";
         
         Stream += "\t\"" + DisplayName + "\",\n";
         

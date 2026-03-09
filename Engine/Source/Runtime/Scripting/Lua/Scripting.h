@@ -62,6 +62,7 @@ namespace Lumina::Lua
         void Initialize();
         void Shutdown();
         
+        void DoThing();
         void ProcessDeferredActions();
 
         RUNTIME_API size_t GetScriptMemoryUsage() const;
@@ -78,9 +79,7 @@ namespace Lumina::Lua
 
     public:
         
-        
-        
-    
+        RUNTIME_API lua_State* GetVM() const { return L; }
         
     private:
         

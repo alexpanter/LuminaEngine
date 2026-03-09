@@ -72,10 +72,10 @@ namespace Lumina::Hash
 
 	namespace FNV1a
 	{
-		constexpr uint32 GConstValue32 = 0x811c9dc5;
-		constexpr uint32 GDefaultOffsetBasis32 = 0x1000193;
-		constexpr uint64 GConstValue64 = 0xcbf29ce484222325;
-		constexpr uint64 GDefaultOffsetBasis64 = 0x100000001b3;
+		constexpr uint32 GConstValue32			= 0x811c9dc5;
+		constexpr uint32 GDefaultOffsetBasis32	= 0x1000193;
+		constexpr uint64 GConstValue64			= 0xcbf29ce484222325;
+		constexpr uint64 GDefaultOffsetBasis64	= 0x100000001b3;
 
 		constexpr static uint32 GetHash32(const char* const str, const uint32 val = GConstValue32)
 		{

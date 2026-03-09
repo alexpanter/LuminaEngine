@@ -18,6 +18,7 @@
 #include "Core/Reflection/Type/Properties/StructProperty.h"
 #include "Package/Package.h"
 #include "Paths/Paths.h"
+#include "Scripting/Lua/Scripting.h"
 
 namespace Lumina
 {
@@ -464,12 +465,15 @@ namespace Lumina
         ObjectParms.Flags       = OF_None;
         ObjectParms.Package     = FindOrCreatePackage(CStruct::StaticPackage());
         ObjectParms.Guid        = FGuid::New();
-
         
         CStruct* FinalClass = (CStruct*)StaticAllocateObject(ObjectParms);
         FinalClass->Size = Params.SizeOf;
         FinalClass->Alignment = Params.AlignOf;
         FinalClass->StructOps.reset(Params.StructOpsFn());
+        
+        
+        lua_State* LuaVM = Lua::FScriptingContext::Get().GetVM();
+        Params.LuaRegisterFn(LuaVM);
         
         *OutStruct = FinalClass;
         

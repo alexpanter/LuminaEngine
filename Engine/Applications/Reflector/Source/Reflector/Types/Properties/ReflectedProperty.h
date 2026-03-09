@@ -2,10 +2,10 @@
 
 #include <EASTL/string.h>
 #include "EASTL/vector.h"
+#include "Reflector/Types/PropertyFlags.h"
 #include "Reflector/Types/StructReflectItem.h"
 #include "Reflector/Utils/MetadataUtils.h"
 
-enum class EPropertyFlags : uint16_t;
 
 namespace Lumina::Reflection
 {
