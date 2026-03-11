@@ -1,9 +1,12 @@
 #pragma once
 
+#include "Core/Object/ObjectMacros.h"
 #include "Platform/GenericPlatform.h"
+#include "keycodes.generated.h"
 
 namespace Lumina
 {
+	REFLECT()
 	enum class EKey : uint16
 	{
 		// From glfw3.h

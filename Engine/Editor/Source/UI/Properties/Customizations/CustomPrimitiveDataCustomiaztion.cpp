@@ -1,8 +1,6 @@
 ﻿#include "CustomPrimitiveDataCustomization.h"
 #include "imgui.h"
-#include "Platform/Process/PlatformProcess.h"
-#include "Scripting/Lua/Scripting.h"
-#include "UI/Tools/ContentBrowserEditorTool.h"
+#include "Core/Reflection/Type/LuminaTypes.h"
 
 namespace Lumina
 {

@@ -78,9 +78,11 @@ namespace Lumina::Reflection
         virtual void DefineSecondaryHeader(eastl::string& Stream, const eastl::string& FileID) = 0;
         virtual void DeclareImplementation(eastl::string& Stream) = 0;
         virtual void DeclareStaticRegistration(eastl::string& Stream) = 0;
+        virtual void SetupLuaRegistration(eastl::string& Stream) = 0;
+        
+        bool HasMetadata(const eastl::string& Meta);
 
         bool DeclareAccessors(eastl::string& Stream, const eastl::string& FileID);
-        
         void GenerateMetadata(const eastl::string& InMetadata);
 
         eastl::vector<eastl::unique_ptr<FReflectedProperty>>    Props;
@@ -120,6 +122,7 @@ namespace Lumina::Reflection
         void DefineSecondaryHeader(eastl::string& Stream, const eastl::string& FileID) override;
         void DeclareImplementation(eastl::string& Stream) override;
         void DeclareStaticRegistration(eastl::string& Stream) override;
+        void SetupLuaRegistration(eastl::string& Stream) override;
 
         void AddConstant(const FConstant& Constant) { Constants.push_back(Constant); }
 
@@ -133,7 +136,7 @@ namespace Lumina::Reflection
     {
     public:
 
-        virtual ~FReflectedStruct() override;
+        ~FReflectedStruct() override;
         
         FReflectedStruct()
         {
@@ -150,6 +153,7 @@ namespace Lumina::Reflection
         void DefineSecondaryHeader(eastl::string& Stream, const eastl::string& FileID) override;
         void DeclareImplementation(eastl::string& Stream) override;
         void DeclareStaticRegistration(eastl::string& Stream) override;
+        void SetupLuaRegistration(eastl::string& Stream) override;
         
         eastl::string Parent;
     };

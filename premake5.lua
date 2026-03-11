@@ -54,9 +54,7 @@ workspace "Lumina"
 		"IMGUI_DEFINE_MATH_OPERATORS",
         "IMGUI_IMPL_VULKAN_USE_VOLK",
         
-        "SOL_USE_LUAU",
-        "SOL_NO_EXCEPTIONS",
-        "SOL_DEFAULT_PASS_ON_ERROR",
+        "LUA_VECTOR_SIZE=4",
 
         "TRACY_ALLOW_SHADOW_WARNING",
         "TRACY_ENABLE",

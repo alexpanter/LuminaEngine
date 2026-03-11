@@ -64,8 +64,6 @@ namespace Lumina
 
         ProcessNewlyLoadedCObjects();
         
-        Lua::FScriptingContext::Get().DoThing();
-        
         GWorldManager = Memory::New<FWorldManager>();
 
         #if USING(WITH_EDITOR)

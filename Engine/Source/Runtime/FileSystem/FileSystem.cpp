@@ -234,7 +234,7 @@ namespace Lumina::VFS
 
     bool IsLuaAsset(FStringView Path)
     {
-        return Extension(Path) == ".lua";
+        return Extension(Path) == ".luau";
     }
 
     bool IsLuminaAsset(FStringView Path)

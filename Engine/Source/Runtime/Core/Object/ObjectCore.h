@@ -359,6 +359,7 @@ namespace Lumina
     
     struct FEnumParams
     {
+        void                        (*LuaRegisterFn)(lua_State*);
         const char*                 Name;
         const FEnumeratorParam*     Params;
         int16                       NumParams;

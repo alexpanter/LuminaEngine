@@ -1,5 +1,6 @@
 ﻿#include "ScriptComponentCustomization.h"
 #include "imgui.h"
+#include "World/World.h"
 #include "Platform/Process/PlatformProcess.h"
 #include "Scripting/Lua/Scripting.h"
 #include "UI/Tools/ContentBrowserEditorTool.h"
@@ -18,7 +19,7 @@ namespace Lumina
         bool bWasChanged = false;
 
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
-        
+        SScriptComponent* ScriptComponent = static_cast<SScriptComponent*>(Property->ContainerPtr);
         
         ImGui::PushID(this);
         if (ImGui::BeginChild("OP", ImVec2(-1, 0), ImGuiChildFlags_AutoResizeY, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse))
@@ -33,13 +34,12 @@ namespace Lumina
 
             ImGui::SetNextItemWidth(TextWidgetWidth);
             
-            FFixedString PathString(Value.ScriptPath.Path.begin(), Value.ScriptPath.Path.end());
-        
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 0.6f, 0.6f, 1.0f));
         
+            FFixedString PathString(ScriptComponent->ScriptPath.Path.begin(), ScriptComponent->ScriptPath.Path.length());
             ImGui::InputText("##ScriptPathText", PathString.data(), PathString.max_size(), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_ReadOnly);
         
-            ImGuiX::TextTooltip("{}", PathString);
+            ImGuiX::TextTooltip("{}", ScriptComponent->ScriptPath.Path);
         
             ImGui::PopStyleColor();
 
@@ -83,8 +83,9 @@ namespace Lumina
                         SelectableLabel.append(LE_ICON_LANGUAGE_LUA).append(" ").append(FileInfo.VirtualPath.c_str());
                         if (ImGui::Selectable(SelectableLabel.c_str()))
                         {
+                            ScriptComponent->ScriptPath.Path = FileInfo.VirtualPath;
+                            ScriptComponent->World->OnScriptComponentCreated(ScriptComponent->World->GetEntityRegistry(), ScriptComponent->Entity);
                             ImGui::CloseCurrentPopup();
-                        
                             bWasChanged = true;
                         }
                     });
@@ -96,7 +97,7 @@ namespace Lumina
             
             if (ImGui::Button(LE_ICON_OPEN_IN_NEW "##Open", GButtonSize))
             {
-                VFS::PlatformOpen(Value.ScriptPath.Path);
+                VFS::PlatformOpen(ScriptComponent->ScriptPath.Path);
             }
             
             ImGuiX::TextTooltip("Open the script in your native editor");
@@ -105,7 +106,7 @@ namespace Lumina
             
             if (ImGui::Button(LE_ICON_CONTENT_COPY "##Copy", GButtonSize))
             {
-                ImGui::SetClipboardText(Value.ScriptPath.Path.c_str());
+                ImGui::SetClipboardText(ScriptComponent->ScriptPath.Path.c_str());
             }
             
             ImGuiX::TextTooltip("Copy the script-path to your native clipboard");
@@ -127,7 +128,12 @@ namespace Lumina
 
             if (ImGui::Button(LE_ICON_CLOSE_CIRCLE "##Clear", GButtonSize))
             {
-                Value = {};
+                ScriptComponent->Script = {};
+                ScriptComponent->AttachFunc = {};
+                ScriptComponent->ReadyFunc = {};
+                ScriptComponent->UpdateFunc = {};
+                ScriptComponent->DetachFunc = {};
+                ScriptComponent->ScriptPath = {};
                 bWasChanged = true;
             }
             
@@ -150,13 +156,11 @@ namespace Lumina
 
     void FScriptComponentPropertyCustomization::UpdatePropertyValue(TSharedPtr<FPropertyHandle> Property)
     {
-        SScriptComponent* Updated = static_cast<SScriptComponent*>(Property->ContainerPtr);
-        *Updated = Value;
+        
     }
 
     void FScriptComponentPropertyCustomization::HandleExternalUpdate(TSharedPtr<FPropertyHandle> Property)
     {
-        SScriptComponent* Updated = static_cast<SScriptComponent*>(Property->ContainerPtr);
-        Value = *Updated;
+
     }
 }

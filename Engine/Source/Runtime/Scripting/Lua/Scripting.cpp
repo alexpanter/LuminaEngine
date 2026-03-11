@@ -1,22 +1,20 @@
 #include "pch.h"
 #include "Scripting.h"
-
 #include "luacode.h"
 #include "lualib.h"
-#include "StateView.h"
+#include "ScriptTypes.h"
+#include "Core/Utils/TimedEvent.h"
+#include "Events/KeyCodes.h"
 #include "FileSystem/FileSystem.h"
+#include "Input/InputProcessor.h"
 #include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
-#include "Paths/Paths.h"
 #include "World/Entity/Systems/SystemContext.h"
 
 namespace Lumina::Lua
 {
-    static void* ScriptingMemoryAllocationFn(void* Caller, void* Memory, size_t OldSize, size_t NewSize)
+    static void* ScriptingMemoryReallocFn([[maybe_unused]] void* Caller, void* Memory, [[maybe_unused]] size_t OldSize, size_t NewSize)
     {
-        (void)Caller;
-        (void)OldSize;
-        
         if (NewSize == 0)
         {
             Memory::Free(Memory);
@@ -26,9 +24,14 @@ namespace Lumina::Lua
         return Memory::Realloc(Memory, NewSize);
     }
     
+    static void LuaPanicHandler(lua_State* L, int ErrorCode)
+    {
+        PANIC("Lua Panic {}", ErrorCode);
+    }
+    
     static int16 AtomString(lua_State* L, const char* Str, size_t Length)
     {
-        return static_cast<int16>(Hash::FNV1a::GetHash32(Str)); 
+        return static_cast<int16>(Hash::FNV1a::GetHash16(Str)); 
     }
 
     static int LuminaLuaPrint(lua_State* L)
@@ -77,65 +80,43 @@ namespace Lumina::Lua
     
     void FScriptingContext::Initialize()
     {
-        L = lua_newstate(ScriptingMemoryAllocationFn, this);
+        L = lua_newstate(ScriptingMemoryReallocFn, this);
         
-        lua_Callbacks* Callbacks = lua_callbacks(L);
-        Callbacks->useratom = AtomString;
+        lua_Callbacks* Callbacks    = lua_callbacks(L);
+        Callbacks->useratom         = AtomString;
+        Callbacks->panic            = LuaPanicHandler;
 
         luaL_openlibs(L);
         
         lua_pushcfunction(L, LuminaLuaPrint, "LuminaLuaPrint");
-        lua_setglobal(L, "print"); 
-        //luaL_sandbox(LuaState);
+        lua_setglobal(L, "print");
+        
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        FRef GlobalsRef(L, -1);
+        
+        FRef InputTable = GlobalsRef.NewTable("Input");
+        InputTable.Set("IsKeyDown", +[](EKey Key){ return FInputProcessor::Get().IsKeyDown(Key); });
+        InputTable.Set("IsKeyUp", +[](EKey Key){ return FInputProcessor::Get().IsKeyUp(Key); });
+        InputTable.Set("IsKeyPressed", +[](EKey Key){ return FInputProcessor::Get().IsKeyPressed(Key); });
+        InputTable.Set("IsKeyRepeated", +[](EKey Key){ return FInputProcessor::Get().IsKeyRepeated(Key); });
+        
+        InputTable.Set("GetMouseDeltaX", +[](){ return FInputProcessor::Get().GetMouseDeltaX(); });
+        InputTable.Set("GetMouseDeltaY", +[](){ return FInputProcessor::Get().GetMouseDeltaY(); });
+        InputTable.Set("GetMouseX", +[](){ return FInputProcessor::Get().GetMouseX(); });
+        InputTable.Set("GetMouseY", +[](){ return FInputProcessor::Get().GetMouseY(); });
+        InputTable.Set("GetMouseZ", +[](){ return FInputProcessor::Get().GetMouseZ(); });
+
+    }
+
+    void FScriptingContext::SandboxGlobals()
+    {
+        luaL_sandbox(L);
     }
 
     void FScriptingContext::Shutdown()
     {
         lua_close(L);
         L = nullptr;
-    }
-
-    void FScriptingContext::DoThing()
-    {
-        const char* source = R"(
-        local Test = SHealthComponent:new()
-        for i = 1, 100 do
-            local X: number = Test.Health
-            print(X)
-        end
-        )";
-
-        size_t bytecodeSize = 0;
-        char* bytecode = luau_compile(source, strlen(source), nullptr, &bytecodeSize);
-
-        if (!bytecode)
-        {
-            return;
-        }
-
-        lua_State* T = lua_newthread(L);
-        luaL_sandboxthread(T);
-
-        int loadResult = luau_load(T, "test", bytecode, bytecodeSize, 0);
-        free(bytecode);
-
-        if (loadResult != LUA_OK)
-        {
-            lua_pop(T, 1);
-            return;
-        }
-
-        auto start = std::chrono::steady_clock::now();
-        int callResult = lua_pcall(T, 0, 0, 0);
-        auto End = std::chrono::steady_clock::now();
-        auto Duration = std::chrono::duration_cast<std::chrono::milliseconds>(End - start);
-        LOG_INFO("Duration {}", Duration.count());
-
-        if (callResult != LUA_OK)
-        {
-            LOG_ERROR("Runtime Error {}", lua_tostring(T, -1));
-            lua_pop(T, 1);
-        }
     }
 
     void FScriptingContext::ProcessDeferredActions()
@@ -158,10 +139,12 @@ namespace Lumina::Lua
             ReloadScripts(Load.Path);
         });
     }
-
-    size_t FScriptingContext::GetScriptMemoryUsage() const
+    
+    int FScriptingContext::GetScriptMemoryUsageBytes() const
     {
-        return 0;
+        int KB        = lua_gc(L, LUA_GCCOUNT, 0);
+        int Remainder = lua_gc(L, LUA_GCCOUNTB, 0);
+        return (KB * 1024) + Remainder;
     }
 
     void FScriptingContext::ScriptReloaded(FStringView ScriptPath)
@@ -190,7 +173,7 @@ namespace Lumina::Lua
         DeferredActions.EnqueueAction<FScriptDelete>(ScriptPath);
     }
 
-    TSharedPtr<FLuaScript> FScriptingContext::LoadUniqueScript(FStringView Path)
+    TSharedPtr<FScript> FScriptingContext::LoadUniqueScriptPath(FStringView Path)
     {
         FString ScriptData;
         if (!VFS::ReadFile(ScriptData, Path))
@@ -204,16 +187,77 @@ namespace Lumina::Lua
             LOG_WARN("Lua - Script file is empty: {}", Path);
             return {};
         }
-        return {};
+        
+        FStringView FileName = VFS::FileName(Path);
+        return LoadUniqueScript(ScriptData, FileName);
     }
 
-    TVector<TSharedPtr<FLuaScript>> FScriptingContext::GetAllRegisteredScripts()
+    TSharedPtr<FScript> FScriptingContext::LoadUniqueScript(FStringView Code, FStringView Name)
     {
-        TVector<TSharedPtr<FLuaScript>> ReturnValue;
+        LUMINA_PROFILE_SCOPE();
+        
+        size_t BytecodeSize = 0;
+        char* Bytecode = luau_compile(Code.data(), Code.length(), nullptr, &BytecodeSize);
+
+        if (!Bytecode)
+        {
+            return {};
+        }
+
+        int StackBefore = lua_gettop(L);
+        lua_State* Thread = lua_newthread(L);
+        FRef ThreadRef(L, -1);
+        luaL_sandboxthread(Thread);
+        lua_pop(L, 1); // We have to pop off the main lua state.
+        
+        // Push a copy since FRef pops internally.
+        lua_pushvalue(Thread, LUA_GLOBALSINDEX);
+        lua_pushvalue(Thread, -1);
+        FRef Environment(Thread, -1);
+        lua_pop(Thread, 1); // Pops the copy.
+        
+        int LoadResult = luau_load(Thread, Name.data(), Bytecode, BytecodeSize, 0);
+        free(Bytecode);
+
+        if (LoadResult != LUA_OK)
+        {
+            LOG_ERROR("Lua - Failed to load: {}", lua_tostring(Thread, -1));
+            lua_pop(Thread, 1);
+            return {};
+        }
+
+        int CallResult = lua_pcall(Thread, 0, 1, 0);
+        if (CallResult != LUA_OK)
+        {
+            LOG_ERROR("Runtime Error {}", lua_tostring(Thread, -1));
+            lua_pop(Thread, 1);
+            return {};
+        }
+
+        auto NewScript = MakeShared<FScript>();
+        NewScript->Name         = Name;
+        NewScript->Path         = "";
+        NewScript->Reference    = FRef(Thread, -1);
+        NewScript->Environment  = Environment;
+        NewScript->Thread       = ThreadRef;
+        lua_pop(Thread, 1);
+        
+        
+        
+        int StackAfter = lua_gettop(L);
+
+        DEBUG_ASSERT(StackAfter == StackBefore);
+        
+        return NewScript;
+    }
+
+    TVector<TSharedPtr<FScript>> FScriptingContext::GetAllRegisteredScripts()
+    {
+        TVector<TSharedPtr<FScript>> ReturnValue;
 
         for (auto& [Path, Vector] : RegisteredScripts)
         {
-            for (TWeakPtr<FLuaScript>& WeakPtr : Vector)
+            for (TWeakPtr<FScript>& WeakPtr : Vector)
             {
                 if (auto StrongPtr = WeakPtr.lock())
                 {
@@ -227,7 +271,7 @@ namespace Lumina::Lua
 
     void FScriptingContext::RunGC()
     {
-        //State.collect_garbage();
+        
     }
 
    

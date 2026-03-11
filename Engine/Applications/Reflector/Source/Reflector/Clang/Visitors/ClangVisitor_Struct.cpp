@@ -1,5 +1,4 @@
-﻿#include <clang/AST/Decl.h>
-#include <clang/AST/Type.h>
+﻿#include <clang/AST/Type.h>
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
 #include <EASTL/optional.h>
@@ -404,7 +403,7 @@ namespace Lumina::Reflection::Visitor
 			}
 			else
 			{
-				spdlog::error("Failed to create function field for {}", NewFunction->Name);
+				spdlog::error("Failed to create function field for {}", NewFunction->Name.c_str());
 			}
 		}
 		

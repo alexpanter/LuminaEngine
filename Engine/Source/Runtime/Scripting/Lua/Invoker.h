@@ -4,8 +4,6 @@
 
 namespace Lumina::Lua
 {
-    
-    
     template<auto TFunc>
     auto Invoker(lua_State* L)
     {
@@ -18,8 +16,9 @@ namespace Lumina::Lua
             if constexpr (eastl::is_member_function_pointer_v<decltype(TFunc)>)
             {
                 using ClassT = TraitsT::ClassType;
-                ClassT* Self = static_cast<ClassT*>(lua_touserdata(L, 1));
-            
+                FUserdataHeader* Header = static_cast<FUserdataHeader*>(lua_touserdata(L, 1));
+                ClassT* Self = static_cast<ClassT*>(Header->Ptr);
+                
                 if constexpr (eastl::is_void_v<ReturnT>)
                 {
                     (Self->*TFunc)(TStack<eastl::tuple_element_t<Is, ArgsT>>::Get(L, Is + 2)...);

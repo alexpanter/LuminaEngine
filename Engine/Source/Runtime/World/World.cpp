@@ -133,7 +133,7 @@ namespace Lumina
                 return;
             }
             
-            ScriptComponent.InvokeScriptFunction("OnReady");
+            ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
         });
         
         auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
@@ -150,7 +150,7 @@ namespace Lumina
                             return;
                         }
                         
-                        ScriptComp->InvokeScriptFunction("OnReady");
+                        ScriptComp->ReadyFunc(ScriptComp->Script->Reference);
                     }
                 });
                 
@@ -159,7 +159,7 @@ namespace Lumina
                     return;
                 }
 
-                Script.InvokeScriptFunction("OnReady");
+                Script.ReadyFunc(Script.Script->Reference);
             }
         });
         
@@ -441,9 +441,40 @@ namespace Lumina
     void CWorld::OnScriptComponentCreated(entt::registry& Registry, entt::entity Entity)
     {
         SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
+        ScriptComponent.Entity     = Entity;
+        ScriptComponent.World      = this;
+        
         if (!ScriptComponent.ScriptPath.Path.empty())
         {
+            ScriptComponent.Script = Lua::FScriptingContext::Get().LoadUniqueScriptPath(ScriptComponent.ScriptPath.Path);
+            if (ScriptComponent.Script == nullptr)
+            {
+                return;
+            }
             
+            ScriptComponent.Script->Reference.Set("Entity", Entity);
+            ScriptComponent.Script->Reference.Set("Registry", &EntityRegistry);
+            
+            ScriptComponent.AttachFunc = ScriptComponent.Script->Reference["OnAttach"];
+            ScriptComponent.ReadyFunc  = ScriptComponent.Script->Reference["OnReady"];
+            ScriptComponent.UpdateFunc = ScriptComponent.Script->Reference["Update"];
+            ScriptComponent.DetachFunc = ScriptComponent.Script->Reference["OnDetach"];
+            
+            if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+            {
+                if (ScriptComponent.AttachFunc.IsValid())
+                {
+                    ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
+                }
+
+                if (!bInitializing)
+                {
+                    if (ScriptComponent.ReadyFunc.IsValid())
+                    {
+                        ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
+                    }
+                }
+            }
         }
     }
 
@@ -454,7 +485,10 @@ namespace Lumina
         {
             if (ScriptComponent.Script != nullptr)
             {
-                ScriptComponent.InvokeScriptFunction("OnDetach");
+                if (ScriptComponent.DetachFunc.IsValid())
+                {
+                    ScriptComponent.DetachFunc(ScriptComponent.Script->Reference);
+                }
             }
         }
     }

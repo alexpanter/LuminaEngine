@@ -3,7 +3,6 @@
 #include "ImGuiDrawUtils.h"
 #include "Core/Reflection/PropertyCustomization/PropertyCustomization.h"
 #include "Renderer/CustomPrimitiveData.h"
-#include "World/Entity/Components/ScriptComponent.h"
 
 
 namespace Lumina

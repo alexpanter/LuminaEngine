@@ -443,6 +443,9 @@ namespace Lumina
         
         *OutEnum = NewEnum;
         
+        lua_State* LuaVM = Lua::FScriptingContext::Get().GetVM();
+        Params.LuaRegisterFn(LuaVM);
+        
         for (uint16 i = 0; i < Params.NumMetaData; ++i)
         {
             const FMetaDataPairParam& Param = Params.MetaDataArray[i];

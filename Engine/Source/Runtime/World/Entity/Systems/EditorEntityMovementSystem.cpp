@@ -20,7 +20,7 @@ namespace Lumina
 
 		double DeltaTime = SystemContext.GetDeltaTime();
 		auto View = SystemContext.CreateView<STransformComponent, FEditorComponent, SCameraComponent, SVelocityComponent>();
-
+		
 		for (entt::entity EditorEntity : View)
 		{
 			SystemContext.DispatchEvent<FSwitchActiveCameraEvent>(FSwitchActiveCameraEvent{ EditorEntity });

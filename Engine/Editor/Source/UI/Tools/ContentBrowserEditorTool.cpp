@@ -493,7 +493,7 @@ namespace Lumina
         {
             CObject* AliveObject = nullptr;
             
-            if (VFS::HasExtension(Destroy.PendingDestroy, ".lua"))
+            if (VFS::HasExtension(Destroy.PendingDestroy, ".luau"))
             {
                 if (VFS::Remove(Destroy.PendingDestroy))
                 {
@@ -668,7 +668,7 @@ namespace Lumina
         Watcher.Stop();
         Watcher.Watch(ScriptPath, [&](const FFileEvent& Event)
         {
-            if (!VFS::HasExtension(Event.Path, ".lua"))
+            if (!VFS::HasExtension(Event.Path, ".luau"))
             {
                 return;
             }
@@ -1240,8 +1240,31 @@ namespace Lumina
     {
         if (ImGui::MenuItem(LE_ICON_OPEN_IN_NEW " New Script"))
         {
-            FFixedString NewScriptPath = SelectedPath + "/" + "NewScript.lua";
-            VFS::WriteFile(NewScriptPath, "-- New Lua Script");
+            FFixedString NewScriptPath = SelectedPath + "/" + "NewScript.luau";
+            VFS::WriteFile(NewScriptPath, R"(
+NewScript = { }
+
+
+function NewScript:OnAttach()
+    -- Called when the entity is created
+end
+
+function NewScript:OnReady()
+    -- Called when the entity hierarchy is initialized
+end
+
+function NewScript:Update(DeltaTime: number)
+    -- Called every frame.
+end
+            
+function NewScript:OnDetach()
+    -- Called when the entity is destroyed.
+end
+
+
+return NewScript
+)");
+            
         }
     }
 

@@ -1,4 +1,6 @@
 ﻿#include "ReflectedType.h"
+
+#include "eastl/any.h"
 #include "Functions/ReflectedFunction.h"
 #include "Properties/ReflectedProperty.h"
 #include "Reflector/Clang/Utils.h"
@@ -23,7 +25,16 @@ namespace Lumina::Reflection
     {
         return HeaderID.find("manualreflecttypes") != eastl::string::npos;
     }
-    
+
+
+    bool FReflectedType::HasMetadata(const eastl::string& Meta)
+    {
+        return eastl::any_of(Metadata.begin(), Metadata.end(), [&](const FMetadataPair& Pair)
+        {
+            return Pair.Key == Meta;
+        });
+    }
+
     bool FReflectedType::DeclareAccessors(eastl::string& Stream, const eastl::string& FileID)
     {
         // First pass: check if any property has accessors
@@ -111,10 +122,15 @@ namespace Lumina::Reflection
             Stream += "\t\t{ \"" + DisplayName + "::" + Constant.Label + "\", " + eastl::to_string(Constant.Value) + " },\n";
         }
         Stream += "\t};\n\n";
+        
+        SetupLuaRegistration(Stream);
+        
+        Stream += "\n";
 
         Stream += "\tstatic const Lumina::FEnumParams EnumParams;\n";
         Stream += "};\n";
         Stream += "const Lumina::FEnumParams Construct_CEnum_" + Namespace + "_" + DisplayName + "_Statics::EnumParams = {\n";
+        Stream += "\t&SetupLuaBindings,\n";
         Stream += "\t\"" + DisplayName + "\",\n";
         Stream += "\tEnumerators,\n";
         Stream += "\t(uint32)std::size(Enumerators)";
@@ -153,7 +169,23 @@ namespace Lumina::Reflection
         eastl::string FriendlyName = ClangUtils::MakeCodeFriendlyNamespace(QualifiedName);
         Stream += "\t{ Construct_CEnum_" + FriendlyName + ", TEXT(\"" + DisplayName + "\") },\n";
     }
-    
+
+    void FReflectedEnum::SetupLuaRegistration(eastl::string& Stream)
+    {
+        Stream += "static void SetupLuaBindings(lua_State* L)\n";
+        Stream += "{\n";
+        Stream += "\tlua_newtable(L);\n";
+
+        for (const FConstant& Constant : Constants)
+        {
+            Stream += "\tlua_pushinteger(L, static_cast<int>(" + QualifiedName + "::" + Constant.Label + "));\n";
+            Stream += "\tlua_setfield(L, -2, \"" + Constant.Label + "\");\n";
+        }
+        
+        Stream += "\tlua_setglobal(L, \"" + DisplayName + "\");\n";
+        Stream += "}\n";
+    }
+
     //---------------------------------------------------------------------------------------------------------------------
     
     FReflectedStruct::~FReflectedStruct()
@@ -290,29 +322,13 @@ namespace Lumina::Reflection
         }
         
         Stream += "\n";
-
-        for (const auto& Func : Functions)
-        {
-            Stream += "\tstatic const LuaMethodFn " + Func->Name + ";\n";
-        }
         
-        Stream += "\n";
-
         for (const auto& Prop : Props)
         {
             Stream += "\tstatic const Lumina::" + eastl::string(Prop->GetPropertyParamType()) + " " + Prop->Name + ";\n";
         }
         
         Stream += "\tstatic const Lumina::FStructParams StructParams;\n";
-        
-        
-        if (!Functions.empty())
-        {
-            for (auto& Func : Functions)
-            {
-                Stream += "\tstatic constexpr int16 " + Func->Name + "_Hash = static_cast<int16>(Lumina::Hash::FNV1a::GetHash32(\"" + Func->Name + "\"));\n";
-            }
-        }
         
         if (!Props.empty())
         {
@@ -321,96 +337,7 @@ namespace Lumina::Reflection
         
         Stream += "\n";
         
-        Stream += "static void SetupLuaBindings(lua_State* L)\n";
-        Stream += "{\n";
-        Stream += "\tint BindingTop = lua_gettop(L);\n";
-        Stream += "\tluaL_newmetatable(L, \"" + DisplayName + "\");\n";
-        Stream += "\tint MetaTableIdx = lua_gettop(L);\n";
-        Stream += "\tstatic uint32 TypeHash = Lumina::Hash::FNV1a::GetHash32(\"" + DisplayName + "\");\n";
-        Stream += "\tlua_pushvalue(L, MetaTableIdx);\n";
-        Stream += "\tlua_rawsetp(L, LUA_REGISTRYINDEX, &TypeHash);\n";
-        
-        if (!Functions.empty())
-        {
-            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
-            Stream += "\t{\n";
-            Stream += "\t\tint Atom = 0;\n";
-            Stream += "\t\tlua_namecallatom(VM, &Atom);\n";
-            
-            Stream += "\t\tswitch(Atom)\n";
-            Stream += "\t\t{\n";
-
-            for (int i = 0; i < Functions.size(); ++i)
-            {
-                const auto& Func = Functions[i];
-                Stream += "\t\tcase(" + Func->Name + "_Hash): return Lumina::Lua::Invoker<&" + QualifiedName + "::" + Func->Name + ">(VM);\n";
-            }
-            
-            Stream += "\t\tdefault: return 0;\n";
-        
-            Stream += "\t\t}\n";
-        
-            Stream += "\t}, \"__namecall\");\n";
-            
-            Stream += "\tlua_setfield(L, MetaTableIdx, \"__namecall\");\n";
-            
-        }
-    
-        if (!Props.empty())
-        {
-            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
-            Stream += "\t{\n";
-            Stream += "\t\t" + QualifiedName + "* ThisType = static_cast<" + QualifiedName + "*>(lua_touserdata(VM, 1));\n";
-            Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
-            Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
-
-            Stream += "\t\tswitch(Hash)\n";
-            Stream += "\t\t{\n";
-            for (auto& Prop : Props)
-            {
-                if (Prop->bInner)
-                {
-                    continue;
-                }
-                
-                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
-            }
-            
-            Stream += "\t\tdefault: return 0;\n";
-            Stream += "\t\t}\n";
-        
-            Stream += "\t\treturn 1;\n";
-            Stream += "\t}, \"__index\");\n";
-            Stream += "\tlua_setfield(L, MetaTableIdx, \"__index\");\n";
-        
-            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
-            Stream += "\t{\n";
-            Stream += "\t\treturn 0;\n";
-            Stream += "\t}, \"__newindex\");\n";
-            Stream += "\tlua_setfield(L, MetaTableIdx, \"__newindex\");\n";
-        }
-        
-        Stream += "\tlua_pop(L, 1); // Pop metatable";
-        Stream += "\n";
-            
-        Stream += "\tlua_newtable(L);\n";
-        Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
-        Stream += "\t{\n";
-        Stream += "\t\tvoid* Block = lua_newuserdata(State, sizeof(" + QualifiedName + "));\n";
-        Stream += "\t\tnew (Block) " + QualifiedName + "{};\n";
-        Stream += "\t\tlua_rawgetp(State, LUA_REGISTRYINDEX, &TypeHash);\n";
-        Stream += "\t\tlua_setmetatable(State, -2);\n";
-        Stream += "\t\treturn 1;\n";
-        Stream += "\t}, \"new\");\n";
-            
-        Stream += "\tlua_setfield(L, -2, \"new\");\n";
-        Stream += "\tlua_setglobal(L, \"" + DisplayName + "\");\n";
-            
-        Stream += "\tDEBUG_ASSERT(BindingTop == lua_gettop(L));\n";
-        
-        Stream += "}\n";
-        
-
+        SetupLuaRegistration(Stream);
         Stream += "};\n\n";
         
         Stream += "Lumina::CStruct* Construct_CStruct_" + FriendlyName + "()\n";
@@ -451,17 +378,6 @@ namespace Lumina::Reflection
             Stream += "\t}\n";
             Stream += "\treturn Registration_Info_CStruct_" + FriendlyName + ".OuterSingleton;\n";
             Stream += "}\n";
-        }
-        
-        if (!Functions.empty())
-        {
-            for (auto& Func : Functions)
-            {
-                Stream += "const LuaMethodFn Construct_CStruct_" + FriendlyName + "_Statics::" + Func->Name + " = ";
-                Func->AppendDefinition(Stream);
-            }
-
-            Stream += "\n";
         }
 
         if (!Props.empty())
@@ -536,6 +452,174 @@ namespace Lumina::Reflection
     {
         eastl::string FriendlyName = ClangUtils::MakeCodeFriendlyNamespace(QualifiedName);
         Stream += "\t{ Construct_CStruct_" + FriendlyName + ", TEXT(\"" + DisplayName + "\") },\n";
+    }
+
+    void FReflectedStruct::SetupLuaRegistration(eastl::string& Stream)
+    {
+        Stream += "static void SetupLuaBindings(lua_State* L)\n";
+        Stream += "{\n";
+        
+        if (eastl::any_of(Metadata.begin(), Metadata.end(), [](const FMetadataPair& Pair)
+        {
+            return Pair.Key == "NoLua";
+        }))
+        {
+            Stream += "}\n";
+            return;
+        }
+        
+        bool bIsComponent = HasMetadata("Component");
+        
+        Stream += "\tint BindingTop = lua_gettop(L);\n";
+        Stream += "\tluaL_newmetatable(L, \"" + DisplayName + "\");\n";
+        Stream += "\tint MetaTableIdx = lua_gettop(L);\n";
+        Stream += "\tlua_pushvalue(L, MetaTableIdx);\n";
+        Stream += "\tlua_rawsetp(L, LUA_REGISTRYINDEX, Lumina::Lua::TClassTraits<" + QualifiedName + ">::MetaTableKey());\n";
+        
+        if (!Functions.empty())
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tint Atom = 0;\n";
+            Stream += "\t\tlua_namecallatom(VM, &Atom);\n";
+            
+            Stream += "\t\tswitch((uint16)Atom)\n";
+            Stream += "\t\t{\n";
+
+            for (int i = 0; i < Functions.size(); ++i)
+            {
+                const auto& Func = Functions[i];
+                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash16(\"" + Func->Name + "\")): return Lumina::Lua::Invoker<&" + QualifiedName + "::" + Func->Name + ">(VM);\n";
+            }
+            
+            Stream += "\t\tdefault: return 0;\n";
+        
+            Stream += "\t\t}\n";
+        
+            Stream += "\t}, \"__namecall\");\n";
+            
+            Stream += "\tlua_setfield(L, MetaTableIdx, \"__namecall\");\n";
+        }
+        
+        Stream += "\n";
+        
+        if (!Props.empty())
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tLumina::Lua::FUserdataHeader* Header = static_cast<Lumina::Lua::FUserdataHeader*>(lua_touserdata(VM, 1));\n";
+            Stream += "\t\t" + QualifiedName + "* ThisType = static_cast<" + QualifiedName + "*>(Header->Ptr);\n";
+            Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
+            Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
+
+            Stream += "\t\tswitch(Hash)\n";
+            Stream += "\t\t{\n";
+            for (auto& Prop : Props)
+            {
+                if (Prop->bInner)
+                {
+                    continue;
+                }
+                
+                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")&>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
+            }
+            
+            Stream += "\t\tdefault: return 0;\n";
+            Stream += "\t\t}\n";
+        
+            Stream += "\t\treturn 1;\n";
+            Stream += "\t}, \"__index\");\n";
+            Stream += "\tlua_setfield(L, MetaTableIdx, \"__index\");\n";
+            Stream += "\n";
+            
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tLumina::Lua::FUserdataHeader* Header = static_cast<Lumina::Lua::FUserdataHeader*>(lua_touserdata(VM, 1));\n";
+            Stream += "\t\t" + QualifiedName + "* ThisType = static_cast<" + QualifiedName + "*>(Header->Ptr);\n";
+            Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
+            Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
+            Stream += "\t\tswitch(Hash)\n";
+            Stream += "\t\t{\n";
+
+            for (auto& Prop : Props)
+            {
+                if (Prop->bInner)
+                {
+                    continue;
+                }
+
+                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")):\n";
+                Stream += "\t\t{\n";
+                Stream += "\t\t\tThisType->" + Prop->Name + " = Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")>::Get(VM, 3);\n";
+                Stream += "\t\t\tbreak;\n";
+                Stream += "\t\t}\n";
+            }
+
+            Stream += "\t\tdefault: break;\n";
+            Stream += "\t\t}\n";
+            Stream += "\t\treturn 0;\n";
+            Stream += "\t}, \"__newindex\");\n";
+            Stream += "\tlua_setfield(L, MetaTableIdx, \"__newindex\");\n";
+        }
+        
+        Stream += "\tlua_pop(L, 1); // Pop metatable";
+        Stream += "\n\n";
+            
+        Stream += "\tlua_newtable(L);\n";
+        
+        if (bIsComponent)
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* State) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tif constexpr (!eastl::is_empty_v<" + QualifiedName + ">)\n";
+            Stream += "\t\t{\n";
+            Stream += "\t\t\tentt::registry* Registry = Lumina::Lua::TStack<entt::registry*>::Get(State, 1);\n";
+            Stream += "\t\t\tentt::entity Entity = Lumina::Lua::TStack<entt::entity>::Get(State, 2);\n";
+            Stream += "\t\t\t" + QualifiedName + "* Comp = Registry->try_get<" + QualifiedName + ">(Entity);\n";
+            Stream += "\t\t\tif (!Comp) { lua_pushnil(State); return 1; }\n";
+            Stream += "\t\t\tLumina::Lua::TStack<" + QualifiedName + "*>::Push(State, Comp);\n";
+            Stream += "\t\t\treturn 1;\n";
+            Stream += "\t\t}\n";
+            Stream += "\t\tlua_pushnil(State);\n";
+            Stream += "\t\treturn 1;\n";
+            Stream += "\t}, \"Get\");\n";
+            Stream += "\tlua_setfield(L, -2, \"Get\");\n";
+
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* State) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tentt::registry* Registry = Lumina::Lua::TStack<entt::registry*>::Get(State, 1);\n";
+            Stream += "\t\tentt::entity Entity = Lumina::Lua::TStack<entt::entity>::Get(State, 2);\n";
+            Stream += "\t\tlua_pushboolean(State, Registry->all_of<" + QualifiedName + ">(Entity));\n";
+            Stream += "\t\treturn 1;\n";
+            Stream += "\t}, \"Has\");\n";
+            Stream += "\tlua_setfield(L, -2, \"Has\");\n";
+
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* State) -> int\n";
+            Stream += "\t{\n";
+            Stream += "\t\tentt::registry* Registry = Lumina::Lua::TStack<entt::registry*>::Get(State, 1);\n";
+            Stream += "\t\tentt::entity Entity = Lumina::Lua::TStack<entt::entity>::Get(State, 2);\n";
+            Stream += "\t\tRegistry->remove<" + QualifiedName + ">(Entity);\n";
+            Stream += "\t\treturn 0;\n";
+            Stream += "\t}, \"Remove\");\n";
+            Stream += "\tlua_setfield(L, -2, \"Remove\");\n";
+        }
+        
+        Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
+        Stream += "\t{\n";
+        Stream += "\t\tvoid* Block = lua_newuserdata(State, sizeof(" + QualifiedName + "));\n";
+        Stream += "\t\tnew (Block) " + QualifiedName + "{};\n";
+        Stream += "\t\tlua_rawgetp(State, LUA_REGISTRYINDEX, Lumina::Lua::TClassTraits<" + QualifiedName + ">::MetaTableKey());\n";
+        Stream += "\t\tlua_setmetatable(State, -2);\n";
+        Stream += "\t\treturn 1;\n";
+        Stream += "\t}, \"new\");\n";
+            
+        Stream += "\tlua_setfield(L, -2, \"new\");\n";
+        Stream += "\n";
+        Stream += "\tlua_setglobal(L, \"" + DisplayName + "\");\n";
+            
+        Stream += "\tDEBUG_ASSERT(BindingTop == lua_gettop(L));\n";
+        
+        Stream += "}\n";
     }
 
 

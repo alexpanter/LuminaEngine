@@ -17,7 +17,7 @@ namespace Lumina
 
 namespace Lumina::Lua
 {
-    struct FLuaScript;
+    struct FScript;
     DECLARE_MULTICAST_DELEGATE(FScriptTransactionDelegate, FStringView);
     
     
@@ -60,18 +60,19 @@ namespace Lumina::Lua
         RUNTIME_API static FScriptingContext& Get();
         
         void Initialize();
+        void SandboxGlobals();
         void Shutdown();
         
-        void DoThing();
         void ProcessDeferredActions();
 
-        RUNTIME_API size_t GetScriptMemoryUsage() const;
+        RUNTIME_API int GetScriptMemoryUsageBytes() const;
         RUNTIME_API void ScriptReloaded(FStringView ScriptPath);
         RUNTIME_API void ScriptCreated(FStringView ScriptPath);
         RUNTIME_API void ScriptRenamed(FStringView NewPath, FStringView OldPath);
         RUNTIME_API void ScriptDeleted(FStringView ScriptPath);
-        RUNTIME_API TSharedPtr<FLuaScript> LoadUniqueScript(FStringView Path);
-        RUNTIME_API TVector<TSharedPtr<FLuaScript>> GetAllRegisteredScripts();
+        RUNTIME_API TSharedPtr<FScript> LoadUniqueScriptPath(FStringView Path);
+        RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "");
+        RUNTIME_API TVector<TSharedPtr<FScript>> GetAllRegisteredScripts();
         RUNTIME_API void RunGC();
         
         FScriptTransactionDelegate OnScriptLoaded;
@@ -92,7 +93,7 @@ namespace Lumina::Lua
         FSharedMutex SharedMutex;
         FDeferredActionRegistry DeferredActions;
         
-        THashMap<FName, TVector<TWeakPtr<FLuaScript>>> RegisteredScripts;
+        THashMap<FName, TVector<TWeakPtr<FScript>>> RegisteredScripts;
     };
     
 }

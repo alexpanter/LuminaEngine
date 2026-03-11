@@ -1079,7 +1079,7 @@ namespace Lumina
         if (ImGui::Begin("Scripts", &bShowScriptsDebug, ImGuiWindowFlags_MenuBar))
         {
             auto& Context = Lua::FScriptingContext::Get();
-            size_t MemoryUsage = Context.GetScriptMemoryUsage();
+            int MemoryUsage = Context.GetScriptMemoryUsageBytes();
             
             ImGui::Text("Loaded Scripts: %zu", Context.GetAllRegisteredScripts().size());
             ImGui::SameLine();
@@ -1095,8 +1095,7 @@ namespace Lumina
             
             ImGui::Separator();
             
-            static ImGuiTableFlags TableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | 
-                                               ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
+            static ImGuiTableFlags TableFlags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollY;
             
             if (ImGui::BeginTable("ScriptsTable", 3, TableFlags))
             {

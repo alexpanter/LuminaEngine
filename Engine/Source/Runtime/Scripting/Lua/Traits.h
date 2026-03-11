@@ -42,9 +42,10 @@ namespace Lumina::Lua
     template<typename T>
     struct TClassTraits
     {
+        inline static int Unique = 0;
+        
         static void* MetaTableKey()
         {
-            static int Unique = 0;
             return &Unique;
         }
     };
