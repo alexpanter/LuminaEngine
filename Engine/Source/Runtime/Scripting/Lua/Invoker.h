@@ -3,7 +3,6 @@
 #include "lualib.h"
 #include "Stack.h"
 #include "Traits.h"
-#include "UserDataHeader.h"
 
 namespace Lumina::Lua
 {
@@ -30,18 +29,47 @@ namespace Lumina::Lua
         }
     }
     
+    template<typename TParam>
+    static bool CheckArg(lua_State* L, int Index)
+    {
+        using BaseT = eastl::remove_cvref_t<TParam>;
+    
+        if constexpr (TLuaNativeType<BaseT>::value)
+        {
+            return TStack<BaseT>::Check(L, Index);
+        }
+        else if constexpr (eastl::is_pointer_v<TParam>)
+        {
+            return TStack<TParam>::Check(L, Index);
+        }
+        else if constexpr (eastl::is_enum_v<BaseT>)
+        {
+            return TStack<BaseT>::Check(L, Index);
+        }
+        else
+        {
+            return TStack<BaseT&>::Check(L, Index);
+        }
+    }
+    
     template<auto TFunc>
     auto Invoker(lua_State* L)
     {
         using TraitsT = TFunctionTraits<decltype(TFunc)>;
         using ReturnT = TraitsT::ReturnType;
         using ArgsT   = TraitsT::ArgsTuple;
-    
+        
         auto Dispatch = [&]<size_t... Is>(eastl::index_sequence<Is...>)
         {
+            
+            if (lua_gettop(L) != TraitsT::ArgCount + 1)
+            {
+                luaL_errorL(L, "[%s] Expected %d arguments but got %d", __FUNCSIG__, TraitsT::ArgCount, lua_gettop(L) - 1);
+            }
+            
             if constexpr (eastl::is_member_function_pointer_v<decltype(TFunc)>)
             {
-                using ClassT = TraitsT::ClassType;
+                using ClassT  = TraitsT::ClassType;
                 
                 ClassT* Self = nullptr;
                 if (lua_islightuserdata(L, 1))
@@ -50,8 +78,12 @@ namespace Lumina::Lua
                 }
                 else
                 {
-                    FUserdataHeader* Header = static_cast<FUserdataHeader*>(lua_touserdata(L, 1));
-                    Self = static_cast<ClassT*>(Header->Ptr);
+                    Self = TStack<ClassT*>::Get(L, 1);
+                }
+                
+                if (Self == nullptr)
+                {
+                    luaL_errorL(L, "[%s]", "Cannot invoke lua function with incorrect usertype.");
                 }
                 
                 if constexpr (eastl::is_void_v<ReturnT>)
@@ -81,7 +113,8 @@ namespace Lumina::Lua
                 }
             }
         };
-    
+        
+        LUMINA_PROFILE_SCOPE();
         return Dispatch(eastl::make_index_sequence<TraitsT::ArgCount>{});
     }
     
@@ -91,17 +124,23 @@ namespace Lumina::Lua
         using TraitsT = TFunctionTraits<decltype(TFunc)>;
         using ReturnT = TraitsT::ReturnType;
         using ArgsT   = TraitsT::ArgsTuple;
+        
     
         auto Dispatch = [&]<size_t... Is>(eastl::index_sequence<Is...>)
         {
+            if (lua_gettop(L) != TraitsT::ArgCount)
+            {
+                luaL_errorL(L, "[%s] Expected %d arguments but got %d", __FUNCSIG__, TraitsT::ArgCount, lua_gettop(L) - 1);
+            }
+            
             if constexpr (eastl::is_member_function_pointer_v<decltype(TFunc)>)
             {
                 using ClassT = TraitsT::ClassType;
                 
-                ClassT* Self = static_cast<ClassT*>(lua_tolightuserdata(L, lua_upvalueindex(1)));
+                ClassT* Self = static_cast<ClassT*>(lua_tolightuserdatatagged(L, lua_upvalueindex(1), TClassTraits<ClassT>::Tag()));
                 if (Self == nullptr)
                 {
-                    luaL_error(L, "Upvalue userdata is null!");
+                    luaL_errorL(L, "[%s]", "Cannot invoke lua function with incorrect usertype.");
                 }
                 
                 if constexpr (eastl::is_void_v<ReturnT>)
@@ -132,6 +171,7 @@ namespace Lumina::Lua
             }
         };
     
+        LUMINA_PROFILE_SCOPE();
         return Dispatch(eastl::make_index_sequence<TraitsT::ArgCount>{});
     }
 }

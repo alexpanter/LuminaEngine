@@ -9,8 +9,8 @@
 namespace Lumina
 {
     
-#define ENTITY_SYSTEM( ... )\
-FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
+    #define ENTITY_SYSTEM( ... )\
+    FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
 
     namespace Meta
     {

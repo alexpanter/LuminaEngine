@@ -172,7 +172,7 @@ namespace Lumina
             }
         });
         
-        if (IsGameWorld())
+        if (WorldType == EWorldType::Simulation || WorldType == EWorldType::Game)
         {
             bPaused = false;
         }
@@ -219,29 +219,20 @@ namespace Lumina
             TimeSinceCreation += DeltaTime;
         }
         
+        if (bPaused && Stage != EUpdateStage::Paused || (!bPaused && Stage == EUpdateStage::Paused))
+        {
+            return;
+        }
+        
         if (Stage == EUpdateStage::DuringPhysics)
         {
             PhysicsScene->Update(Context.GetDeltaTime());
         }
 
-        SystemContext.DeltaTime = DeltaTime;
-        SystemContext.Time = TimeSinceCreation;
-        SystemContext.UpdateStage = Stage;
+        SystemContext.DeltaTime     = DeltaTime;
+        SystemContext.Time          = TimeSinceCreation;
+        SystemContext.UpdateStage   = Stage;
         
-        TickSystems(SystemContext);
-    }
-
-    void CWorld::Paused(const FUpdateContext& Context)
-    {
-        LUMINA_PROFILE_SCOPE();
-
-        DeltaTime = Context.GetDeltaTime();
-        TimeSinceCreation += DeltaTime;
-        
-        SystemContext.DeltaTime = DeltaTime;
-        SystemContext.Time = TimeSinceCreation;
-        SystemContext.UpdateStage = EUpdateStage::Paused;
-
         TickSystems(SystemContext);
     }
 

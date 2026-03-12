@@ -41,6 +41,7 @@ namespace Lumina::Lua
     template<>
     struct TStack<FNil>
     {
+        static FStringView TypeName(lua_State* State)       { return lua_typename(State, LUA_TNIL); }
         static void Push(lua_State* State, FNil)            { lua_pushnil(State); }
         static FNil  Get(lua_State* State, int Index)       { return {}; }
         static bool Check(lua_State* State, int Index)      { return lua_isnil(State, Index); }
@@ -49,94 +50,107 @@ namespace Lumina::Lua
     template<>
     struct TStack<int>
     {
+        static FStringView TypeName(lua_State* State)       { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, int Value)       { lua_pushinteger(State, Value); }
-        static int  Get(lua_State* State, int Index)        { return lua_tointeger(State, Index); }
+        static int  Get(lua_State* State, int Index)        { return luaL_checkinteger(State, Index); }
         static bool Check(lua_State* State, int Index)      { return lua_isnumber(State, Index); }
     };
     
     template<>
     struct TStack<unsigned>
     {
+        static FStringView TypeName(lua_State* State)           { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, unsigned Value)      { lua_pushunsigned(State, Value); }
-        static unsigned  Get(lua_State* State, int Index)       { return lua_tounsigned(State, Index); }
+        static unsigned  Get(lua_State* State, int Index)       { return luaL_checkunsigned(State, Index); }
         static bool Check(lua_State* State, int Index)          { return lua_isnumber(State, Index); }
     };
 
     template<>
     struct TStack<float>
     {
+        static FStringView TypeName(lua_State* State)       { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, float Value)     { lua_pushnumber(State, Value); }
-        static float Get(lua_State* State, int Index)       { return (float)lua_tonumber(State, Index); }
+        static float Get(lua_State* State, int Index)       { return (float)luaL_checknumber(State, Index); }
         static bool Check(lua_State* State, int Index)      { return lua_isnumber(State, Index); }
     };
     
     template<>
     struct TStack<double>
     {
+        static FStringView TypeName(lua_State* State)        { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, double Value)     { lua_pushnumber(State, Value); }
-        static double Get(lua_State* State, int Index)       { return (float)lua_tonumber(State, Index); }
+        static double Get(lua_State* State, int Index)       { return (float)luaL_checknumber(State, Index); }
         static bool Check(lua_State* State, int Index)       { return lua_isnumber(State, Index); }
     };
     
     template<>
     struct TStack<bool>
     {
+        static FStringView TypeName(lua_State* State)   { return lua_typename(State, LUA_TBOOLEAN); }
         static void Push(lua_State* State, bool Value)  { lua_pushboolean(State, Value); }
-        static bool Get(lua_State* State, int Index)    { return lua_toboolean(State, Index); }
+        static bool Get(lua_State* State, int Index)    { return luaL_checkboolean(State, Index); }
         static bool Check(lua_State* State, int Index)  { return lua_isboolean(State, Index); }
     };
 
     template<>
     struct TStack<const char*>
     {
+        static FStringView TypeName(lua_State* State)         { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const char* Value) { lua_pushstring(State, Value); }
-        static const char* Get(lua_State* State, int Index)   { return lua_tostring(State, Index); }
+        static const char* Get(lua_State* State, int Index)   { return luaL_checkstring(State, Index); }
         static bool Check(lua_State* State, int Index)        { return lua_isstring(State, Index); }
     };
     
     template<>
     struct TStack<FStringView>
     {
+        static FStringView TypeName(lua_State* State)         { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, FStringView Value) { lua_pushstring(State, Value.data()); }
-        static FStringView Get(lua_State* State, int Index)   { return lua_tostring(State, Index); }
+        static FStringView Get(lua_State* State, int Index)   { return luaL_checkstring(State, Index); }
         static bool Check(lua_State* State, int Index)        { return lua_isstring(State, Index); }
     };
     
     template<>
     struct TStack<FString>
     {
+        static FStringView TypeName(lua_State* State)               { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const FString& Value)    { lua_pushstring(State, Value.c_str()); }
-        static FString Get(lua_State* State, int Index)             { return lua_tostring(State, Index); }
+        static FString Get(lua_State* State, int Index)             { return luaL_checkstring(State, Index); }
         static bool Check(lua_State* State, int Index)              { return lua_isstring(State, Index); }
     };
     
     template<>
     struct TStack<FFixedString>
     {
+        static FStringView TypeName(lua_State* State)                   { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const FFixedString& Value)   { lua_pushstring(State, Value.c_str()); }
-        static FFixedString Get(lua_State* State, int Index)            { return lua_tostring(State, Index); }
+        static FFixedString Get(lua_State* State, int Index)            { return luaL_checkstring(State, Index); }
         static bool Check(lua_State* State, int Index)                  { return lua_isstring(State, Index); }
     };
     
     template<>
     struct TStack<FName>
     {
+        static FStringView TypeName(lua_State* State)               { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const FName& Value)      { lua_pushstring(State, Value.c_str()); }
-        static FName Get(lua_State* State, int Index)               { return lua_tostring(State, Index); }
+        static FName Get(lua_State* State, int Index)               { return luaL_checkstring(State, Index); }
         static bool Check(lua_State* State, int Index)              { return lua_isstring(State, Index); }
     };
     
     template<>
     struct TStack<entt::entity>
     {
+        static FStringView TypeName(lua_State* State)                   { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, const entt::entity& Value)   { lua_pushinteger(State, (int)entt::to_integral(Value)); }
-        static entt::entity Get(lua_State* State, int Index)            { return static_cast<entt::entity>(lua_tointeger(State, Index)); }
+        static entt::entity Get(lua_State* State, int Index)            { return static_cast<entt::entity>(luaL_checkinteger(State, Index)); }
         static bool Check(lua_State* State, int Index)                  { return lua_isnumber(State, Index); }
     };
     
     template<>
     struct TStack<glm::vec2>
     {
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TVECTOR); }
+
         static void Push(lua_State* State, const glm::vec2& Value)
         {
             lua_pushvector(State, Value.x, Value.y, 0.0f, 0.0f);
@@ -144,7 +158,7 @@ namespace Lumina::Lua
     
         static glm::vec2 Get(lua_State* State, int Index)
         {
-            const float* V = lua_tovector(State, Index);
+            const float* V = luaL_checkvector(State, Index);
             return { V[0], V[1] };
         }
     
@@ -157,6 +171,7 @@ namespace Lumina::Lua
     template<>
     struct TStack<glm::vec3>
     {
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TVECTOR); }
         static void Push(lua_State* State, const glm::vec3& Value)
         {
             lua_pushvector(State, Value.x, Value.y, Value.z, 0.0f);
@@ -164,7 +179,7 @@ namespace Lumina::Lua
     
         static glm::vec3 Get(lua_State* State, int Index)
         {
-            const float* V = lua_tovector(State, Index);
+            const float* V = luaL_checkvector(State, Index);
             return { V[0], V[1], V[2] };
         }
     
@@ -177,6 +192,7 @@ namespace Lumina::Lua
     template<>
     struct TStack<glm::vec4>
     {
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TVECTOR); }
         static void Push(lua_State* State, const glm::vec4& Value)
         {
             lua_pushvector(State, Value.x, Value.y, Value.z, Value.w);
@@ -184,7 +200,7 @@ namespace Lumina::Lua
     
         static glm::vec4 Get(lua_State* State, int Index)
         {
-            const float* V = lua_tovector(State, Index);
+            const float* V = luaL_checkvector(State, Index);
             return { V[0], V[1], V[2], V[3]};
         }
     
@@ -198,8 +214,11 @@ namespace Lumina::Lua
     requires(eastl::is_arithmetic_v<T>)
     struct TStack<TVector<T>>
     {
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TBUFFER); }
+        
         static void Push(lua_State* State, const TVector<T>& Value)
         {
+            LUMINA_PROFILE_SCOPE();
             void* Buffer = lua_newbuffer(State, Value.size());
             Memory::Memcpy(Buffer, Value.data(), Value.size() * sizeof(T));
         }
@@ -207,7 +226,7 @@ namespace Lumina::Lua
         static TVector<T> Get(lua_State* State, int Index)
         {
             size_t Size = 0;
-            void* Buffer = lua_tobuffer(State, Index, &Size);
+            void* Buffer = luaL_checkbuffer(State, Index, &Size);
         
             TVector<T> Result(Size / sizeof(T));
             Memory::Memcpy(Result.data(), Buffer, Size * sizeof(T));
@@ -221,28 +240,29 @@ namespace Lumina::Lua
     };
     
     template<typename T>
-    requires(!eastl::is_enum_v<T> && !eastl::is_pointer_v<T>)
+    requires(!eastl::is_enum_v<T> && !eastl::is_pointer_v<T> && !eastl::is_reference_v<T>)
     struct TStack<T>
     {
-        constexpr bool IsUserData = true;
-        
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TUSERDATA); }
+
         using RawT = eastl::remove_cvref_t<T>;
 
         template<typename... TArgs>
         requires(eastl::is_constructible_v<RawT, TArgs...>)
         static void Push(lua_State* State, TArgs&&... Args)
         {
-            void* Block = lua_newuserdatataggedwithmetatable(State, sizeof(FUserdataHeader) + sizeof(T), TClassTraits<RawT>::Tag());
-            FUserdataHeader* Header = new (Block) FUserdataHeader{};
-            Header->Ptr = Header + 1;
-            Header->bOwned = true;
-            new (Header->Ptr) T(eastl::forward<TArgs>(Args)...);
+            LUMINA_PROFILE_SCOPE();
+            void* Block = lua_newuserdatataggedwithmetatable(State, sizeof(TUserdataHeader<RawT>), TClassTraits<RawT>::Tag());
+            TUserdataHeader<RawT>* Header = new (Block) TUserdataHeader<RawT>{};
+            Header->Emplace(eastl::forward<TArgs>(Args)...);
         }
 
         static RawT& Get(lua_State* State, int Index)
         {
-            void* Storage = static_cast<FUserdataHeader*>(lua_touserdatatagged(State, Index, TClassTraits<RawT>::Tag()))->Ptr;
-            return *static_cast<RawT*>(Storage);
+            LUMINA_PROFILE_SCOPE();
+            auto* Userdata = static_cast<TUserdataHeader<RawT>*>(lua_touserdatatagged(State, Index, TClassTraits<RawT>::Tag()));
+            DEBUG_ASSERT(Userdata, "Tagged userdata not found!");
+            return *Userdata->Underlying();
         }
 
         static bool Check(lua_State* State, int Index)
@@ -254,27 +274,28 @@ namespace Lumina::Lua
     template<typename T>
     struct TStack<T*>
     {
-        constexpr bool IsUserData = true;
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TUSERDATA); }
 
         using RawT = eastl::remove_pointer_t<eastl::remove_cvref_t<T>>;
 
         static void Push(lua_State* State, T* Ptr)
         {
-            void* Block = lua_newuserdatataggedwithmetatable(State, sizeof(FUserdataHeader), TClassTraits<RawT>::Tag());
-            FUserdataHeader* Header = new (Block) FUserdataHeader{};
-            Header->Ptr     = Ptr;
+            LUMINA_PROFILE_SCOPE();
+            void* Block = lua_newuserdatataggedwithmetatable(State, sizeof(TUserdataHeader<RawT*>), TClassTraits<RawT>::Tag());
+            auto* Header = new (Block) TUserdataHeader<RawT*>{};
+            Header->Emplace(Ptr);
         }
 
         static RawT* Get(lua_State* State, int Index)
         {
-            auto* Header = static_cast<FUserdataHeader*>(lua_touserdatatagged(State, Index, TClassTraits<RawT>::Tag()));
+            LUMINA_PROFILE_SCOPE();
+            auto* Header = static_cast<TUserdataHeader<RawT*>*>(lua_touserdatatagged(State, Index, TClassTraits<RawT>::Tag()));
             if (!ALERT_IF_NOT(Header, "Type is not registered as a userdata for Luau"))
             {
                 return nullptr;
             }
             
-            void* Storage = Header->Ptr;
-            return static_cast<RawT*>(Storage);
+            return *Header->Underlying();
         }
 
         static bool Check(lua_State* State, int Index)
@@ -286,6 +307,8 @@ namespace Lumina::Lua
     template<>
     struct TStack<void*>
     {
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TLIGHTUSERDATA); }
+
         static void Push(lua_State* State, void* Ptr)
         {
             lua_pushlightuserdata(State, Ptr);
@@ -305,6 +328,8 @@ namespace Lumina::Lua
     template<typename T>
     struct TStack<T&>
     {
+        static FStringView TypeName(lua_State* State) { return lua_typename(State, LUA_TUSERDATA); }
+
         static void Push(lua_State* State, T& Ref)
         {
             TStack<T*>::Push(State, &Ref);
@@ -325,6 +350,7 @@ namespace Lumina::Lua
     requires(eastl::is_enum_v<T>)
     struct TStack<T>
     {
+        static FStringView TypeName(lua_State* State)   { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, T Value)     { lua_pushinteger(State, (int)Value); }
         static T  Get(lua_State* State, int Index)      { return (T)lua_tointeger(State, Index); }
         static bool Check(lua_State* State, int Index)  { return lua_isnumber(State, Index); }

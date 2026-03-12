@@ -54,7 +54,8 @@ workspace "Lumina"
         "IMGUI_IMPL_VULKAN_USE_VOLK",
         
         "LUA_VECTOR_SIZE=4",
-        "LUA_UTAG_LIMIT=65535",
+        "LUA_UTAG_LIMIT=1000",
+        "LUA_LUTAG_LIMIT=1000",
 
         "TRACY_ALLOW_SHADOW_WARNING",
         "TRACY_ENABLE",

@@ -10,6 +10,12 @@
 
 namespace Lumina::Lua
 {
+    /**
+     * A reference to a lua object.
+     *
+     * This will pin down a reference to a lua-allocated object and prevent it from being garbage collected.
+     * Once this class is cleaned up, it will release the reference, and may allow GC again.
+     */
     class RUNTIME_API FRef
     {
     public:
@@ -99,36 +105,6 @@ namespace Lumina::Lua
         int Ref = LUA_NOREF;
     };
 
-    template<>
-    struct TStack<FRef>
-    {
-        static void Push(lua_State* State, const FRef& Value)
-        {
-            if (!Value.IsValid())
-            {
-                lua_pushnil(State);
-                return;
-            }
-        
-            (void)Value.Push();
-        }
-
-        static bool Check(lua_State* State, int Index)
-        {
-            return !lua_isnone(State, Index);
-        }
-
-        static FRef Get(lua_State* State, int Index)
-        {
-            if (lua_isnoneornil(State, Index))
-            {
-                return {};
-            }
-        
-            return FRef(State, Index);
-        }
-    };
-
     template <typename T>
     requires(!eastl::is_function_v<T> && !eastl::is_member_function_pointer_v<T>)
     void FRef::Set(FStringView Key, const T& Value)
@@ -143,7 +119,7 @@ namespace Lumina::Lua
         lua_pop(State, 1);
     }
 
-    template <auto TFunc, typename TClass = void>
+    template <auto TFunc, typename TClass>
     void FRef::SetFunction(FStringView Key, TClass* Instance)
     {
         if (!Push())
@@ -160,7 +136,7 @@ namespace Lumina::Lua
         }
         else
         {
-            lua_pushlightuserdata(State, Instance);
+            lua_pushlightuserdatatagged(State, Instance, TClassTraits<TClass>::Tag());
             lua_pushcclosure(State, [](lua_State* L)
             {
                 return InvokerWithInstance<TFunc>(L);
@@ -173,7 +149,7 @@ namespace Lumina::Lua
     template <auto TFunc, typename TClass>
     void FRef::SetFunction(EMetaMethod Meta, TClass* Instance)
     {
-        SetFunction<TFunc>(MetaMethodName(Meta), Instance);
+        SetFunction<TFunc, TClass>(MetaMethodName(Meta), Instance);
     }
 
     template <typename T>
@@ -283,4 +259,41 @@ namespace Lumina::Lua
         DEBUG_ASSERT(lua_gettop(State) == Top);
         return Class;
     }
+    
+    
+    
+    
+    
+    
+    
+    template<>
+    struct TStack<FRef>
+    {
+        static void Push(lua_State* State, const FRef& Value)
+        {
+            if (!Value.IsValid())
+            {
+                lua_pushnil(State);
+                return;
+            }
+        
+            (void)Value.Push();
+        }
+
+        static bool Check(lua_State* State, int Index)
+        {
+            return !lua_isnone(State, Index);
+        }
+
+        static FRef Get(lua_State* State, int Index)
+        {
+            if (lua_isnoneornil(State, Index))
+            {
+                return {};
+            }
+        
+            return FRef(State, Index);
+        }
+    };
+    
 }

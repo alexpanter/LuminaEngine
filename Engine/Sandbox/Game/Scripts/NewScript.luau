@@ -4,39 +4,23 @@ function NewScript:OnAttach()
 end
 
 function NewScript:OnReady()
-    --self.Entity
-    --self.Registry
+    self.CC  = SCharacterControllerComponent.Get(self.Registry, self.Entity)
+    self.CMC = SCharacterMovementComponent.Get(self.Registry, self.Entity)
+    self.T   = STransformComponent.Get(self.Registry, self.Entity)
 end
+
 
 function NewScript:Update(DeltaTime: number)
+    local x, z = 0.0, 0.0    
 
-    local CC  = SCharacterControllerComponent.Get(self.Registry, self.Entity)
-    local CMC = SCharacterMovementComponent.Get(self.Registry, self.Entity)
-    local T   = STransformComponent.Get(self.Registry, self.Entity)
+    if Input.IsKeyDown(EKey.W) then z =  1.0 end
+    if Input.IsKeyDown(EKey.S) then z = -1.0 end
+    if Input.IsKeyDown(EKey.A) then x =  1.0 end
+    if Input.IsKeyDown(EKey.D) then x = -1.0 end
 
-    local x, z = 0.0, 0.0
-
-    if Input.IsKeyDown(EKey.W) then
-        z = 1.0
+    if x ~= 0.0 or z ~= 0.0 then
+        self.CC:AddMovementInput(vector.create(x, 0.0, z))
     end
-    
-    if Input.IsKeyDown(EKey.S) then
-        z = -1.0
-    end
-
-    if Input.IsKeyDown(EKey.A) then
-        x = 1.0
-    end
-
-    if Input.IsKeyDown(EKey.D) then
-        x = -1.0
-    end
-
-    local Dir = vector.create(x, 0.0, z)
-    CC:AddMovementInput(Dir)
-end
-            
-function NewScript:OnDetach()
 end
 
 return NewScript

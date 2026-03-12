@@ -18,37 +18,15 @@ namespace Lumina
     void FWorldManager::UpdateWorlds(const FUpdateContext& UpdateContext) 
     { 
         LUMINA_PROFILE_SCOPE(); 
-     
-        const EUpdateStage Stage = UpdateContext.GetUpdateStage();
-    
+        
         for (FManagedWorld& World : Worlds) 
         { 
             if (World.World->IsSuspended()) 
             { 
-                continue; 
-            }
-        
-            const bool bIsPaused = World.World->IsPaused();
-            const bool bIsSimulating = World.World->IsSimulating();
-            const bool bIsPausedStage = (Stage == EUpdateStage::Paused);
-            const bool bIsPhysicsStage = (Stage == EUpdateStage::PrePhysics || Stage == EUpdateStage::DuringPhysics || Stage == EUpdateStage::PostPhysics);
-        
-            if (bIsPaused && bIsPausedStage)
-            {
-                World.World->Paused(UpdateContext);
                 continue;
             }
-        
-            if (!bIsPaused && !bIsPausedStage)
-            {
-                World.World->Update(UpdateContext);
-                continue;
-            }
-        
-            if (bIsSimulating && bIsPhysicsStage)
-            {
-                World.World->Update(UpdateContext);
-            }
+            
+            World.World->Update(UpdateContext);
         } 
     }
 

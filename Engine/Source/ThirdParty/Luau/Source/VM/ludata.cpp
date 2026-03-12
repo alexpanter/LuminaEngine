@@ -13,7 +13,8 @@ Udata* luaU_newudata(lua_State* L, size_t s, int tag)
         luaM_toobig(L);
     Udata* u = luaM_newgco(L, Udata, sizeudata(s), L->activememcat);
     luaC_init(L, u, LUA_TUSERDATA);
-    u->len = int(s);
+    LUAU_ASSERT(s <= UINT16_MAX); // @LUMINA_LUAU Added assert.
+    u->len = uint16_t(s); // @LUMINA_LUAU Changed from int
     u->metatable = NULL;
     LUAU_ASSERT(tag >= 0 && tag <= UINT16_MAX); // @LUMINA_LUAU Changed from 255
     u->tag = uint16_t(tag); // @LUMINA_LUAU Changed from uint8_t

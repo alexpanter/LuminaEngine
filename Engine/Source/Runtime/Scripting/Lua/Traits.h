@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "lua.h"
+#include "Core/Math/Hash/Hash.h"
 #include "Containers/String.h"
 #include "Containers/Tuple.h"
 #include "Platform/GenericPlatform.h"
@@ -39,22 +40,17 @@ namespace Lumina::Lua
         static constexpr size_t ArgCount = sizeof...(TArgs);
     };
     
-    
-    inline uint16 GNextTag = 1;
+    struct FTypeIndex final
+    {
+        RUNTIME_API static uint16 Next();
+    };
     
     template<typename T>
     struct TClassTraits
     {
-        inline static int Unique = 0;
-        
-        static void* MetaTableKey()
-        {
-            return &Unique;
-        }
-        
         static uint16 Tag()
         {
-            static uint16 STag = GNextTag++;
+            static uint16 STag = FTypeIndex::Next();
             return STag;
         }
     };

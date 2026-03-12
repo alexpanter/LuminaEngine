@@ -3,10 +3,25 @@
 
 namespace Lumina::Lua
 {
-    struct alignas(std::max_align_t) FUserdataHeader
+    template<typename T>
+    struct TUserdataHeader
     {
-        void* Ptr   = nullptr;
-        
-        bool bOwned = false;
+        template<typename... TArgs>
+        void Emplace(TArgs&&... args)
+        {
+            new (Storage) T(eastl::forward<TArgs>(args)...);
+        }
+
+        T* Underlying()
+        {
+            return reinterpret_cast<T*>(Storage);
+        }
+
+        const T* Underlying() const
+        {
+            return reinterpret_cast<const T*>(Storage);
+        }
+
+        alignas(T) unsigned char Storage[sizeof(T)];
     };
 }

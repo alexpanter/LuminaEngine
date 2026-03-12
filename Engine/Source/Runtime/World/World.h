@@ -63,7 +63,6 @@ namespace Lumina
          * Called on every update stage and runs systems attached to this world.
          */
         void Update(const FUpdateContext& Context);
-        void Paused(const FUpdateContext& Context);
         void Render(FRenderGraph& RenderGraph);
         
         entt::entity ConstructEntity(const FName& Name, const FTransform& Transform = FTransform());
@@ -79,7 +78,6 @@ namespace Lumina
         entt::entity GetActiveCameraEntity() const;
         
         void OnChangeCameraEvent(const FSwitchActiveCameraEvent& Event);
-        
         double GetWorldDeltaTime() const { return DeltaTime; }
         double GetTimeSinceWorldCreation() const { return TimeSinceCreation; }
         

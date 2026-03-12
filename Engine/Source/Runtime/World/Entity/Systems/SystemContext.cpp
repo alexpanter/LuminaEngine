@@ -164,4 +164,9 @@ namespace Lumina
     {
         return Registry.valid(Entity);
     }
+
+    EWorldType FSystemContext::GetWorldType() const
+    {
+        return World->GetWorldType();
+    }
 }

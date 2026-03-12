@@ -125,7 +125,7 @@ namespace Lumina
         {
             if (World->GetPhysicsScene() == nullptr)
             {
-                World->InitializeWorld(EWorldType::Tool);
+                World->InitializeWorld(EWorldType::Editor);
             }
             
             SetupWorldForTool();
@@ -170,7 +170,7 @@ namespace Lumina
 
         if (World->GetPhysicsScene() == nullptr)
         {
-            World->InitializeWorld(EWorldType::Tool);
+            World->InitializeWorld(EWorldType::Editor);
         }
         
         SetupWorldForTool();

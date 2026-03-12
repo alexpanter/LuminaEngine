@@ -8,6 +8,7 @@
 
 namespace Lumina
 {
+    enum class EWorldType : uint8;
     enum class EMoveMode : uint8;
 
     namespace Physics
@@ -164,6 +165,8 @@ namespace Lumina
 
         RUNTIME_API size_t GetNumEntities() const;
         RUNTIME_API bool IsValidEntity(entt::entity Entity) const;
+        
+        RUNTIME_API EWorldType GetWorldType() const;
     
     private:
 

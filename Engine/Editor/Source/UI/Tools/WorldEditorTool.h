@@ -29,11 +29,6 @@ namespace Lumina
             entt::entity Entity;
         };
         
-        class FSystemListViewItemData
-        {
-            TWeakObjectPtr<CWorld::FSystemVariant> System;
-        };
-
         struct FEntityListFilterState
         {
             ImGuiTextFilter FilterName;

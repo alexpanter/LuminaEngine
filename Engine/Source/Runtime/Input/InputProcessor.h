@@ -39,11 +39,8 @@ namespace Lumina
     	
         double MouseX = 0.0;
         double MouseY = 0.0;
-    	
-        //Scroll Functionality.
         double MouseZ = 0.0;
-
-
+    	
         double MouseDeltaX = 0.0;
         double MouseDeltaY = 0.0;
 

@@ -478,6 +478,7 @@ namespace Lumina::Reflection
         {
             Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
             Stream += "\t{\n";
+            Stream += "\t\tLUMINA_PROFILE_SECTION(\"" + QualifiedName + " | __namecall\");\n";
             Stream += "\t\tint Atom = 0;\n";
             Stream += "\t\tlua_namecallatom(VM, &Atom);\n";
             
@@ -505,8 +506,9 @@ namespace Lumina::Reflection
         {
             Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
             Stream += "\t{\n";
-            Stream += "\t\tLumina::Lua::FUserdataHeader* Header = static_cast<Lumina::Lua::FUserdataHeader*>(lua_touserdata(VM, 1));\n";
-            Stream += "\t\t" + QualifiedName + "* ThisType = static_cast<" + QualifiedName + "*>(Header->Ptr);\n";
+            Stream += "\t\tLUMINA_PROFILE_SECTION(\"" + QualifiedName + " | __index\");\n";
+            Stream += "\t\tif(!Lumina::Lua::TStack<" + QualifiedName + "*>::Check(VM, 1)) return 0;\n";
+            Stream += "\t\t" + QualifiedName + "* ThisType = Lumina::Lua::TStack<" + QualifiedName + "*>::Get(VM, 1);\n";
             Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
             Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
 
@@ -532,8 +534,9 @@ namespace Lumina::Reflection
             
             Stream += "\tlua_pushcfunction(L, +[](lua_State* VM) -> int\n";
             Stream += "\t{\n";
-            Stream += "\t\tLumina::Lua::FUserdataHeader* Header = static_cast<Lumina::Lua::FUserdataHeader*>(lua_touserdata(VM, 1));\n";
-            Stream += "\t\t" + QualifiedName + "* ThisType = static_cast<" + QualifiedName + "*>(Header->Ptr);\n";
+            Stream += "\t\tLUMINA_PROFILE_SECTION(\"" + QualifiedName + " | __newindex\");\n";
+            Stream += "\t\tif(!Lumina::Lua::TStack<" + QualifiedName + "*>::Check(VM, 1)) return 0;\n";
+            Stream += "\t\t" + QualifiedName + "* ThisType = Lumina::Lua::TStack<" + QualifiedName + "*>::Get(VM, 1);\n";
             Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
             Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
             Stream += "\t\tswitch(Hash)\n";

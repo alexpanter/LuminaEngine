@@ -206,6 +206,7 @@ namespace Lumina::Reflection
 		Stream += "#include \"World/Entity/Events/ECSEvent.h\"\n";
 		Stream += "#include \"lua.h\"\n";
 		Stream += "#include \"lualib.h\"\n";
+		Stream += "#include \"Core/Profiler/Profile.h\"\n";
 		Stream += "#include \"Core/Math/Hash/Hash.h\"\n";
 		Stream += "#include \"Scripting/Lua/Invoker.h\"\n";
 		Stream += "#include \"Core/Object/Class.h\"\n";
