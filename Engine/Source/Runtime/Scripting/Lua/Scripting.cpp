@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "Scripting.h"
+
+#include "lstate.h"
 #include "luacode.h"
 #include "lualib.h"
 #include "ScriptTypes.h"
@@ -9,6 +11,7 @@
 #include "Input/InputProcessor.h"
 #include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
+#include "World/Entity/Registry/EntityRegistry.h"
 #include "World/Entity/Systems/SystemContext.h"
 
 namespace Lumina::Lua
@@ -94,18 +97,21 @@ namespace Lumina::Lua
         lua_pushvalue(L, LUA_GLOBALSINDEX);
         FRef GlobalsRef(L, -1);
         
-        FRef InputTable = GlobalsRef.NewTable("Input");
-        InputTable.Set("IsKeyDown", +[](EKey Key){ return FInputProcessor::Get().IsKeyDown(Key); });
-        InputTable.Set("IsKeyUp", +[](EKey Key){ return FInputProcessor::Get().IsKeyUp(Key); });
-        InputTable.Set("IsKeyPressed", +[](EKey Key){ return FInputProcessor::Get().IsKeyPressed(Key); });
-        InputTable.Set("IsKeyRepeated", +[](EKey Key){ return FInputProcessor::Get().IsKeyRepeated(Key); });
+        struct Foobar
+        {
+            
+        };
         
-        InputTable.Set("GetMouseDeltaX", +[](){ return FInputProcessor::Get().GetMouseDeltaX(); });
-        InputTable.Set("GetMouseDeltaY", +[](){ return FInputProcessor::Get().GetMouseDeltaY(); });
-        InputTable.Set("GetMouseX", +[](){ return FInputProcessor::Get().GetMouseX(); });
-        InputTable.Set("GetMouseY", +[](){ return FInputProcessor::Get().GetMouseY(); });
-        InputTable.Set("GetMouseZ", +[](){ return FInputProcessor::Get().GetMouseZ(); });
-
+        auto Class = GlobalsRef.NewClass<Foobar>("Foobar");
+        
+        FRef InputTable = GlobalsRef.NewTable("Input");
+        InputTable.SetFunction<&FInputProcessor::IsKeyDown>("IsKeyDown", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsKeyUp>("IsKeyUp", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsKeyPressed>("IsKeyPressed", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsKeyRepeated>("IsKeyRepeated", &FInputProcessor::Get());
+        
+        luaL_newmetatable(L, "EntityRegistry");
+        lua_setuserdatametatable(L, TClassTraits<FEntityRegistry>::Tag());
     }
 
     void FScriptingContext::SandboxGlobals()
@@ -218,6 +224,7 @@ namespace Lumina::Lua
         
         int LoadResult = luau_load(Thread, Name.data(), Bytecode, BytecodeSize, 0);
         free(Bytecode);
+        
 
         if (LoadResult != LUA_OK)
         {
@@ -241,8 +248,6 @@ namespace Lumina::Lua
         NewScript->Environment  = Environment;
         NewScript->Thread       = ThreadRef;
         lua_pop(Thread, 1);
-        
-        
         
         int StackAfter = lua_gettop(L);
 
@@ -274,7 +279,13 @@ namespace Lumina::Lua
         
     }
 
-   
+    #if LUAI_GCMETRICS
+    const GCMetrics* FScriptingContext::GetGCMetrics() const
+    {
+        return &L->global->gcmetrics;
+    }
+    #endif
+
     void FScriptingContext::ReloadScripts(FStringView Path)
     {
         

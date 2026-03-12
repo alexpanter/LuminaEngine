@@ -258,10 +258,10 @@ typedef struct TString
 typedef struct Udata
 {
     CommonHeader;
+    
+    uint16_t tag; // @LUMINA_LUAU Changed from uint8_t
 
-    uint8_t tag;
-
-    int len;
+    uint16_t len; // @LUMINA_LUAU Changed from int
 
     struct LuaTable* metatable;
 

@@ -8,6 +8,7 @@
 #include "World/Entity/Components/Component.h"
 
 
+struct GCMetrics;
 struct lua_State;
 
 namespace Lumina
@@ -74,6 +75,10 @@ namespace Lumina::Lua
         RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "");
         RUNTIME_API TVector<TSharedPtr<FScript>> GetAllRegisteredScripts();
         RUNTIME_API void RunGC();
+        
+        #if LUAI_GCMETRICS
+        RUNTIME_API const GCMetrics* GetGCMetrics() const;  
+        #endif
         
         FScriptTransactionDelegate OnScriptLoaded;
         FScriptTransactionDelegate OnScriptDeleted;

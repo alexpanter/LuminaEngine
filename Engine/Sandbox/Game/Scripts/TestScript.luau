@@ -1,9 +1,7 @@
-local PlayerScript = {
-    Test = 12
-}
+local PlayerScript = {}
 
 function PlayerScript:Update(DeltaTime: number)
-    print(Input.IsKeyDown(EKey.W))
+    
 end
 
 function PlayerScript:OnDetach()

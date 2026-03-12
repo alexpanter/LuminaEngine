@@ -473,8 +473,6 @@ namespace Lumina::Reflection
         Stream += "\tint BindingTop = lua_gettop(L);\n";
         Stream += "\tluaL_newmetatable(L, \"" + DisplayName + "\");\n";
         Stream += "\tint MetaTableIdx = lua_gettop(L);\n";
-        Stream += "\tlua_pushvalue(L, MetaTableIdx);\n";
-        Stream += "\tlua_rawsetp(L, LUA_REGISTRYINDEX, Lumina::Lua::TClassTraits<" + QualifiedName + ">::MetaTableKey());\n";
         
         if (!Functions.empty())
         {
@@ -562,7 +560,8 @@ namespace Lumina::Reflection
             Stream += "\tlua_setfield(L, MetaTableIdx, \"__newindex\");\n";
         }
         
-        Stream += "\tlua_pop(L, 1); // Pop metatable";
+        Stream += "\n";
+        Stream += "\tlua_setuserdatametatable(L, Lumina::Lua::TClassTraits<" + QualifiedName + ">::Tag());\n";
         Stream += "\n\n";
             
         Stream += "\tlua_newtable(L);\n";
@@ -574,6 +573,7 @@ namespace Lumina::Reflection
             Stream += "\t\tif constexpr (!eastl::is_empty_v<" + QualifiedName + ">)\n";
             Stream += "\t\t{\n";
             Stream += "\t\t\tentt::registry* Registry = Lumina::Lua::TStack<entt::registry*>::Get(State, 1);\n";
+            Stream += "\t\t\tif (!Registry) { lua_pushnil(State); return 1; }\n";
             Stream += "\t\t\tentt::entity Entity = Lumina::Lua::TStack<entt::entity>::Get(State, 2);\n";
             Stream += "\t\t\t" + QualifiedName + "* Comp = Registry->try_get<" + QualifiedName + ">(Entity);\n";
             Stream += "\t\t\tif (!Comp) { lua_pushnil(State); return 1; }\n";
@@ -583,34 +583,32 @@ namespace Lumina::Reflection
             Stream += "\t\tlua_pushnil(State);\n";
             Stream += "\t\treturn 1;\n";
             Stream += "\t}, \"Get\");\n";
-            Stream += "\tlua_setfield(L, -2, \"Get\");\n";
+            Stream += "\tlua_setfield(L, -2, \"Get\");\n\n";
 
             Stream += "\tlua_pushcfunction(L, +[](lua_State* State) -> int\n";
             Stream += "\t{\n";
             Stream += "\t\tentt::registry* Registry = Lumina::Lua::TStack<entt::registry*>::Get(State, 1);\n";
+            Stream += "\t\t\tif (!Registry) { lua_pushnil(State); return 1; }\n";
             Stream += "\t\tentt::entity Entity = Lumina::Lua::TStack<entt::entity>::Get(State, 2);\n";
             Stream += "\t\tlua_pushboolean(State, Registry->all_of<" + QualifiedName + ">(Entity));\n";
             Stream += "\t\treturn 1;\n";
             Stream += "\t}, \"Has\");\n";
-            Stream += "\tlua_setfield(L, -2, \"Has\");\n";
+            Stream += "\tlua_setfield(L, -2, \"Has\");\n\n";
 
             Stream += "\tlua_pushcfunction(L, +[](lua_State* State) -> int\n";
             Stream += "\t{\n";
             Stream += "\t\tentt::registry* Registry = Lumina::Lua::TStack<entt::registry*>::Get(State, 1);\n";
+            Stream += "\t\t\tif (!Registry) return 0;\n";
             Stream += "\t\tentt::entity Entity = Lumina::Lua::TStack<entt::entity>::Get(State, 2);\n";
             Stream += "\t\tRegistry->remove<" + QualifiedName + ">(Entity);\n";
             Stream += "\t\treturn 0;\n";
             Stream += "\t}, \"Remove\");\n";
-            Stream += "\tlua_setfield(L, -2, \"Remove\");\n";
+            Stream += "\tlua_setfield(L, -2, \"Remove\");\n\n";
         }
         
         Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
         Stream += "\t{\n";
-        Stream += "\t\tvoid* Block = lua_newuserdata(State, sizeof(" + QualifiedName + "));\n";
-        Stream += "\t\tnew (Block) " + QualifiedName + "{};\n";
-        Stream += "\t\tlua_rawgetp(State, LUA_REGISTRYINDEX, Lumina::Lua::TClassTraits<" + QualifiedName + ">::MetaTableKey());\n";
-        Stream += "\t\tlua_setmetatable(State, -2);\n";
-        Stream += "\t\treturn 1;\n";
+        Stream += "\t\treturn 0;\n";
         Stream += "\t}, \"new\");\n";
             
         Stream += "\tlua_setfield(L, -2, \"new\");\n";

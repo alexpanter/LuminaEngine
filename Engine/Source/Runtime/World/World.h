@@ -20,6 +20,7 @@
 
 namespace Lumina
 {
+    struct SScriptComponent;
     struct SDefaultWorldSettings;
     struct FLineBatcherComponent;
 }
@@ -105,7 +106,8 @@ namespace Lumina
         const TVector<FSystemVariant>& GetSystemsForUpdateStage(EUpdateStage Stage);
 
         void OnRelationshipComponentDestroyed(entt::registry& Registry, entt::entity Entity);
-        void OnScriptComponentCreated(entt::registry& Registry, entt::entity Entity);
+        void OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity);
+        void OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent);
         void OnScriptComponentDestroyed(entt::registry& Registry, entt::entity Entity);
 
         void RegisterSystems();

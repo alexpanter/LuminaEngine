@@ -36,8 +36,7 @@ workspace "Lumina"
             "JPH_FLOATING_POINT_EXCEPTIONS_ENABLED",
             "JPH_EXTERNAL_PROFILE",
             "JPH_ENABLE_ASSERTS",
-            "SOL_ALL_SAFETIES_ON",
-            "SOL_DEBUG_BUILD",
+            "LUAI_GCMETRICS",
         }
     filter {}
 		
@@ -55,6 +54,7 @@ workspace "Lumina"
         "IMGUI_IMPL_VULKAN_USE_VOLK",
         
         "LUA_VECTOR_SIZE=4",
+        "LUA_UTAG_LIMIT=65535",
 
         "TRACY_ALLOW_SHADOW_WARNING",
         "TRACY_ENABLE",

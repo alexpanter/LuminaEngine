@@ -84,9 +84,34 @@ namespace Lumina
                         if (ImGui::Selectable(SelectableLabel.c_str()))
                         {
                             ScriptComponent->ScriptPath.Path = FileInfo.VirtualPath;
-                            ScriptComponent->World->OnScriptComponentCreated(ScriptComponent->World->GetEntityRegistry(), ScriptComponent->Entity);
+                            ScriptComponent->World->OnScriptComponentCreated(ScriptComponent->Entity, *ScriptComponent);
                             ImGui::CloseCurrentPopup();
                             bWasChanged = true;
+                        }
+                        
+                        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+                        {
+                            FString FileContents;
+                            if (VFS::ReadFile(FileContents, FileInfo.VirtualPath))
+                            {
+                                FString Preview;
+                                int LineCount = 0;
+                                for (char C : FileContents)
+                                {
+                                    if (C == '\n' && ++LineCount >= 10)
+                                    {
+                                        Preview.append("\n...");
+                                        break;
+                                    }
+                                    Preview.push_back(C);
+                                }
+
+                                ImGui::BeginTooltip();
+                                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f, 1.0f, 0.6f, 1.0f));
+                                ImGui::TextUnformatted(Preview.c_str());
+                                ImGui::PopStyleColor();
+                                ImGui::EndTooltip();
+                            }
                         }
                     });
                 }

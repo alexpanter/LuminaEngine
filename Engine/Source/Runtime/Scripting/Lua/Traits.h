@@ -10,6 +10,9 @@ namespace Lumina::Lua
     template<typename T>
     struct TFunctionTraits;
     
+    template<typename T>
+    struct TFunctionTraits : TFunctionTraits<decltype(&T::operator())> {};
+    
     template<typename TReturn, typename ... TArgs>
     struct TFunctionTraits<TReturn(*)(TArgs...)>
     {
@@ -37,7 +40,7 @@ namespace Lumina::Lua
     };
     
     
-    
+    inline uint16 GNextTag = 1;
     
     template<typename T>
     struct TClassTraits
@@ -48,21 +51,13 @@ namespace Lumina::Lua
         {
             return &Unique;
         }
+        
+        static uint16 Tag()
+        {
+            static uint16 STag = GNextTag++;
+            return STag;
+        }
     };
-    
-    
-    
-    template<typename T>
-    T GetArg(lua_State* L, int Index)
-    {
-        if constexpr (eastl::is_same_v<T, int>)         return lua_tointeger(L, Index);
-        if constexpr (eastl::is_same_v<T, float>)       return (float)lua_tonumber(L, Index);
-        if constexpr (eastl::is_same_v<T, double>)      return lua_tonumber(L, Index);
-        if constexpr (eastl::is_same_v<T, bool>)        return lua_toboolean(L, Index);
-        if constexpr (eastl::is_same_v<T, const char*>) return lua_tostring(L, Index);
-    }
-    
-    
     
     enum class EMetaMethod : uint8
     {
@@ -79,30 +74,32 @@ namespace Lumina::Lua
         Lt,             // __lt
         Le,             // __le
         Len,            // __len
+        Iter,           // __iter
         Call,           // __call
-        GC,             // __gc
+        NameCall,       // __namecall
     };
     
     constexpr FStringView MetaMethodName(EMetaMethod M) noexcept
     {
         switch (M)
         {
-            case EMetaMethod::Index:      return "__index";
-            case EMetaMethod::NewIndex:   return "__newindex";
-            case EMetaMethod::ToString:   return "__tostring";
-            case EMetaMethod::Add:        return "__add";
-            case EMetaMethod::Sub:        return "__sub";
-            case EMetaMethod::Mul:        return "__mul";
-            case EMetaMethod::Div:        return "__div";
-            case EMetaMethod::Mod:        return "__mod";
-            case EMetaMethod::UnaryMinus: return "__unm";
-            case EMetaMethod::Eq:         return "__eq";
-            case EMetaMethod::Lt:         return "__lt";
-            case EMetaMethod::Le:         return "__le";
-            case EMetaMethod::Len:        return "__len";
-            case EMetaMethod::Call:       return "__call";
-            case EMetaMethod::GC:         return "__gc";
-            default:                      return "__unknown";
+            case EMetaMethod::Index:        return "__index";
+            case EMetaMethod::NewIndex:     return "__newindex";
+            case EMetaMethod::ToString:     return "__tostring";
+            case EMetaMethod::Add:          return "__add";
+            case EMetaMethod::Sub:          return "__sub";
+            case EMetaMethod::Mul:          return "__mul";
+            case EMetaMethod::Div:          return "__div";
+            case EMetaMethod::Mod:          return "__mod";
+            case EMetaMethod::UnaryMinus:   return "__unm";
+            case EMetaMethod::Eq:           return "__eq";
+            case EMetaMethod::Lt:           return "__lt";
+            case EMetaMethod::Le:           return "__le";
+            case EMetaMethod::Len:          return "__len";
+            case EMetaMethod::Iter:         return "__iter";
+            case EMetaMethod::Call:         return "__call";
+            case EMetaMethod::NameCall:     return "__namecall";
+            default:                        return "__unknown";
         }
     }
     

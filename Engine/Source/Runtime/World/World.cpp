@@ -106,7 +106,7 @@ namespace Lumina
         });
         
         EntityRegistry.on_destroy   <FRelationshipComponent>()  .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
-        EntityRegistry.on_construct <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentCreated>(this);
+        EntityRegistry.on_construct <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentConstruct>(this);
         EntityRegistry.on_destroy   <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentDestroyed>(this);
         SystemContext.EventSink     <FSwitchActiveCameraEvent>().connect<&ThisClass::OnChangeCameraEvent>(this);
         
@@ -120,9 +120,9 @@ namespace Lumina
         });
         
         auto ScriptView = EntityRegistry.view<SScriptComponent>(entt::exclude<SDisabledTag>);
-        ScriptView.each([&](entt::entity Entity, SScriptComponent&)
+        ScriptView.each([&](entt::entity Entity, SScriptComponent& Component)
         {
-            OnScriptComponentCreated(EntityRegistry, Entity); 
+            OnScriptComponentCreated(Entity, Component); 
         });
         
         auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
@@ -133,7 +133,10 @@ namespace Lumina
                 return;
             }
             
-            ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
+            if (ScriptComponent.ReadyFunc.IsValid())
+            {
+                ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
+            }
         });
         
         auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
@@ -150,7 +153,10 @@ namespace Lumina
                             return;
                         }
                         
-                        ScriptComp->ReadyFunc(ScriptComp->Script->Reference);
+                        if (ScriptComp->ReadyFunc.IsValid())
+                        {
+                            ScriptComp->ReadyFunc(ScriptComp->Script->Reference);
+                        }
                     }
                 });
                 
@@ -159,7 +165,10 @@ namespace Lumina
                     return;
                 }
 
-                Script.ReadyFunc(Script.Script->Reference);
+                if (Script.ReadyFunc.IsValid())
+                {
+                    Script.ReadyFunc(Script.Script->Reference);
+                }
             }
         });
         
@@ -174,7 +183,7 @@ namespace Lumina
     void CWorld::TeardownWorld()
     {
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);
-        EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentCreated>(this);
+        EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentConstruct>(this);
         
         ForEachUniqueSystem([&](const FSystemVariant& System)
         {
@@ -315,7 +324,7 @@ namespace Lumina
                 continue;
             }
             
-            // We also need to check the entity we're creating, incase another component adds it.
+            // We also need to check the entity we're creating, in-case another component adds it.
             if(Storage.contains(From) && !Storage.contains(To))
             {
                 Storage.push(To, Storage.value(From));
@@ -437,12 +446,17 @@ namespace Lumina
         ECS::Utils::RemoveFromParent(Registry, Entity);
         ECS::Utils::DestroyEntityHierarchy(Registry, Entity);
     }
-    
-    void CWorld::OnScriptComponentCreated(entt::registry& Registry, entt::entity Entity)
+
+    void CWorld::OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity)
     {
-        SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
-        ScriptComponent.Entity     = Entity;
-        ScriptComponent.World      = this;
+        SScriptComponent& ScriptComponent   = Registry.get<SScriptComponent>(Entity);
+        OnScriptComponentCreated(Entity, ScriptComponent);
+    }
+
+    void CWorld::OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent)
+    {
+        ScriptComponent.Entity              = Entity;
+        ScriptComponent.World               = this;
         
         if (!ScriptComponent.ScriptPath.Path.empty())
         {
@@ -454,7 +468,19 @@ namespace Lumina
             
             ScriptComponent.Script->Reference.Set("Entity", Entity);
             ScriptComponent.Script->Reference.Set("Registry", &EntityRegistry);
+            ScriptComponent.Script->Reference.Set("World", (void*)this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::IsGameWorld>("IsGameWorld", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetDefaultWorldSettings>("GetDefaultWorldSettings", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::MarkTransformDirty>("MarkTransformDirty", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetEntityByTag>("GetEntityByTag", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetEntityByName>("GetEntityByName", this);
             
+            constexpr auto CreateFn = static_cast<entt::entity(entt::registry::*)()>(&entt::registry::create);
+            ScriptComponent.Script->Environment.SetFunction<CreateFn>("CreateEntity", &EntityRegistry);
+            
+            constexpr auto DestroyFn = static_cast<entt::registry::version_type(entt::registry::*)(entt::entity)>(&entt::registry::destroy);
+            ScriptComponent.Script->Environment.SetFunction<DestroyFn>("DestroyEntity", &EntityRegistry);
+
             ScriptComponent.AttachFunc = ScriptComponent.Script->Reference["OnAttach"];
             ScriptComponent.ReadyFunc  = ScriptComponent.Script->Reference["OnReady"];
             ScriptComponent.UpdateFunc = ScriptComponent.Script->Reference["Update"];

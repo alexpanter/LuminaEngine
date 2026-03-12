@@ -1,6 +1,8 @@
 ﻿#pragma once
 
+#include "Class.h"
 #include "Error.h"
+#include "Invoker.h"
 #include "lua.h"
 #include "Stack.h"
 #include "Log/Log.h"
@@ -23,7 +25,14 @@ namespace Lumina::Lua
         FRef& operator=(FRef&& Other) noexcept;
         
         template<typename T>
+        requires(!eastl::is_function_v<T> && !eastl::is_member_function_pointer_v<T>)
         void Set(FStringView Key, const T& Value);
+        
+        template<auto TFunc, typename TClass = void>
+        void SetFunction(FStringView Key, TClass* Instance = nullptr);
+        
+        template<auto TFunc, typename TClass = void>
+        void SetFunction(EMetaMethod Meta, TClass* Instance = nullptr);
         
         template<typename T>
         NODISCARD bool Is() const;
@@ -40,8 +49,12 @@ namespace Lumina::Lua
         template<typename T, typename... TArgs>
         NODISCARD T InvokeGet(TArgs&& ... Args);
         
+        template<typename T>
+        NODISCARD TClass<T> NewClass(FStringView Name);
+        
         void Reset();
         bool Push() const;
+        
         
         NODISCARD FRef NewTable(FStringView Key) const;
         NODISCARD bool IsValid() const;
@@ -117,6 +130,7 @@ namespace Lumina::Lua
     };
 
     template <typename T>
+    requires(!eastl::is_function_v<T> && !eastl::is_member_function_pointer_v<T>)
     void FRef::Set(FStringView Key, const T& Value)
     {
         if (!Push())
@@ -127,6 +141,39 @@ namespace Lumina::Lua
         TStack<T>::Push(State, Value);
         lua_setfield(State, -2, Key.data());
         lua_pop(State, 1);
+    }
+
+    template <auto TFunc, typename TClass = void>
+    void FRef::SetFunction(FStringView Key, TClass* Instance)
+    {
+        if (!Push())
+        {
+            return;
+        }
+        
+        if constexpr (eastl::is_void_v<TClass>)
+        {
+            lua_pushcfunction(State, [](lua_State* L)
+            {
+                return Invoker<TFunc>(L);
+            }, Key.data());
+        }
+        else
+        {
+            lua_pushlightuserdata(State, Instance);
+            lua_pushcclosure(State, [](lua_State* L)
+            {
+                return InvokerWithInstance<TFunc>(L);
+            }, Key.data(), 1);
+        }
+        lua_setfield(State, -2, Key.data());
+        lua_pop(State, 1);
+    }
+
+    template <auto TFunc, typename TClass>
+    void FRef::SetFunction(EMetaMethod Meta, TClass* Instance)
+    {
+        SetFunction<TFunc>(MetaMethodName(Meta), Instance);
     }
 
     template <typename T>
@@ -218,5 +265,22 @@ namespace Lumina::Lua
         T Result = TStack<T>::Get(State, -1);
         lua_pop(State, 1);
         return Result;
+    }
+
+    template <typename T>
+    TClass<T> FRef::NewClass(FStringView Name)
+    {
+        int Top = lua_gettop(State);
+        if (!Push())
+        {
+            return TClass<T>(State, Name);
+        }
+        
+        ASSERT(lua_istable(State, -1));
+        TClass<T> Class(State, Name);
+        
+        lua_pop(State, 1);
+        DEBUG_ASSERT(lua_gettop(State) == Top);
+        return Class;
     }
 }
