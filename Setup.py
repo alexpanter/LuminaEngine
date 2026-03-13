@@ -262,7 +262,7 @@ def main():
         print(f"{Fore.WHITE}Welcome to the Lumina Engine setup utility.")
         print(f"{Fore.WHITE}This will download dependencies and configure your project.\n")
         
-        dropbox_url = "https://www.dropbox.com/scl/fi/xul7gd2ryx1yatc0axuc8/External.7z?rlkey=ntnen331j7s8gkm6t03t07325&st=jsjtc3zu&dl=0"
+        dropbox_url = "https://www.dropbox.com/scl/fi/xul7gd2ryx1yatc0axuc8/External.7z?rlkey=ntnen331j7s8gkm6t03t07325&st=ungyann9&dl=0"
         archive_file = "External.7z"
         extract_location = "."
         generation_script = Path("BuildScripts") / "GenerateProjectFiles.py"
