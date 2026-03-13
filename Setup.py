@@ -263,7 +263,7 @@ def main():
         print(f"{Fore.WHITE}This will download dependencies and configure your project.\n")
         
         # Configuration
-        dropbox_url = "https://www.dropbox.com/scl/fi/xkgu0zkwcza98ovobind5/External.zip?rlkey=a7mf53v9ywn0f60c8tzvdk0vd&st=2iexb83z&dl=0"
+        dropbox_url = "https://www.dropbox.com/scl/fi/lv66zolocddgylco2a277/External.7z?rlkey=q0iyx20qcgoz7w97v9iawtrz9&st=8bf8kogg&dl=0"
         archive_file = "External.7z"
         extract_location = "."
         generation_script = Path("BuildScripts") / "GenerateProjectFiles.py"
