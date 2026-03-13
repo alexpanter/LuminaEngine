@@ -21,6 +21,7 @@
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
 #include "Subsystems/FCameraManager.h"
+#include "Subsystems/WorldSettings.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/entity/systems/EntitySystem.h"
 
@@ -68,9 +69,16 @@ namespace Lumina
 
         EntityRegistry.ctx().emplace<entt::dispatcher&>(SingletonDispatcher);
         
+        for (auto Entity : EntityRegistry.view<SDefaultWorldSettings>())
+        {
+            SingletonEntity = Entity;
+            break;
+        }
+        
         if (!EntityRegistry.valid(SingletonEntity))
         {
             SingletonEntity = EntityRegistry.create();
+            EntityRegistry.emplace<SDefaultWorldSettings>(SingletonEntity);
         }
         
         LineBatcherComponent = &EntityRegistry.emplace<FLineBatcherComponent>(SingletonEntity);
@@ -87,13 +95,18 @@ namespace Lumina
         CreateRenderer();
         RegisterSystems();
         
+        if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+        {
+            PhysicsScene->Simulate();
+        }
+        
         ForEachUniqueSystem([&](const FSystemVariant& System)
         {
             eastl::visit([&](const auto& Sys) { Sys.Startup(SystemContext); }, System);
         });
         
         EntityRegistry.on_destroy   <FRelationshipComponent>()  .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
-        EntityRegistry.on_construct <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentCreated>(this);
+        EntityRegistry.on_construct <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentConstruct>(this);
         EntityRegistry.on_destroy   <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentDestroyed>(this);
         SystemContext.EventSink     <FSwitchActiveCameraEvent>().connect<&ThisClass::OnChangeCameraEvent>(this);
         
@@ -107,15 +120,23 @@ namespace Lumina
         });
         
         auto ScriptView = EntityRegistry.view<SScriptComponent>(entt::exclude<SDisabledTag>);
-        ScriptView.each([&](entt::entity Entity, SScriptComponent&)
+        ScriptView.each([&](entt::entity Entity, SScriptComponent& Component)
         {
-           OnScriptComponentCreated(EntityRegistry, Entity); 
+            OnScriptComponentCreated(Entity, Component); 
         });
         
         auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
-        RootView.each([&](entt::entity RootEntity, SScriptComponent& ScriptComponent)
+        RootView.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
         {
-            ScriptComponent.InvokeScriptFunction("OnReady");
+            if (ScriptComponent.Script == nullptr)
+            {
+                return;
+            }
+            
+            if (ScriptComponent.ReadyFunc.IsValid())
+            {
+                ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
+            }
         });
         
         auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
@@ -127,16 +148,31 @@ namespace Lumina
                 {
                     if (SScriptComponent* ScriptComp = EntityRegistry.try_get<SScriptComponent>(Descendant))
                     {
-                        ScriptComp->InvokeScriptFunction("OnReady");
+                        if (ScriptComp->Script == nullptr)
+                        {
+                            return;
+                        }
+                        
+                        if (ScriptComp->ReadyFunc.IsValid())
+                        {
+                            ScriptComp->ReadyFunc(ScriptComp->Script->Reference);
+                        }
                     }
                 });
                 
-                Script.InvokeScriptFunction("OnReady");
+                if (Script.Script == nullptr)
+                {
+                    return;
+                }
 
+                if (Script.ReadyFunc.IsValid())
+                {
+                    Script.ReadyFunc(Script.Script->Reference);
+                }
             }
         });
         
-        if (IsGameWorld())
+        if (WorldType == EWorldType::Simulation || WorldType == EWorldType::Game)
         {
             bPaused = false;
         }
@@ -147,16 +183,20 @@ namespace Lumina
     void CWorld::TeardownWorld()
     {
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);
-        EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentCreated>(this);
-        
-        RegistryPending.clear<>();
-        EntityRegistry.clear<>();
+        EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentConstruct>(this);
         
         ForEachUniqueSystem([&](const FSystemVariant& System)
         {
             eastl::visit([&](const auto& Sys) { Sys.Teardown(SystemContext); }, System);
         });
         
+        if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+        {
+            PhysicsScene->StopSimulate();
+        }
+        
+        RegistryPending.clear<>();
+        EntityRegistry.clear<>();
         PhysicsScene.reset();
         DestroyRenderer();
         
@@ -164,7 +204,7 @@ namespace Lumina
         
         GWorldManager->RemoveWorld(this);
         
-        Scripting::FScriptingContext::Get().RunGC();
+        Lua::FScriptingContext::Get().RunGC();
     }
     
     void CWorld::Update(const FUpdateContext& Context)
@@ -179,29 +219,20 @@ namespace Lumina
             TimeSinceCreation += DeltaTime;
         }
         
+        if (bPaused && Stage != EUpdateStage::Paused || (!bPaused && Stage == EUpdateStage::Paused))
+        {
+            return;
+        }
+        
         if (Stage == EUpdateStage::DuringPhysics)
         {
             PhysicsScene->Update(Context.GetDeltaTime());
         }
 
-        SystemContext.DeltaTime = DeltaTime;
-        SystemContext.Time = TimeSinceCreation;
-        SystemContext.UpdateStage = Stage;
+        SystemContext.DeltaTime     = DeltaTime;
+        SystemContext.Time          = TimeSinceCreation;
+        SystemContext.UpdateStage   = Stage;
         
-        TickSystems(SystemContext);
-    }
-
-    void CWorld::Paused(const FUpdateContext& Context)
-    {
-        LUMINA_PROFILE_SCOPE();
-
-        DeltaTime = Context.GetDeltaTime();
-        TimeSinceCreation += DeltaTime;
-        
-        SystemContext.DeltaTime = DeltaTime;
-        SystemContext.Time = TimeSinceCreation;
-        SystemContext.UpdateStage = EUpdateStage::Paused;
-
         TickSystems(SystemContext);
     }
 
@@ -284,7 +315,7 @@ namespace Lumina
                 continue;
             }
             
-            // We also need to check the entity we're creating, incase another component adds it.
+            // We also need to check the entity we're creating, in-case another component adds it.
             if(Storage.contains(From) && !Storage.contains(To))
             {
                 Storage.push(To, Storage.value(From));
@@ -330,16 +361,11 @@ namespace Lumina
         SetActiveCamera(Event.NewActiveEntity);
     }
 
-    void CWorld::SimulateWorld()
+    SDefaultWorldSettings& CWorld::GetDefaultWorldSettings()
     {
-        PhysicsScene->OnWorldSimulate();
+        return EntityRegistry.get<SDefaultWorldSettings>(SingletonEntity);
     }
 
-    void CWorld::StopSimulation()
-    {
-        PhysicsScene->OnWorldStopSimulate();
-    }
-    
     void CWorld::CreateRenderer()
     {
         if (!RenderScene)
@@ -411,54 +437,59 @@ namespace Lumina
         ECS::Utils::RemoveFromParent(Registry, Entity);
         ECS::Utils::DestroyEntityHierarchy(Registry, Entity);
     }
-    
-    void CWorld::OnScriptComponentCreated(entt::registry& Registry, entt::entity Entity)
+
+    void CWorld::OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity)
     {
-        SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
+        SScriptComponent& ScriptComponent   = Registry.get<SScriptComponent>(Entity);
+        OnScriptComponentCreated(Entity, ScriptComponent);
+    }
+
+    void CWorld::OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent)
+    {
+        ScriptComponent.Entity              = Entity;
+        ScriptComponent.World               = this;
+        
         if (!ScriptComponent.ScriptPath.Path.empty())
         {
-            if (TSharedPtr<Scripting::FLuaScript> Script = Scripting::FScriptingContext::Get().LoadUniqueScript(ScriptComponent.ScriptPath.Path))
+            ScriptComponent.Script = Lua::FScriptingContext::Get().LoadUniqueScriptPath(ScriptComponent.ScriptPath.Path);
+            if (ScriptComponent.Script == nullptr)
             {
-                ScriptComponent.Script = Script;
-                
-                auto ScriptVarVisitor = [&]<typename T>(TVector<TNamedScriptVar<T>>& Vector)
-                {
-                    for (const TNamedScriptVar<T>& Var : Vector)
-                    {
-                        const char* KeyName = Var.Name.c_str();
-                        sol::object ExistingValue = Script->ScriptTable[KeyName];
-            
-                        if (!ExistingValue.valid() || !ExistingValue.is<T>())
-                        {
-                            continue;
-                        }
-                        
-                        if constexpr (eastl::is_same_v<T, FString>)
-                        {
-                            Script->ScriptTable[KeyName] = Var.Value.c_str();
-                        }
-                        else
-                        {
-                            Script->ScriptTable[KeyName] = Var.Value;
-                        }
-                    }
-                };
-        
-                eastl::apply([&](auto&... Vectors)
-                {
-                    (ScriptVarVisitor(Vectors), ...);
-                }, ScriptComponent.CustomData);
+                return;
             }
             
-            if (WorldType == EWorldType::Game)
+            ScriptComponent.Script->Reference.Set("Entity", Entity);
+            ScriptComponent.Script->Reference.Set("Registry", &EntityRegistry);
+            ScriptComponent.Script->Reference.Set("World", (void*)this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::IsGameWorld>("IsGameWorld", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetDefaultWorldSettings>("GetDefaultWorldSettings", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::MarkTransformDirty>("MarkTransformDirty", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetEntityByTag>("GetEntityByTag", this);
+            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetEntityByName>("GetEntityByName", this);
+            
+            constexpr auto CreateFn = static_cast<entt::entity(entt::registry::*)()>(&entt::registry::create);
+            ScriptComponent.Script->Environment.SetFunction<CreateFn>("CreateEntity", &EntityRegistry);
+            
+            constexpr auto DestroyFn = static_cast<entt::registry::version_type(entt::registry::*)(entt::entity)>(&entt::registry::destroy);
+            ScriptComponent.Script->Environment.SetFunction<DestroyFn>("DestroyEntity", &EntityRegistry);
+
+            ScriptComponent.AttachFunc = ScriptComponent.Script->Reference["OnAttach"];
+            ScriptComponent.ReadyFunc  = ScriptComponent.Script->Reference["OnReady"];
+            ScriptComponent.UpdateFunc = ScriptComponent.Script->Reference["Update"];
+            ScriptComponent.DetachFunc = ScriptComponent.Script->Reference["OnDetach"];
+            
+            if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
             {
-                ScriptComponent.Script->Environment["Entity"]   = Entity;
-                ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
-                ScriptComponent.InvokeScriptFunction("OnAttach");
-                
+                if (ScriptComponent.AttachFunc.IsValid())
+                {
+                    ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
+                }
+
                 if (!bInitializing)
                 {
-                    ScriptComponent.InvokeScriptFunction("OnReady");
+                    if (ScriptComponent.ReadyFunc.IsValid())
+                    {
+                        ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
+                    }
                 }
             }
         }
@@ -469,18 +500,18 @@ namespace Lumina
         SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
         if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
         {
-            if (ScriptComponent.Script != nullptr || !ScriptComponent.Script->ScriptTable.valid())
+            if (ScriptComponent.Script != nullptr)
             {
-                ScriptComponent.Script->Environment["Entity"]   = Entity;
-                ScriptComponent.Script->Environment["Context"]  = std::ref(SystemContext);
-                ScriptComponent.InvokeScriptFunction("OnDetach");
+                if (ScriptComponent.DetachFunc.IsValid())
+                {
+                    ScriptComponent.DetachFunc(ScriptComponent.Script->Reference);
+                }
             }
         }
     }
 
     void CWorld::RegisterSystems()
     {
-        using namespace Scripting;
         using namespace entt::literals;
 
         for (int i = 0; i < (int)EUpdateStage::Max; ++i)
@@ -501,19 +532,6 @@ namespace Lumina
                 RegisterSystem(Variant);
             }
         }
-        
-        //FScriptingContext::Get().ForEachScript([&](FName Path, const TSharedPtr<FLuaScript>& Script)
-        //{
-        //    if (!Script->ScriptTable["Type"].valid() || Script->ScriptTable["Type"] != EScriptType::WorldSystem)
-        //    {
-        //        return;
-        //    }
-        //    
-        //    FEntityScriptSystem ScriptSystem;
-        //    ScriptSystem.WeakScript = Script;
-        //    FSystemVariant Variant = Move(ScriptSystem);
-        //    RegisterSystem(Variant);
-        //});
     }
 
     void CWorld::DrawBillboard(FRHIImage* Image, const glm::vec3& Location, float Scale)

@@ -106,16 +106,13 @@ namespace Lumina
         DirectionalLightEntity = World->ConstructEntity("Directional Light");
         World->GetEntityRegistry().emplace<SDirectionalLightComponent>(DirectionalLightEntity);
         World->GetEntityRegistry().emplace<SEnvironmentComponent>(DirectionalLightEntity);
-
         
         MeshEntity = World->ConstructEntity("MeshEntity");
         SStaticMeshComponent& StaticMeshComponent = World->GetEntityRegistry().emplace<SStaticMeshComponent>(MeshEntity);
         StaticMeshComponent.StaticMesh = CThumbnailManager::Get().SphereMesh;
 
         STransformComponent& MeshTransform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
-        MeshTransform.SetLocation(glm::vec3(0.0f, 0.0f, -5.0));
         
-
         STransformComponent& EditorTransform = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
         glm::quat Rotation = Math::FindLookAtRotation(MeshTransform.GetLocation(), EditorTransform.GetLocation());
         EditorTransform.SetRotation(Rotation);
@@ -214,7 +211,6 @@ namespace Lumina
         ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 12));
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 8));
     
-        // Error state
         if (CompilationResult.bIsError)
         {
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
@@ -230,7 +226,6 @@ namespace Lumina
             return;
         }
     
-        // Empty state
         if (Tree.empty())
         {
             ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
@@ -253,30 +248,25 @@ namespace Lumina
             return;
         }
     
-        // Shader preview
         ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.12f, 0.12f, 0.15f, 1.0f));
         ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(0.3f, 0.3f, 0.35f, 1.0f));
     
         ImGui::BeginChild("##glsl_preview", ImVec2(0, 0), true, ImGuiWindowFlags_HorizontalScrollbar);
     
-        // Header
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.7f, 0.85f, 1.0f, 1.0f));
         ImGui::TextUnformatted("GLSL Shader Tree");
         ImGui::PopStyleColor();
         ImGui::Separator();
         ImGui::Spacing();
     
-        // Monospace font for code
         ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[0]);
         
-        // Render code with highlighting if there's a replacement
         if (ReplacementStart != std::string::npos && ReplacementEnd != std::string::npos)
         {
             FString BeforeReplacement = Tree.substr(0, ReplacementStart);
             FString ReplacedCode = Tree.substr(ReplacementStart, ReplacementEnd - ReplacementStart);
             FString AfterReplacement = Tree.substr(ReplacementEnd);
     
-            // Before replacement (normal color)
             if (!BeforeReplacement.empty())
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.92f, 1.0f));
@@ -284,7 +274,6 @@ namespace Lumina
                 ImGui::PopStyleColor();
             }
     
-            // Replaced code (highlighted in green)
             if (!ReplacedCode.empty())
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.4f, 1.0f, 0.5f, 1.0f)); // Bright green
@@ -292,7 +281,6 @@ namespace Lumina
                 ImGui::PopStyleColor();
             }
     
-            // After replacement (normal color)
             if (!AfterReplacement.empty())
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.92f, 1.0f));
@@ -302,7 +290,6 @@ namespace Lumina
         }
         else
         {
-            // No replacement highlighting - just show the tree normally
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.9f, 0.9f, 0.92f, 1.0f));
             ImGui::TextUnformatted(Tree.c_str());
             ImGui::PopStyleColor();
@@ -392,14 +379,10 @@ namespace Lumina
         ImGuiID leftDockID = 0, rightDockID = 0;
         ImGuiID rightBottomDockID = 0;
 
-        // 1. Split horizontally: Left (Material Graph) and Right (Material Preview + bottom)
         ImGui::DockBuilderSplitNode(InDockspaceID, ImGuiDir_Right, 0.3f, &rightDockID, &leftDockID);
 
-        // 2. Split right dock vertically: Top (Material Preview), Bottom (GLSL Preview)
         ImGui::DockBuilderSplitNode(rightDockID, ImGuiDir_Down, 0.3f, &rightBottomDockID, &rightDockID);
-        
 
-        // Dock windows
         ImGui::DockBuilderDockWindow(GetToolWindowName(MaterialGraphName).c_str(), leftDockID);
         ImGui::DockBuilderDockWindow(GetToolWindowName(ViewportWindowName).c_str(), rightDockID);
         ImGui::DockBuilderDockWindow(GetToolWindowName(GLSLPreviewName).c_str(), rightBottomDockID);

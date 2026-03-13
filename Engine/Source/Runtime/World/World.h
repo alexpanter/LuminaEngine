@@ -20,6 +20,8 @@
 
 namespace Lumina
 {
+    struct SScriptComponent;
+    struct SDefaultWorldSettings;
     struct FLineBatcherComponent;
 }
 
@@ -61,7 +63,6 @@ namespace Lumina
          * Called on every update stage and runs systems attached to this world.
          */
         void Update(const FUpdateContext& Context);
-        void Paused(const FUpdateContext& Context);
         void Render(FRenderGraph& RenderGraph);
         
         entt::entity ConstructEntity(const FName& Name, const FTransform& Transform = FTransform());
@@ -77,14 +78,12 @@ namespace Lumina
         entt::entity GetActiveCameraEntity() const;
         
         void OnChangeCameraEvent(const FSwitchActiveCameraEvent& Event);
-        
-        void SimulateWorld();
-        void StopSimulation();
-        
         double GetWorldDeltaTime() const { return DeltaTime; }
         double GetTimeSinceWorldCreation() const { return TimeSinceCreation; }
         
         NODISCARD EWorldType GetWorldType() const { return WorldType; }
+        
+        NODISCARD SDefaultWorldSettings& GetDefaultWorldSettings();
         
         void CreateRenderer();
         void DestroyRenderer();
@@ -105,7 +104,8 @@ namespace Lumina
         const TVector<FSystemVariant>& GetSystemsForUpdateStage(EUpdateStage Stage);
 
         void OnRelationshipComponentDestroyed(entt::registry& Registry, entt::entity Entity);
-        void OnScriptComponentCreated(entt::registry& Registry, entt::entity Entity);
+        void OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity);
+        void OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent);
         void OnScriptComponentDestroyed(entt::registry& Registry, entt::entity Entity);
 
         void RegisterSystems();
@@ -158,8 +158,6 @@ namespace Lumina
         
         FLineBatcherComponent*                              LineBatcherComponent;
         
-        EWorldType                                          WorldType = EWorldType::None;
-        
         int64                                               WorldIndex = -1;
         double                                              DeltaTime = 0.0;
         double                                              TimeSinceCreation = 0.0;
@@ -168,6 +166,7 @@ namespace Lumina
         uint32                                              bActive:1 = true;
         
         
+        EWorldType                                          WorldType = EWorldType::None;
         bool                                                bInitializing = true;
     };
     

@@ -14,9 +14,9 @@ namespace Lumina
 
 	struct FDrawKey
 	{
-		uint64 StartIndex;
-		uint64 IndexCount;
-
+		uint32 StartIndex;
+		uint32 IndexCount;
+			
 		bool operator == (const FDrawKey& Key) const
 		{
 			return StartIndex == Key.StartIndex && IndexCount == Key.IndexCount;
@@ -58,12 +58,11 @@ namespace Lumina
 	 */
 	struct FMeshDrawCommand
 	{
-		FRHIVertexShader* VertexShader = nullptr;
-		FRHIPixelShader* PixelShader = nullptr;
-		uint32                                     IndirectDrawOffset = 0;
-		THashMap<FDrawKey, uint32>                 DrawArgumentIndexMap;
-		uint32                                     DrawCount = 0;
-
-		uint32                                     bDrawInDepthPass : 1;
+		TFixedHashMap<FDrawKey, uint32, 4>	DrawArgumentIndexMap;
+		FRHIVertexShader*					VertexShader = nullptr;
+		FRHIPixelShader*					PixelShader = nullptr;
+		uint32                      		IndirectDrawOffset = 0;
+		uint32                      		DrawCount = 0;
+		uint32                      		bDrawInDepthPass : 1;
 	};
 }

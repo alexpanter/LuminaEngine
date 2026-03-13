@@ -10,7 +10,6 @@
 #include "Reflector/ProjectSolution.h"
 #include "Reflector/ReflectionCore/ReflectedHeader.h"
 #include "Reflector/ReflectionCore/ReflectedProject.h"
-#include "Reflector/Types/Functions/ReflectedFunction.h"
 #include "Reflector/Types/Properties/ReflectedProperty.h"
 
 
@@ -204,7 +203,15 @@ namespace Lumina::Reflection
 		Stream += "#include \"";
 		Stream += Header->HeaderPath + "\"\n";
 		Stream += "#include \"World/Entity/Components/Component.h\"\n";
+		Stream += "#include \"World/Entity/Events/ECSEvent.h\"\n";
+		Stream += "#include \"lua.h\"\n";
+		Stream += "#include \"lualib.h\"\n";
+		Stream += "#include \"Core/Profiler/Profile.h\"\n";
+		Stream += "#include \"Core/Math/Hash/Hash.h\"\n";
+		Stream += "#include \"Scripting/Lua/Invoker.h\"\n";
 		Stream += "#include \"Core/Object/Class.h\"\n";
+		Stream += "using namespace entt::literals;\n";
+		Stream += "using LuaMethodFn = int(*)(lua_State*);\n";
 		Stream += "\n\n";
 
 		eastl::string ProjectAPI = Header->Project->Name + "_api";
@@ -367,118 +374,6 @@ namespace Lumina::Reflection
 		{
 			return;
 		}
-
-		Stream += "// ** Begin Lua Registration **\n";
-		Stream += "#include <sol/sol.hpp>\n";
-		Stream += "#include \"Scripting/DeferredScriptRegistry.h\"\n";
-
-		Stream += "static void " + FileID + "_" + "LuaRegistration(sol::state_view State)\n";
-		Stream += "{\n";
-
-		for (const auto& Type : ReflectedTypes)
-		{
-			if (Type->Type != FReflectedType::EType::Enum)
-			{
-				continue;
-			}
-
-			FReflectedEnum* Enum = static_cast<FReflectedEnum*>(Type.get());
-
-			if (Enum->Constants.empty())
-			{
-				continue;
-			}
-
-			Stream += "\t State.new_enum(\"" + Type->DisplayName + "\",\n";
-
-			for (size_t i = 0; i < Enum->Constants.size(); ++i)
-			{
-				const FReflectedEnum::FConstant& Constant = Enum->Constants[i];
-				Stream += "\t\t\"" + Constant.Label + "\", " + Type->Namespace + "::" + Type->DisplayName + "::" + Constant.Label;
-
-				if (i != Enum->Constants.size() - 1)
-				{
-					Stream += ",\n";
-				}
-			}
-
-			Stream += ");";
-		}
-
-		Stream += "\n\n";
-
-		for (const auto& Type : ReflectedTypes)
-		{
-			bool bIsStructure = Type->Type == FReflectedType::EType::Structure;
-			bool bIsClass = Type->Type == FReflectedType::EType::Class;
-
-			if (!(bIsClass || bIsStructure))
-			{
-				continue;
-			}
-
-			FReflectedStruct* StructType = static_cast<FReflectedStruct*>(Type.get());
-
-			Stream += "\t State.new_usertype<" + Type->Namespace + "::" + Type->DisplayName + ">(\"" + Type->DisplayName + "\",\n";
-
-			if (bIsStructure)
-			{
-				Stream += "\t\tsol::call_constructor, sol::constructors<" + Type->Namespace + "::" + Type->DisplayName + "()>(),\n";
-			}
-
-			if (!StructType->Parent.empty())
-			{
-				Stream += "\t\tsol::base_classes, sol::bases<" + Type->Namespace + "::" + StructType->Parent + ">(),\n";
-			}
-			Stream += "\t\t\"__type\", sol::readonly_property([]() { return \"" + Type->DisplayName + "\"; })";
-
-			if (!Type->Props.empty() || !Type->Functions.empty())
-			{
-				Stream += ",";
-			}
-
-			Stream += "\n";
-
-
-			for (const auto& Property : Type->Props)
-			{
-				if (Property->bInner)
-				{
-					continue;
-				}
-
-				if (Property->GenerateLuaBinding(Stream) && (Property != Type->Props.back() || !Type->Functions.empty()))
-				{
-					Stream += ",";
-				}
-
-				Stream += "\n";
-			}
-
-			Stream += "\n\n";
-
-			for (const auto& Function : Type->Functions)
-			{
-				Stream += "\t\t\"" + Function->Name + "\", &" + Type->Namespace + "::" + Type->DisplayName + "::" + Function->Name;
-
-				if (Function != Type->Functions.back())
-				{
-					Stream += ",";
-				}
-
-				Stream += "\n";
-			}
-
-			Stream += "\t);\n";
-
-		}
-
-		Stream += "}\n";
-
-		Stream += "static Lumina::Scripting::FRegisterScriptInfo " + FileID + "LuaRegisterInfo(&" + FileID + "_" + "LuaRegistration);\n";
-
-
-		Stream += "// ** End Lua Registration **\n\n";
 	}
 
 }

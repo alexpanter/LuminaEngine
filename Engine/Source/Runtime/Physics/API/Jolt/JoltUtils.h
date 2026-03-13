@@ -1,11 +1,14 @@
 ﻿#pragma once
+
 #include <Jolt/Core/Color.h>
 #include <Jolt/Physics/Body/MotionType.h>
-
+#include "Jolt/Physics/Collision/ObjectLayer.h"
 #include "Physics/PhysicsTypes.h"
 
 namespace Lumina::JoltUtils
 {
+    JPH::ObjectLayer PackToObjectLayer(const FCollisionProfile& Profile);
+    
     // Vec3 conversions
     JPH::Vec3 ToJPHVec3(const glm::vec3& Vec);
     glm::vec3 FromJPHVec3(const JPH::Vec3& Vec);

@@ -129,7 +129,7 @@ namespace Lumina
         TArray<FRHIImageRef, (int)ENamedImage::Num>     NamedImages = {};
         
         /** Packed array of per-instance data */
-        TVector<FInstanceData>                  InstanceData;
+        TVector<FGPUInstance>                  InstanceData;
         TVector<glm::mat4>                      BonesData;
         
         FShadowAtlas                            ShadowAtlas;

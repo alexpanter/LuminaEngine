@@ -10,4 +10,5 @@ namespace Lumina
     {
         GENERATED_BODY()
     };
+    
 }

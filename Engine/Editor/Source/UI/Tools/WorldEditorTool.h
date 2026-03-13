@@ -29,11 +29,6 @@ namespace Lumina
             entt::entity Entity;
         };
         
-        class FSystemListViewItemData
-        {
-            TWeakObjectPtr<CWorld::FSystemVariant> System;
-        };
-
         struct FEntityListFilterState
         {
             ImGuiTextFilter FilterName;
@@ -167,11 +162,15 @@ namespace Lumina
         TQueue<FComponentDestroyRequest>        ComponentDestroyRequests;
         TQueue<entt::entity>                    EntityDestroyRequests;
         TVector<TUniquePtr<FPropertyTable>>     PropertyTables;
+        TUniquePtr<FPropertyTable>              WorldSettingsPropertyTable;
+        
 
         float                                   GuizmoSnapTranslate = 0.1f;
 		float                                   GuizmoSnapRotate = 5.0f;
 		float                                   GuizmoSnapScale = 0.1f;
 
+        
+        bool                                    bShowComponentVisualizers = true;
 		bool									bGuizmoSnapEnabled = true;
         bool                                    bGamePreviewRunning = false;
         bool                                    bSimulatingWorld = false;

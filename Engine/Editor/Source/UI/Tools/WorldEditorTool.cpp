@@ -24,7 +24,6 @@
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/EditorComponent.h"
 #include "world/entity/components/entitytags.h"
-#include "World/Entity/Components/LineBatcherComponent.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
@@ -32,6 +31,7 @@
 #include "World/Entity/Components/VelocityComponent.h"
 #include "World/Scene/RenderScene/RenderScene.h"
 #include "World/Scene/RenderScene/SceneRenderTypes.h"
+#include "World/Subsystems/WorldSettings.h"
 
 
 namespace Lumina
@@ -57,7 +57,7 @@ namespace Lumina
         
         CreateToolWindow(WorldSettingsName, [&](bool bFocused)
         {
-            
+            DrawWorldSettings(bFocused);
         });
 
         CreateToolWindow(SystemOutlinerName, [&] (bool bFocused)
@@ -80,6 +80,8 @@ namespace Lumina
         GuizmoSnapScale     = GConfig->Get("Editor.WorldEditorTool.GuizmoSnapScale", 0.1f);
 
         //------------------------------------------------------------------------------------------------------
+        
+        WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
         
         OutlinerContext.SetDragDropFunction = [this] (FTreeListView& Tree, entt::entity Item)
         {
@@ -173,11 +175,15 @@ namespace Lumina
             NameComponent.Name = NewName;
 		};
         
-        OutlinerContext.ItemSelectedFunction = [this](FTreeListView& Tree, entt::entity Item)
+        OutlinerContext.ItemSelectedFunction = [this](FTreeListView& Tree, entt::entity Item, bool bShouldClear)
         {
-            if (Item == entt::null)
+            if (bShouldClear)
             {
                 ClearSelectedEntities();
+            }
+
+            if (Item == entt::null)
+            {
                 return;
             }
             
@@ -189,7 +195,6 @@ namespace Lumina
                 return;
             }
             
-            ClearSelectedEntities();
             AddSelectedEntity(Data.Entity, false);
             
             RebuildPropertyTables(Data.Entity);
@@ -340,24 +345,27 @@ namespace Lumina
     {
         using namespace entt::literals;
         
-        CComponentVisualizerRegistry& ComponentVisualizerRegistry = CComponentVisualizerRegistry::Get();
-
-        auto View = World->GetEntityRegistry().view<FSelectedInEditorComponent>(entt::exclude<SDisabledTag>);
-        View.each([&] (entt::entity SelectedEntity)
+        if (bShowComponentVisualizers)
         {
-            ECS::Utils::ForEachComponent(World->GetEntityRegistry(), SelectedEntity, [&](void*, entt::basic_sparse_set<>& Set, const entt::meta_type& Type)
-            {
-                if (entt::meta_any ReturnValue = ECS::Utils::InvokeMetaFunc(Type, "static_struct"_hs))
-                {
-                    CStruct* StructType = ReturnValue.cast<CStruct*>();
+            CComponentVisualizerRegistry& ComponentVisualizerRegistry = CComponentVisualizerRegistry::Get();
 
-                    if (CComponentVisualizer* Visualizer = ComponentVisualizerRegistry.GetComponentVisualizer(StructType))
+            auto View = World->GetEntityRegistry().view<FSelectedInEditorComponent>(entt::exclude<SDisabledTag>);
+            View.each([&] (entt::entity SelectedEntity)
+            {
+                ECS::Utils::ForEachComponent(World->GetEntityRegistry(), SelectedEntity, [&](void*, entt::basic_sparse_set<>& Set, const entt::meta_type& Type)
+                {
+                    if (entt::meta_any ReturnValue = ECS::Utils::InvokeMetaFunc(Type, "static_struct"_hs))
                     {
-                        Visualizer->Draw(World, World->GetEntityRegistry(), SelectedEntity);
+                        CStruct* StructType = ReturnValue.cast<CStruct*>();
+
+                        if (CComponentVisualizer* Visualizer = ComponentVisualizerRegistry.GetComponentVisualizer(StructType))
+                        {
+                            Visualizer->Draw(World, World->GetEntityRegistry(), SelectedEntity);
+                        }
                     }
-                }
+                });
             });
-        });
+        }
     }
 
     void FWorldEditorTool::OnEntityCreated(entt::registry& Registry, entt::entity Entity)
@@ -427,7 +435,7 @@ namespace Lumina
             }
         }
         
-        if (bGamePreviewRunning)
+        if (World->IsGameWorld())
         {
             return;
         }
@@ -811,11 +819,6 @@ namespace Lumina
 
     void FWorldEditorTool::DrawViewportToolbar(const FUpdateContext& UpdateContext)
     {
-        if (!IsAssetEditorTool() && !bSimulatingWorld && !bGamePreviewRunning)
-        {
-            return;
-        }
-        
         constexpr float Padding = 8.0f;
         constexpr float ItemSpacing = 6.0f;
         constexpr float ButtonSize = 32.0f;
@@ -841,12 +844,15 @@ namespace Lumina
         if (ImGui::Begin("##ViewportToolbar", nullptr, WindowFlags))
         {
             ImGui::BeginGroup();
+            
+            if (IsAssetEditorTool() || bSimulatingWorld || bGamePreviewRunning)
+            {
+                DrawSimulationControls(ButtonSize);
         
-            DrawSimulationControls(ButtonSize);
-        
-            ImGui::SameLine();
-            ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-            ImGui::SameLine();
+                ImGui::SameLine();
+                ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+                ImGui::SameLine();   
+            }
             
             DrawCameraControls(ButtonSize);
         
@@ -1240,6 +1246,8 @@ namespace Lumina
         
         FEditorTool::SetWorld(InWorld);
         
+        WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
+        
         OutlinerListView.MarkTreeDirty();
     }
 
@@ -1552,6 +1560,21 @@ namespace Lumina
         {
             ImGui::Text("Visualizations");
             ImGui::Separator();
+            
+            if (ImGui::BeginMenu("Components"))
+            {
+                ImGui::Checkbox("Show All", &bShowComponentVisualizers);
+                
+                ImGui::BeginDisabled(!bShowComponentVisualizers);
+                for (auto&& [Struct, Visualizer] : CComponentVisualizerRegistry::Get().GetVisualizers())
+                {
+                    bool bFoobar = false;
+                    ImGui::Checkbox(Struct->MakeDisplayName().c_str(), &bFoobar);
+                }
+                ImGui::EndDisabled();
+                
+                ImGui::EndMenu();
+            }
             
             if (ImGui::BeginMenu("Physics"))
             {
@@ -1890,7 +1913,6 @@ namespace Lumina
             
             World = CWorld::DuplicateWorld(ProxyWorld);
             World->InitializeWorld(EWorldType::Game);
-            World->SimulateWorld();
             
             OutlinerListView.ClearTree();
             OutlinerListView.MarkTreeDirty();
@@ -1905,7 +1927,6 @@ namespace Lumina
         {
             PropertyTables.clear();
             World->SetPaused(true);
-            World->StopSimulation();
             bGamePreviewRunning = false;
             
             ProxyWorld->DestroyEntity(EditorEntity);
@@ -1933,6 +1954,7 @@ namespace Lumina
     {
         if (bShouldSimulate != bSimulatingWorld && bShouldSimulate == true)
         {
+            PropertyTables.clear();
             bSimulatingWorld = true;
             
             STransformComponent TransformCopy = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
@@ -1942,7 +1964,6 @@ namespace Lumina
             ProxyWorld = World;
             World = CWorld::DuplicateWorld(ProxyWorld);
             World->InitializeWorld(EWorldType::Simulation);
-            World->SimulateWorld();
 
             ProxyWorld->DestroyEntity(EditorEntity);
             EditorEntity = entt::null;
@@ -1977,7 +1998,7 @@ namespace Lumina
         }
         else if (bShouldSimulate != bSimulatingWorld && bShouldSimulate == false)
         {
-            World->StopSimulation();
+            PropertyTables.clear();
             bSimulatingWorld = false;
 
             STransformComponent TransformCopy = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
@@ -2325,7 +2346,7 @@ namespace Lumina
 
     void FWorldEditorTool::DrawWorldSettings(bool bFocused)
     {
-        
+        WorldSettingsPropertyTable->DrawTree();
     }
 
     void FWorldEditorTool::DrawOutliner(bool bFocused)
@@ -3059,7 +3080,8 @@ namespace Lumina
     void FWorldEditorTool::RebuildPropertyTables(entt::entity Entity)
     {
         using namespace entt::literals;
-        
+        WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
+
         PropertyTables.clear();
 
         if (World->GetEntityRegistry().valid(Entity))
@@ -3077,9 +3099,7 @@ namespace Lumina
                 CStruct* Struct = Any.cast<CStruct*>();
 
                 Sorted.emplace_back(Component, Struct);
-                
             });
-            
             
             eastl::sort(Sorted.begin(), Sorted.end(), [&](const PairType& LHS, const PairType& RHS)
             {

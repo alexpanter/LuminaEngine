@@ -1,18 +1,13 @@
-﻿#include <clang/AST/Decl.h>
-#include <clang/AST/Type.h>
-#include <clang-c/CXFile.h>
-#include <clang-c/CXSourceLocation.h>
+﻿#include <clang/AST/Type.h>
 #include <clang-c/CXString.h>
 #include <clang-c/Index.h>
 #include <EASTL/optional.h>
 #include <EASTL/string.h>
 #include <Reflector/Types/ReflectedType.h>
 #include <spdlog/spdlog.h>
-#include "ClangVisitor.h"
 #include "Reflector/Clang/ClangParserContext.h"
 #include "Reflector/Clang/Utils.h"
 #include "Reflector/ReflectionCore/ReflectionMacro.h"
-#include "Reflector/Types/FieldInfo.h"
 #include "Reflector/Types/Functions/ReflectedFunction.h"
 #include "Reflector/Types/Properties/ReflectedArrayProperty.h"
 #include "Reflector/Types/Properties/ReflectedEnumProperty.h"
@@ -23,7 +18,6 @@
 
 namespace Lumina::Reflection::Visitor
 {
-
 	static eastl::optional<FFieldInfo> CreateFieldInfo(FClangParserContext* Context, const CXCursor& Cursor)
 	{
 		eastl::string CursorName = ClangUtils::GetCursorDisplayName(Cursor);
@@ -86,6 +80,74 @@ namespace Lumina::Reflection::Visitor
 		Info.Flags			= PropFlags;
 		Info.Type			= FieldType;
 		Info.Name			= CursorName;
+		Info.TypeName		= TypeSpelling;
+		Info.RawFieldType	= FieldQualType.getAsString().c_str();
+
+		return Info;
+	}
+	
+	static eastl::optional<FFieldInfo> CreateFuncField(FClangParserContext* Context, const CXType& FieldType)
+	{
+		clang::QualType FieldQualType = ClangUtils::GetQualType(FieldType);
+		if (FieldQualType.isNull())
+		{
+			return eastl::nullopt;
+		}
+
+		eastl::string TypeSpelling;
+		ClangUtils::GetQualifiedNameForType(FieldQualType, TypeSpelling);
+		EPropertyTypeFlags PropFlags = GetCoreTypeFromName(TypeSpelling.c_str());
+		
+		// Is not a core type.
+		if (PropFlags == EPropertyTypeFlags::None)
+		{
+			if (FieldQualType->isEnumeralType())
+			{
+				PropFlags = EPropertyTypeFlags::Enum;
+			}
+			else if (FieldQualType->isStructureType())
+			{
+				PropFlags = EPropertyTypeFlags::Struct;
+			}
+			else if (FieldQualType->isPointerType())
+			{
+				PropFlags = EPropertyTypeFlags::Object;
+			}
+			else if (FieldQualType->isReferenceType())
+			{
+				clang::QualType ReferenceType = FieldQualType->getAs<clang::ReferenceType>()->getPointeeType();
+				if (ReferenceType->isStructureType())
+				{
+					PropFlags = EPropertyTypeFlags::Struct;
+				}
+				else
+				{
+					ClangUtils::GetQualifiedNameForType(ReferenceType, TypeSpelling);
+					PropFlags = GetCoreTypeFromName(TypeSpelling.c_str());
+				}
+			}
+		}
+		
+		FFieldInfo Info;
+		
+		if (clang_isConstQualifiedType(FieldType))
+		{
+			Info.PropertyFlags |= EPropertyFlags::Const;
+		}
+		
+		if (clang_isPODType(FieldType))
+		{
+			Info.PropertyFlags |= EPropertyFlags::Trivial;
+		}
+		
+		if (FieldType.kind >= CXType_FirstBuiltin && FieldType.kind <= CXType_LastBuiltin)
+		{
+			Info.PropertyFlags |= EPropertyFlags::Builtin;
+		}
+		
+		Info.Flags			= PropFlags;
+		Info.Type			= FieldType;
+		Info.Name			= "None";
 		Info.TypeName		= TypeSpelling;
 		Info.RawFieldType	= FieldQualType.getAsString().c_str();
 
@@ -325,6 +387,33 @@ namespace Lumina::Reflection::Visitor
 		auto NewFunction = eastl::make_unique<FReflectedFunction>();
 		NewFunction->Outer = Struct->DisplayName;
 		NewFunction->Name = ClangUtils::GetCursorSpelling(Cursor);
+
+		int NumArgs = clang_Cursor_getNumArguments(Cursor);
+
+		for (int i = 0; i < NumArgs; ++i)
+		{
+			CXCursor ArgCursor = clang_Cursor_getArgument(Cursor, i);
+			eastl::string ArgName = ClangUtils::GetCursorSpelling(ArgCursor);
+			CXType FieldType = clang_getCursorType(ArgCursor);
+			auto Field = CreateFuncField(Context, FieldType);
+			if (Field.has_value() && Field->Flags != EPropertyTypeFlags::None)
+			{
+				Field->Name		= eastl::move(ArgName);
+				NewFunction->AddArgument(eastl::move(Field.value()));
+			}
+			else
+			{
+				spdlog::error("Failed to create function field for {}", NewFunction->Name.c_str());
+			}
+		}
+		
+		CXType FuncType = clang_getCursorType(Cursor);
+		CXType ResultType = clang_getResultType(FuncType);
+		
+		if (ResultType.kind != CXType_Void)
+		{
+			NewFunction->Return = CreateFuncField(Context, ResultType);
+		}
 		
 		OutFunction = NewFunction.get();
 		Struct->PushFunction(eastl::move(NewFunction));
@@ -333,15 +422,13 @@ namespace Lumina::Reflection::Visitor
 	}
 
 	template<typename TVisitType>
-	static CXChildVisitResult VisitContents(CXCursor Cursor, CXCursor parent, CXClientData pClientData)
+	static CXChildVisitResult VisitContents(CXCursor Cursor, CXCursor Parent, CXClientData pClientData)
 	{
 		FClangParserContext* Context = (FClangParserContext*)pClientData;
 		eastl::string CursorName = ClangUtils::GetCursorDisplayName(Cursor);
 		CXCursorKind Kind = clang_getCursorKind(Cursor);
 		TVisitType* Type = Context->GetParentReflectedType<TVisitType>();
-
-
-
+		
 		switch (Kind)
 		{
 		case(CXCursor_CXXBaseSpecifier):

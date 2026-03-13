@@ -2,6 +2,7 @@
 
 #include "Assets/AssetTypes/Textures/Texture.h"
 #include "Nodes/MaterialNodeExpression.h"
+#include "Nodes/MaterialNode_PrimitiveData.h"
 #include "Paths/Paths.h"
 #include "Platform/Filesystem/FileHelper.h"
 #include "UI/Tools/NodeGraph/EdGraphNode.h"
@@ -13,7 +14,7 @@ namespace Lumina
 		ShaderChunks.reserve(2000);
 	}
 
-	FString FMaterialCompiler::BuildTree(size_t& StartReplacement, size_t& EndReplacement)
+	FString FMaterialCompiler::BuildTree(size_t& StartReplacement, size_t& EndReplacement) const
 	{
 		FString FragmentPath = Paths::GetEngineResourceDirectory() + "/Shaders/MaterialShader/BasePixelPass.slang";
 
@@ -42,11 +43,6 @@ namespace Lumina
 		return LoadedString;
 	}
 
-	void FMaterialCompiler::ValidateConnections(CMaterialInput* A, CMaterialInput* B)
-	{
-		// Could add type compatibility checking here
-	}
-
 	static FString GetVectorType(EMaterialInputType Type)
 	{
 		switch (Type)
@@ -55,6 +51,7 @@ namespace Lumina
 			case EMaterialInputType::Float2:	return "float2";
 			case EMaterialInputType::Float3:	return "float3";
 			case EMaterialInputType::Float4:	return "float4";
+			case EMaterialInputType::Texture: return "float4";
 			default: return "float";
 		}
 	}
@@ -198,11 +195,7 @@ namespace Lumina
 		
 		return ResultType;
 	}
-
-	// ========================================================================
-	// Parameter Definitions
-	// ========================================================================
-
+	
 	void FMaterialCompiler::DefineFloatParameter(const FString& NodeID, const FName& ParamID, float Value)
 	{
 		if (ScalarParameters.find(ParamID) == ScalarParameters.end())
@@ -250,10 +243,6 @@ namespace Lumina
 		FString IndexString = eastl::to_string(VectorParameters[ParamID].Index);
 		ShaderChunks.append("float4 " + NodeID + " = GetMaterialVec4(" + IndexString + ");\n");
 	}
-
-	// ========================================================================
-	// Constant Definitions
-	// ========================================================================
 
 	void FMaterialCompiler::DefineConstantFloat(const FString& ID, float Value)
 	{
@@ -441,10 +430,50 @@ namespace Lumina
 			+  ValueG.Value + GMask + ", " + ValueB.Value + BMask + ", " + ValueA.Value + AMask + ");\n");
 	}
 
-	// ========================================================================
-	// Texture Operations
-	// ========================================================================
-
+	void FMaterialCompiler::ComponentMask(CMaterialInput* A)
+	{
+		CMaterialExpression_ComponentMask* OwningNode = A->GetOwningNode<CMaterialExpression_ComponentMask>();
+		
+		if (!A->HasConnection())
+		{
+			EdNodeGraph::FError Error;
+			Error.Node = A->GetOwningNode<CMaterialGraphNode>();
+			Error.Name = "Invalid Action";
+			Error.Description.append("ComponentMask is required to have an input value");
+		
+			AddError(Error);
+			ShaderChunks.append("// ERROR: Component Mask Issue\n");
+		}
+		
+		FString Swizzle = ".";
+		int32 ComponentCount = 0;
+		if (OwningNode->R)
+		{
+			Swizzle += "r";
+			ComponentCount++;
+		}
+		if (OwningNode->G)
+		{
+			Swizzle += "g";
+			ComponentCount++;
+		}
+		if (OwningNode->B)
+		{
+			Swizzle += "b";
+			ComponentCount++;
+		}
+		if (OwningNode->A)
+		{
+			Swizzle += "a";
+			ComponentCount++;
+		}
+		
+		FString VectorType = GetVectorType(ComponentCount);
+		FInputValue Value = GetTypedInputValue(A, "");
+		
+		ShaderChunks.append(VectorType + " " + OwningNode->GetNodeFullName() + " = " + Value.Value + Swizzle + ";\n");
+	}
+	
 	void FMaterialCompiler::DefineTextureSample(const FString& ID)
 	{
 		return;
@@ -468,15 +497,23 @@ namespace Lumina
 		{
 			UVStr = "float2(" + UVValue.Value + ")";
 		}
-		
-		int32 Index = static_cast<int32>(BoundImages.size());
-		ShaderChunks.append("float4 " + ID + " = uGlobalTextures[GetMaterialTexture(MaterialIndex, " + eastl::to_string(Index) + ")].Sample(" + UVStr + ");\n");
-		BoundImages.push_back(Texture);
-	}
 
-	// ========================================================================
-	// Built-in Inputs
-	// ========================================================================
+		auto It = eastl::find(BoundImages.begin(), BoundImages.end(), Texture);
+    
+		int32 Index;
+		if (It != BoundImages.end())
+		{
+			Index = (int32)eastl::distance(BoundImages.begin(), It);
+		}
+		else
+		{
+			Index = (int32)BoundImages.size();
+			BoundImages.push_back(Texture);
+			NumTextureParams++;
+		}
+
+		ShaderChunks.append("float4 " + ID + " = uGlobalTextures[GetMaterialTexture(MaterialIndex, " + eastl::to_string(Index) + ")].Sample(" + UVStr + ");\n");
+	}
 
 	void FMaterialCompiler::NewLine()
 	{
@@ -525,6 +562,32 @@ namespace Lumina
 	void FMaterialCompiler::Time(const FString& ID)
 	{
 		ShaderChunks.append("float " + ID + " = GetTime();\n");
+	}
+
+	void FMaterialCompiler::CustomPrimitiveData(CMaterialExpression_CustomPrimitiveData* Node, ECustomPrimitiveDataType Type)
+	{
+		Node->Output->SetInputType(EMaterialInputType::Float);
+		
+		switch (Type)
+		{
+		case ECustomPrimitiveDataType::Float:
+			ShaderChunks.append("float " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsFloat;\n");
+			break;
+		case ECustomPrimitiveDataType::Int:
+			ShaderChunks.append("int " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsInt;\n");
+			break;
+		case ECustomPrimitiveDataType::UInt:
+			ShaderChunks.append("uint " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsUInt;\n");
+			break;
+		case ECustomPrimitiveDataType::Float4:
+			ShaderChunks.append("float4 " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsFloat4;\n");
+			Node->Output->SetInputType(EMaterialInputType::Float4);
+			Node->Output->SetComponentMask(EComponentMask::RGBA);
+			break;
+		case ECustomPrimitiveDataType::Bool:
+			ShaderChunks.append("bool " + Node->GetNodeFullName() + " = InstanceData.CustomData.AsBool;\n");
+			break;
+		}
 	}
 
 	// ========================================================================

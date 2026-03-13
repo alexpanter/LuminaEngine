@@ -6,7 +6,6 @@ project "Editor"
 
     libdirs
     {
-        LuminaConfig.EnginePath("Engine/Source/ThirdParty/lua"),
 		LuminaConfig.EnginePath("Engine/Source/ThirdParty/NvidiaAftermath/lib"),
     }
 
@@ -33,7 +32,9 @@ project "Editor"
     	"EA",
 		"EnkiTS",
 		"Tracy",
-		"lua54",
+		
+        "Luau",
+
 		"GFSDK_Aftermath_Lib",
 	}
 

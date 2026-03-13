@@ -430,6 +430,8 @@ namespace Lumina
 
     TSharedPtr<FBufferChunk> FUploadManager::CreateChunk(uint64 Size) const
     {
+        LUMINA_PROFILE_SCOPE();
+        
         TSharedPtr<FBufferChunk> Chunk = MakeShared<FBufferChunk>();
         
         if (bIsScratchBuffer)

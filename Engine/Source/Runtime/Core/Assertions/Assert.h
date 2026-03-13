@@ -1,8 +1,8 @@
 #pragma once
 #include <source_location>
-
 #include "Containers/String.h"
 #include "Platform/GenericPlatform.h"
+#include "Platform/Platform.h"
 
 
 #if __has_include(<stacktrace>) && defined(__cpp_lib_stacktrace)

@@ -56,7 +56,7 @@ namespace Lumina
         TFunction<void(FTreeListView&)>                                 RebuildTreeFunction;
 
         /** Called when an item has been selected in the tree */
-        TFunction<void(FTreeListView&, entt::entity)>                   ItemSelectedFunction;
+        TFunction<void(FTreeListView&, entt::entity, bool)>             ItemSelectedFunction;
 
         /** Called when we have a drag-drop operation on a target */
         TFunction<void(FTreeListView&, entt::entity)>                   DragDropFunction;
@@ -107,7 +107,7 @@ namespace Lumina
     
     private:
         
-        void SetSelection(entt::entity Item, const FTreeListViewContext& Context);
+        void SetSelection(entt::entity Item, const FTreeListViewContext& Context, bool bShouldClear);
 
         bool HandleKeyPressed(const FTreeListViewContext& Context, entt::entity Item, ImGuiKey Key);
         

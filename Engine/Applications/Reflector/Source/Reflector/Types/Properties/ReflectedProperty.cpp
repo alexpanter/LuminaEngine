@@ -1,7 +1,6 @@
 ﻿#include "ReflectedProperty.h"
 
-#include <iostream>
-
+#include "Reflector/Types/PropertyFlags.h"
 #include "Reflector/Types/ReflectedType.h"
 #include "Reflector/Utils/MetadataUtils.h"
 

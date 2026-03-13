@@ -5,6 +5,7 @@
 #include "Core/Object/Cast.h"
 #include "Nodes/MaterialNodeExpression.h"
 #include "Nodes/MaterialNodeGetTime.h"
+#include "Nodes/MaterialNode_PrimitiveData.h"
 #include "Nodes/MaterialNode_TextureSample.h"
 #include "Nodes/MaterialOutputNode.h"
 
@@ -117,7 +118,7 @@ namespace Lumina
         RegisterGraphNode(CMaterialExpression_Clamp::StaticClass());
 
         //RegisterGraphNode(CMaterialExpression_Append::StaticClass());
-        //RegisterGraphNode(CMaterialExpression_ComponentMask::StaticClass());
+        RegisterGraphNode(CMaterialExpression_ComponentMask::StaticClass());
         RegisterGraphNode(CMaterialExpression_VertexNormal::StaticClass());
         RegisterGraphNode(CMaterialExpression_TexCoords::StaticClass());
         RegisterGraphNode(CMaterialExpression_Panner::StaticClass());
@@ -125,6 +126,7 @@ namespace Lumina
         RegisterGraphNode(CMaterialExpression_CameraPos::StaticClass());
         RegisterGraphNode(CMaterialExpression_WorldPos::StaticClass());
         RegisterGraphNode(CMaterialExpression_EntityID::StaticClass());
+        RegisterGraphNode(CMaterialExpression_CustomPrimitiveData::StaticClass());
 
         RegisterGraphNode(CMaterialExpression_ConstantFloat::StaticClass());
         RegisterGraphNode(CMaterialExpression_ConstantFloat2::StaticClass());

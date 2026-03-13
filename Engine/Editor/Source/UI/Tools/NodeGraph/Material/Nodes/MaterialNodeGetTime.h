@@ -13,6 +13,7 @@ namespace Lumina
         GENERATED_BODY()
     public:
 
+        uint32 GetNodeTitleColor() const override { return IM_COL32(25, 25, 255, 255); }
         FFixedString GetNodeCategory() const override { return "Utility"; }
         FString GetNodeDisplayName() const override { return "Time"; }
         void* GetNodeDefaultValue() override { return nullptr; }

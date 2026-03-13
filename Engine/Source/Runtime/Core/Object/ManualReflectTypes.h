@@ -6,7 +6,7 @@
 
 namespace glm
 {
-    REFLECT()
+    REFLECT(NoLua)
     struct vec2
     {
         PROPERTY(Editable)
@@ -16,7 +16,7 @@ namespace glm
         float y;
     };
 
-    REFLECT()
+    REFLECT(NoLua)
     struct vec3
     {
         PROPERTY(Editable)
@@ -29,7 +29,7 @@ namespace glm
         float z;
     };
 
-    REFLECT()
+    REFLECT(NoLua)
     struct vec4
     {
         PROPERTY(Editable)

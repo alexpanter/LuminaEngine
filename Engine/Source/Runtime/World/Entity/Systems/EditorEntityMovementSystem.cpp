@@ -9,18 +9,22 @@
 #ifdef _WIN32
 #include <Windows.h>
 #endif
-#include "glfw/glfw3.h"
+#include "World/WorldManager.h"
 
 namespace Lumina
 {
-
 	void SEditorEntityMovementSystem::Update(const FSystemContext& SystemContext) noexcept
 	{
 		LUMINA_PROFILE_SCOPE();
+		
+		if (SystemContext.GetWorldType() != EWorldType::Simulation && SystemContext.GetWorldType() != EWorldType::Editor)
+		{
+			return;
+		}
 
 		double DeltaTime = SystemContext.GetDeltaTime();
 		auto View = SystemContext.CreateView<STransformComponent, FEditorComponent, SCameraComponent, SVelocityComponent>();
-
+		
 		for (entt::entity EditorEntity : View)
 		{
 			SystemContext.DispatchEvent<FSwitchActiveCameraEvent>(FSwitchActiveCameraEvent{ EditorEntity });

@@ -48,6 +48,11 @@ namespace Lumina::Logging
 		Logger = nullptr;
 	}
 
+	void ClearLogQueue()
+	{
+		Logs.clear();
+	}
+
 	const FLogQueue& GetConsoleLogQueue()
 	{
 		return Logs;

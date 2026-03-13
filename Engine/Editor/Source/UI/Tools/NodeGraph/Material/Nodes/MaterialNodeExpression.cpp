@@ -26,14 +26,10 @@ namespace Lumina
     {
         Super::BuildNode();
 
-        // Input pin - accepts any vector type
         InputPin = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "Input", ENodePinDirection::Input));
         
         InputPin->SetInputType(EMaterialInputType::Float4);
         InputPin->SetComponentMask(EComponentMask::RGBA);
-    
-        // Output pin - type depends on mask selection
-        Output->SetComponentMask(GetOutputMask());
     }
 
     FString CMaterialExpression_ComponentMask::GetNodeDisplayName() const
@@ -62,121 +58,29 @@ namespace Lumina
         return Builder;
     }
 
+    
     void CMaterialExpression_ComponentMask::GenerateDefinition(FMaterialCompiler& Compiler)
     {
-
+        Compiler.ComponentMask(InputPin);
     }
 
     ImVec2 CMaterialExpression_ComponentMask::GetMinNodeTitleBarSize() const
     {
-        return ImVec2(24.0f, Super::GetMinNodeTitleBarSize().y);
-    }
-
-    FString CMaterialExpression_ComponentMask::BuildSwizzleMask() const
-    {
-        FString Swizzle;
-    
-        // Count selected components and build swizzle string
-        if (R || G || B || A)
-        {
-            Swizzle = ".";
-        
-            if (R)
-            {
-                Swizzle += "r";
-            }
-            if (G)
-            {
-                Swizzle += "g";
-            }
-            if (B)
-            {
-                Swizzle += "b";
-            }
-            if (A)
-            {
-                Swizzle += "a";
-            }
-        }
-    
-        return Swizzle;
-    }
-
-    int32 CMaterialExpression_ComponentMask::GetSelectedComponentCount() const
-    {
-        int32 Count = 0;
-        if (R)
-        {
-            Count++;
-        }
-        if (G)
-        {
-            Count++;
-        }
-        if (B)
-        {
-            Count++;
-        }
-        if (A)
-        {
-            Count++;
-        }
-        return Count;
-    }
-
-    EComponentMask CMaterialExpression_ComponentMask::GetOutputMask() const
-    {
-        uint32 Mask = 0;
-    
-        if (R)
-        {
-            Mask |= static_cast<uint32>(EComponentMask::R);
-        }
-        if (G)
-        {
-            Mask |= static_cast<uint32>(EComponentMask::G);
-        }
-        if (B)
-        {
-            Mask |= static_cast<uint32>(EComponentMask::B);
-        }
-        if (A)
-        {
-            Mask |= static_cast<uint32>(EComponentMask::A);
-        }
-
-        return static_cast<EComponentMask>(Mask);
+        return ImVec2(22.0f, Super::GetMinNodeTitleBarSize().y);
     }
     
-    FString CMaterialExpression_ComponentMask::GetDefaultValueForMask() const
-    {
-        int32 Count = GetSelectedComponentCount();
-    
-        switch (Count)
-        {
-        case 1: return "0.0";
-        case 2: return "vec2(0.0)";
-        case 3: return "vec3(0.0)";
-        case 4: return "vec4(0.0)";
-        default: return "0.0";
-        }
-    }
-
     void CMaterialExpression_Append::BuildNode()
     {
         CMaterialExpression::BuildNode();
 
-        // Input A - first component(s)
         InputA = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "A", ENodePinDirection::Input));
         InputA->SetInputType(EMaterialInputType::Float4);
         InputA->SetComponentMask(EComponentMask::RGBA);
     
-        // Input B - second component(s)
         InputB = Cast<CMaterialInput>(CreatePin(CMaterialInput::StaticClass(), "B", ENodePinDirection::Input));
         InputB->SetInputType(EMaterialInputType::Float4);
         InputB->SetComponentMask(EComponentMask::RGBA);
     
-        // Output pin - combined components
         Output->SetComponentMask(EComponentMask::RGBA);
     }
 
@@ -266,6 +170,9 @@ namespace Lumina
     void CMaterialExpression_WorldPos::BuildNode()
     {
         Super::BuildNode();
+        
+        Output->SetInputType(EMaterialInputType::Float3);
+        Output->SetComponentMask(EComponentMask::RGB);
     }
 
     void CMaterialExpression_WorldPos::GenerateDefinition(FMaterialCompiler& Compiler)

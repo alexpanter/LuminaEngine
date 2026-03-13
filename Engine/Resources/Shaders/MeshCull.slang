@@ -3,9 +3,7 @@
 
 #define LOCAL_SIZE 256
 
-// ============================================================================
-//  Helpers
-// ============================================================================
+
 
 bool IsInFrustum(uint Index)
 {
@@ -41,13 +39,13 @@ bool ProjectSphere(float3 C, float R, float ZNear, float P00, float P11, out flo
     }
 
     float2 CX   = -C.xz;
-    float2 VX   = float2(sqrt(dot(CX, CX) - R * R), R);
-    float2 MinX = mul(float2x2(VX.x,  VX.y, -VX.y, VX.x), CX);
-    float2 MaxX = mul(float2x2(VX.x, -VX.y,  VX.y, VX.x), CX);
+    float2 VX = float2(sqrt(dot(CX, CX) - R * R), R);
+    float2 MinX = mul(CX, float2x2(VX.x, VX.y, -VX.y, VX.x));
+    float2 MaxX = mul(CX, float2x2(VX.x, -VX.y,  VX.y, VX.x));
 
     float2 CY   = -C.yz;
-    float2 VY   = float2(sqrt(dot(CY, CY) - R * R), R);
-    float2 MinY = mul(float2x2(VY.x,  VY.y, -VY.y, VY.x), CY);
+    float2 VY = float2(sqrt(dot(CY, CY) - R * R), R);
+    float2 MinY = mul(CY, float2x2(VY.x,  VY.y, -VY.y, VY.x));
     float2 MaxY = mul(float2x2(VY.x, -VY.y,  VY.y, VY.x), CY);
 
     AABB = float4(
@@ -62,10 +60,6 @@ bool ProjectSphere(float3 C, float R, float ZNear, float P00, float P11, out flo
 
     return true;
 }
-
-// ============================================================================
-//  Main
-// ============================================================================
 
 [shader("compute")]
 [numthreads(LOCAL_SIZE, 1, 1)]
@@ -87,8 +81,9 @@ void ComputeMain(uint3 GlobalID : SV_DispatchThreadID)
 
     }
 
-    bool bSkipCull = HasFlag(GetInstanceDataFlags(uInstanceData[GID]), INSTANCE_FLAG_NO_CULL);
+    bool bSkipCull = uInstanceData[GID].HasFlag(EInstanceFlags::NoCull);
 
+    #if 0
     if (!bSkipCull && bVisible && uSceneData.CullData.bOcclusionCull != 0)
     {
         float4 SphereBounds = uInstanceData[GID].SphereBounds;
@@ -119,10 +114,10 @@ void ComputeMain(uint3 GlobalID : SV_DispatchThreadID)
             bVisible = bVisible && DepthSphere >= Depth;
         }
     }
-
+#endif
     if (bVisible)
     {
-        uint BatchID            = GetInstanceDataDrawID(uInstanceData[GID]);
+        uint BatchID            = uInstanceData[GID].DrawID;
         uint InstanceCount      = 0;
         InterlockedAdd(uIndirectDrawData[BatchID].InstanceCount, 1, InstanceCount);
         uint InstanceIndex      = uIndirectDrawData[BatchID].FirstInstance + InstanceCount;

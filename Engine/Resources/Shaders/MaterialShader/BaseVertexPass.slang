@@ -8,10 +8,8 @@ struct VSOutput
     float4 NormalWS                 : NORMAL_WS;
     float4 FragPos                  : FRAG_POS;
     float2 UV                       : TEXCOORD0;
-    nointerpolation uint EntityID   : ENTITY_ID;
-    nointerpolation uint ReceiveShadow : RECEIVE_SHADOW;
-    nointerpolation uint Selected   : SELECTED;
-    nointerpolation uint MatIndex   : MAT_INDEX;
+
+    uint InstanceIndex              : INSTANCE;
 
     // IMPORTANT: Changes to position calculations must be exactly
     // reflected in DepthPrePass.slang
@@ -25,13 +23,12 @@ struct VSOutput
 [shader("vertex")]
 VSOutput VertexMain(uint VertexIndex: SV_VulkanVertexID, uint InstanceIndex: SV_VulkanInstanceID)
 {
-    FInstanceData InstanceData  = GetInstanceData(InstanceIndex);
-    uint          Flags         = GetInstanceDataFlags(InstanceData);
+    FGPUInstance InstanceData = GetInstanceData(InstanceIndex);
 
     FVertexData VertexData;
-    if (HasFlag(Flags, INSTANCE_FLAG_SKINNED))
+    if (InstanceData.HasFlag(EInstanceFlags::Skinned))
     {
-        VertexData = LoadSkinnedVertex(InstanceData.VBAddress, InstanceData.IBAddress, VertexIndex, GetInstanceDataBoneIndex(InstanceData));
+        VertexData = LoadSkinnedVertex(InstanceData.VBAddress, InstanceData.IBAddress, VertexIndex, InstanceData.BoneOffset);
     }
     else
     {
@@ -50,15 +47,13 @@ VSOutput VertexMain(uint VertexIndex: SV_VulkanVertexID, uint InstanceIndex: SV_
     float4 ViewPos  = mul(View, WorldPos);
 
     VSOutput Output;
-    Output.UV            = VertexData.UV;
-    Output.FragPos       = ViewPos;
-    Output.NormalVS      = float4(NormalVS, 1.0);
-    Output.NormalWS      = float4(NormalWS, 1.0);
-    Output.FragColor     = VertexData.Color;
-    Output.EntityID      = InstanceData.EntityID;
-    Output.ReceiveShadow = uint(HasFlag(Flags, INSTANCE_FLAG_RECEIVE_SHADOW));
-    Output.Selected      = uint(HasFlag(Flags, INSTANCE_FLAG_SELECTED));
-    Output.MatIndex      = GetInstanceDataMaterialIndex(InstanceData);
-    Output.Position      = mul(Projection, ViewPos);
+    Output.UV               = VertexData.UV;
+    Output.FragPos          = ViewPos;
+    Output.NormalVS         = float4(NormalVS, 1.0);
+    Output.NormalWS         = float4(NormalWS, 1.0);
+    Output.InstanceIndex    = InstanceIndex;
+    Output.FragColor        = VertexData.Color;
+    Output.Position         = mul(Projection, ViewPos);
+    
     return Output;
 }

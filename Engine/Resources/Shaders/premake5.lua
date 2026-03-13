@@ -3,9 +3,6 @@ project "Shaders"
 	
 	files
 	{
-		"**.vert",
-		"**.frag",
-		"**.comp",
-        "**.glsl",
+        "**.slang",
         "../premake5.lua",
 	}

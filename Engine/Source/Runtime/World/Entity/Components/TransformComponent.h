@@ -44,7 +44,6 @@ namespace Lumina
         
         FUNCTION(Script)
         FORCEINLINE float MaxScale()        const    { return glm::max(Transform.Scale.x, glm::max(Transform.Scale.y, Transform.Scale.z)); }
-
         
         FORCEINLINE glm::mat4 GetMatrix()   const    { return CachedMatrix; }
 

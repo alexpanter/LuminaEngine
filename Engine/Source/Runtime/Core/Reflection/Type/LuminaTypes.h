@@ -3,7 +3,6 @@
 #include "Core/Object/Field.h"
 #include "Core/Object/ObjectCore.h"
 #include "Core/Serialization/Structured/StructuredArchive.h"
-#include "Core/Templates/Align.h"
 #include "Metadata/PropertyMetadata.h"
 #include "Platform/GenericPlatform.h"
 

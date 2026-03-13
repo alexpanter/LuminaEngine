@@ -5,6 +5,47 @@
 
 namespace Lumina
 {
+    REFLECT(BitMask)
+    enum class RUNTIME_API ECollisionProfiles : uint16
+    {
+        Static      = BIT(0),
+        Dynamic     = BIT(1),
+        
+        Channel0    = BIT(2),
+        Channel1    = BIT(3),
+        Channel2    = BIT(4),
+        Channel3    = BIT(5),
+        Channel4    = BIT(6),
+        Channel5    = BIT(7),
+        Channel6    = BIT(8),
+        Channel7    = BIT(9),
+        Channel8    = BIT(10),
+        Channel9    = BIT(11),
+        Channel10   = BIT(12),
+        Channel11   = BIT(13),
+        Channel12   = BIT(14),
+        Channel13   = BIT(15),
+    };
+    
+    ENUM_CLASS_FLAGS(ECollisionProfiles);
+    
+    REFLECT()
+    struct FCollisionProfile
+    {
+        GENERATED_BODY()
+        
+        PROPERTY(Script, Editable)
+        ECollisionProfiles Layer    = ECollisionProfiles::Dynamic;
+        
+        PROPERTY(Script, Editable)
+        ECollisionProfiles Mask     = ECollisionProfiles::Static | ECollisionProfiles::Dynamic;
+        
+        NODISCARD FORCEINLINE bool ShouldCollide(const FCollisionProfile& Other) const
+        {
+            return (Mask & Other.Layer) != (ECollisionProfiles)0 || (Other.Mask & Layer) != (ECollisionProfiles)0;
+        }
+    };
+    
     REFLECT()
     enum class RUNTIME_API EMoveMode : uint8
     {
@@ -16,9 +57,8 @@ namespace Lumina
     REFLECT()
     enum class RUNTIME_API EBodyType : uint8
     {
-        None,
         Static,
         Kinematic,
         Dynamic,
-    };    
+    };
 }

@@ -12,26 +12,13 @@ namespace Lumina
         LUMINA_PROFILE_SCOPE(); 
         
         auto View = Context.CreateView<SScriptComponent>(entt::exclude<SDisabledTag>);
-        View.each([&](entt::entity Entity, const SScriptComponent& ScriptComponent)
+        View.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
         {
-            if (const TSharedPtr<Scripting::FLuaScript>& Script = ScriptComponent.Script)
+            if (const TSharedPtr<Lua::FScript>& Script = ScriptComponent.Script)
             {
-                if (!Script->ScriptTable.valid())
+                if (ScriptComponent.UpdateFunc.IsValid())
                 {
-                    return;
-                }
-            
-                Script->Environment["Entity"] = Entity;
-                Script->Environment["Context"] = std::ref(Context);
-                
-                if (sol::optional<sol::function> BeginPlayFunc = Script->ScriptTable["Update"])
-                {
-                    sol::protected_function_result Result = (*BeginPlayFunc)(Script->ScriptTable, Context.GetDeltaTime());
-                    if (!Result.valid())
-                    {
-                        sol::error Error = Result;
-                        LOG_ERROR("Script Error: {} - {}", Script->Path, Error.what());
-                    }
+                    ScriptComponent.UpdateFunc(Script->Reference, Context.GetDeltaTime());
                 }
             }
         });

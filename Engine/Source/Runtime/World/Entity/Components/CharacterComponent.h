@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Core/Object/ObjectMacros.h"
-#include <Jolt/Physics/Character/CharacterVirtual.h>
+#include "Jolt/Physics/Character/CharacterVirtual.h"
 #include "Physics/Physics.h"
+#include "Physics/PhysicsTypes.h"
 #include "CharacterComponent.generated.h"
 
 
@@ -15,8 +16,8 @@ namespace Lumina
     
         JPH::Ref<JPH::CharacterVirtual> Character;
         
-        FUNCTION(Script)
-        uint32 GetBodyID() const { return Character->GetInnerBodyID().GetIndexAndSequenceNumber(); }
+        PROPERTY(Script, Editable, Category = "Physics")
+        FCollisionProfile CollisionProfile;
     
         PROPERTY(Script, Editable, Category = "Collision")
         float HalfHeight = 1.8f;
@@ -29,6 +30,9 @@ namespace Lumina
         
         PROPERTY(Script, Editable, Category = "Physics")
         float Padding = 0.02f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        float HitReductionCosMaxAngle = 0.999f;
         
         PROPERTY(Script, Editable, Category = "Physics")
         float PenetrationRecoverySpeed = 1.0f;
@@ -44,6 +48,35 @@ namespace Lumina
     
         PROPERTY(Script, Editable, Category = "Physics")
         float StepHeight = 0.4f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        uint32 MaxCollisionIterations = 5;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        uint32 MaxConstraintIterations = 15;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        float MinTimeRemaining = 1.0e-4f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        float CollisionTolerance = 1.0e-3f;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        uint32 MaxNumHits = 256;
+        
+        
+        
+        FUNCTION(Script)
+        uint32 GetBodyID() const
+        {
+            if (Character == nullptr)
+            {
+                return 0xFFFFFFFF;
+            }
+            
+            return Character->GetInnerBodyID().GetIndexAndSequenceNumber();
+        }
+        
     };
 
     REFLECT(Component)

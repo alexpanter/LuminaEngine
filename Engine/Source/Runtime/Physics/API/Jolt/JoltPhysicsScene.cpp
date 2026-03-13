@@ -1,17 +1,16 @@
 #include "pch.h"
 #include "JoltPhysicsScene.h"
-
-#include <Jolt/Physics/Character/CharacterVirtual.h>
-#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
-#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
-
 #include <algorithm>
+#include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
 #include <Jolt/Physics/Collision/ShapeCast.h>
+#include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#if JPH_DEBUG_RENDERER
 #include <Jolt/Renderer/DebugRendererSimple.h>
-
+#endif
 #include "JoltPhysics.h"
 #include "JoltUtils.h"
 #include "Core/Console/ConsoleVariable.h"
@@ -28,16 +27,56 @@
 #include "World/Entity/Components/TransformComponent.h"
 #include "world/entity/components/velocitycomponent.h"
 #include "World/Entity/Events/ImpulseEvent.h"
+#include "World/Subsystems/WorldSettings.h"
 
 using namespace JPH::literals;
 
 namespace Lumina::Physics
 {
+    namespace BroadPhaseLayers
+    {
+        static constexpr JPH::BroadPhaseLayer STATIC(0);
+        static constexpr JPH::BroadPhaseLayer MOVING(1);
+        static constexpr uint32 NUM_LAYERS(2);
+    };
+    
+    class FLayerInterfaceImpl final : public JPH::BroadPhaseLayerInterface
+    {
+    public:
+        virtual uint32 GetNumBroadPhaseLayers() const override
+        {
+            return BroadPhaseLayers::NUM_LAYERS;
+        }
+
+        virtual JPH::BroadPhaseLayer GetBroadPhaseLayer(JPH::ObjectLayer inLayer) const override
+        {
+            ECollisionProfiles LayerBits = (ECollisionProfiles)(uint16)(inLayer & 0xFFFF);
+
+            if ((LayerBits & ECollisionProfiles::Static) != (ECollisionProfiles)0)
+            {
+                return BroadPhaseLayers::STATIC;
+            }
+
+            return BroadPhaseLayers::MOVING;
+        }
+
+        #if defined(JPH_EXTERNAL_PROFILE) || defined(JPH_PROFILE_ENABLED)
+        virtual const char* GetBroadPhaseLayerName(JPH::BroadPhaseLayer inLayer) const override
+        {
+            switch ((JPH::BroadPhaseLayer::Type)inLayer)
+            {
+            case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::STATIC:      return "STATIC";
+            case (JPH::BroadPhaseLayer::Type)BroadPhaseLayers::MOVING:      return "MOVING";
+            default: JPH_ASSERT(false); return "INVALID";
+            }
+        }
+        #endif
+    };
+    
     constexpr JPH::EMotionType ToJoltMotionType(EBodyType BodyType)
     {
         switch (BodyType)
         {
-            case EBodyType::None:       return JPH::EMotionType::Static;
             case EBodyType::Static:     return JPH::EMotionType::Static;
             case EBodyType::Kinematic:  return JPH::EMotionType::Kinematic;
             case EBodyType::Dynamic:    return JPH::EMotionType::Dynamic;
@@ -45,31 +84,21 @@ namespace Lumina::Physics
 
         UNREACHABLE();
     }
-
-    constexpr JPH::ObjectLayer ToJoltObjectType(EBodyType BodyType)
-    {
-        if (BodyType == EBodyType::Dynamic || BodyType == EBodyType::Kinematic)
-        {
-            return Layers::MOVING;
-        }
-
-        return Layers::NON_MOVING;
-    }
     
     class FObjectVsBroadPhaseLayerFilterImpl : public JPH::ObjectVsBroadPhaseLayerFilter
     {
     public:
-        virtual bool ShouldCollide(JPH::ObjectLayer LayerA, JPH::BroadPhaseLayer LayerB) const override
+        
+        bool ShouldCollide(JPH::ObjectLayer LayerA, JPH::BroadPhaseLayer LayerB) const override
         {
-            switch (LayerA)
-            {
-                case Layers::NON_MOVING:    return LayerB == BroadPhaseLayers::MOVING;
-                case Layers::MOVING:        return true;
+            ECollisionProfiles LayerBits = (ECollisionProfiles)(uint16)(LayerA & 0xFFFF);
 
-                
-                default: JPH_ASSERT(false);
-                return false;
+            if ((LayerBits & ECollisionProfiles::Static) != (ECollisionProfiles)0)
+            {
+                return LayerB == BroadPhaseLayers::STATIC;
             }
+
+            return true;
         }
     };
 
@@ -79,20 +108,18 @@ namespace Lumina::Physics
         
         bool ShouldCollide(JPH::ObjectLayer ObjectA, JPH::ObjectLayer ObjectB) const override
         {
-            switch (ObjectA)
-            {
-                case Layers::NON_MOVING:    return ObjectB == Layers::MOVING;   // Non-moving only collides with moving
-                case Layers::MOVING:        return true;                        // Moving collides with everything
+            ECollisionProfiles LayerA = (ECollisionProfiles)(uint16)(ObjectA & 0xFFFF);
+            ECollisionProfiles MaskA  = (ECollisionProfiles)(uint16)(ObjectA >> 16);
+            ECollisionProfiles LayerB = (ECollisionProfiles)(uint16)(ObjectB & 0xFFFF);
+            ECollisionProfiles MaskB  = (ECollisionProfiles)(uint16)(ObjectB >> 16);
 
-                
-                default: JPH_ASSERT(false);
-                return false;
-            }
+            return (MaskA & LayerB) != (ECollisionProfiles)0 || (MaskB & LayerA) != (ECollisionProfiles)0;
         }
     };
 
-    static FObjectLayerPairFilterImpl GObjectVsObjectLayerFilter;
-    static FObjectVsBroadPhaseLayerFilterImpl GObjectVsBroadPhaseLayerFilter;
+    static FLayerInterfaceImpl                  GJoltLayerInterface;
+    static FObjectLayerPairFilterImpl           GObjectVsObjectLayerFilter;
+    static FObjectVsBroadPhaseLayerFilterImpl   GObjectVsBroadPhaseLayerFilter;
 
 
     void FJoltContactListener::OnContactAdded(const JPH::Body& inBody1, const JPH::Body& inBody2, const JPH::ContactManifold& inManifold, JPH::ContactSettings& ioSettings)
@@ -123,9 +150,8 @@ namespace Lumina::Physics
         , World(InWorld)
     {
         JoltSystem = MakeUnique<JPH::PhysicsSystem>();
-        JoltInterfaceLayer = MakeUnique<FLayerInterfaceImpl>();
         
-        JoltSystem->Init(65536, 0, 131072, 262144, *JoltInterfaceLayer, GObjectVsBroadPhaseLayerFilter, GObjectVsObjectLayerFilter);
+        JoltSystem->Init(65536, 0, 131072, 262144, GJoltLayerInterface, GObjectVsBroadPhaseLayerFilter, GObjectVsObjectLayerFilter);
         JoltSystem->SetGravity(JPH::Vec3Arg(0.0f, GEarthGravity, 0.0f));
 
         JPH::PhysicsSettings JoltSettings;
@@ -245,11 +271,13 @@ namespace Lumina::Physics
         CollisionSteps = static_cast<int>(Accumulator / FixedTimeStep);
         CollisionSteps = std::min(CollisionSteps, MaxSteps);
         
+        #if JPH_DEBUG_RENDERER
         if (FConsoleRegistry::Get().GetAs<bool>("Jolt.Debug.Draw"))
         {
             FJoltDebugRenderer* DebugRenderer = FJoltPhysicsContext::GetDebugRenderer();
             DebugRenderer->DrawBodies(JoltSystem.get(), World);
         }
+        #endif
         
         if (CollisionSteps > 0)
         {
@@ -270,10 +298,12 @@ namespace Lumina::Physics
         
         SyncTransforms();
         
+        #if JPH_DEBUG_RENDERER
         FJoltPhysicsContext::GetDebugRenderer()->NextFrame();
+        #endif
     }
     
-    void FJoltPhysicsScene::OnWorldSimulate()
+    void FJoltPhysicsScene::Simulate()
     {
         entt::registry& Registry = World->GetEntityRegistry();
         
@@ -312,7 +342,7 @@ namespace Lumina::Physics
         Dispatcher.sink<SSetGravityFactorEvent>().connect<&FJoltPhysicsScene::OnSetGravityFactorEvent>(this);
     }
 
-    void FJoltPhysicsScene::OnWorldStopSimulate()
+    void FJoltPhysicsScene::StopSimulate()
     {
         entt::registry& Registry = World->GetEntityRegistry();
 
@@ -332,8 +362,6 @@ namespace Lumina::Physics
         Dispatcher.sink<SAddImpulseAtPositionEvent>().disconnect<&FJoltPhysicsScene::OnAddImpulseAtPositionEvent>(this);
         Dispatcher.sink<SAddForceAtPositionEvent>().disconnect<&FJoltPhysicsScene::OnAddForceAtPositionEvent>(this);
         Dispatcher.sink<SSetGravityFactorEvent>().disconnect<&FJoltPhysicsScene::OnSetGravityFactorEvent>(this);
-        
-        
 
         auto View = Registry.view<SRigidBodyComponent>();
         View.each([&] (entt::entity EntityID, SRigidBodyComponent&)
@@ -360,9 +388,11 @@ namespace Lumina::Physics
         BodyInterface.SetMotionType(JPH::BodyID(BodyID), JoltUtils::ToJoltMotionType(NewType), JPH::EActivation::Activate);
     }
 
-    void FJoltPhysicsScene::SyncTransforms()
+    void FJoltPhysicsScene::SyncTransforms() const
     {
         LUMINA_PROFILE_SCOPE();
+        
+        float KillHeight = World->GetDefaultWorldSettings().WorldKillHeight;
 
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         entt::registry& Registry = World->GetEntityRegistry();
@@ -370,15 +400,22 @@ namespace Lumina::Physics
         auto View = Registry.view<SRigidBodyComponent, STransformComponent>();
         View.each([&](entt::entity EntityID, const SRigidBodyComponent& BodyComponent, STransformComponent& TransformComponent)
         {
+            LUMINA_PROFILE_SECTION("Sync Entity Transform");
             const JPH::Body* Body = LockInterface.TryGetBody(JPH::BodyID(BodyComponent.BodyID));
-            if (Body == nullptr || !Body->IsActive())
+            if (Body == nullptr || !Body->IsActive() || Body->IsStatic())
             {
                 return;
             }
             
-            JPH::RVec3 Pos          = Body->GetPosition();
-            JPH::Quat Rot           = Body->GetRotation();
+            JPH::RVec3 Pos = Body->GetPosition();
             
+            if (Pos.GetY() < KillHeight)
+            {
+                Registry.destroy(EntityID);
+                return;
+            }
+            
+            JPH::Quat Rot = Body->GetRotation();
             TransformComponent.SetLocation(JoltUtils::FromJPHRVec3(Pos));
             TransformComponent.SetRotation(JoltUtils::FromJPHQuat(Rot));
             
@@ -390,6 +427,12 @@ namespace Lumina::Physics
         {
             JPH::Vec3 Pos = CharacterComponent.Character->GetPosition();
             JPH::Quat Rot = CharacterComponent.Character->GetRotation();
+            
+            if (Pos.GetY() < KillHeight)
+            {
+                Registry.destroy(Entity);
+                return;
+            }
         
             TransformComponent.SetLocation(JoltUtils::FromJPHRVec3(Pos));
             TransformComponent.SetRotation(JoltUtils::FromJPHQuat(Rot));
@@ -400,6 +443,8 @@ namespace Lumina::Physics
 
     TOptional<FRayResult> FJoltPhysicsScene::CastRay(const FRayCastSettings& Settings)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::Vec3 JPHStart  = JoltUtils::ToJPHVec3(Settings.Start);
         JPH::Vec3 JPHEnd    = JoltUtils::ToJPHVec3(Settings.End);
         JPH::Vec3 Direction = JPHEnd - JPHStart;
@@ -470,6 +515,8 @@ namespace Lumina::Physics
 
     TVector<FRayResult> FJoltPhysicsScene::CastSphere(const FSphereCastSettings& Settings)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::RVec3 JPHStart  = JoltUtils::ToJPHRVec3(Settings.Start);
         JPH::RVec3 JPHEnd    = JoltUtils::ToJPHRVec3(Settings.End);
         JPH::Vec3 Direction = (JPHEnd - JPHStart);
@@ -529,6 +576,7 @@ namespace Lumina::Physics
             JPH::ShapeFilter()
         );
         
+        #if JPH_DEBUG_RENDERER
         DEFER 
         { 
             FJoltPhysicsContext::GetDebugRenderer()->SetDrawDuration(0.0f); 
@@ -561,7 +609,7 @@ namespace Lumina::Physics
                 false, 
                 true);
         }
-            
+        #endif
         
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         
@@ -591,11 +639,12 @@ namespace Lumina::Physics
                 .Fraction   = Hit.mFraction
             };
             
+            #if JPH_DEBUG_RENDERER
             if (Settings.bDrawDebug)
             {
                 FJoltPhysicsContext::GetDebugRenderer()->DrawLine(Hit.mContactPointOn1, Hit.mContactPointOn2, JPH::Color(255, 0, 0, 255));
             }
-            
+            #endif
             Results.push_back(Result);
         }
         
@@ -609,6 +658,8 @@ namespace Lumina::Physics
 
     void FJoltPhysicsScene::OnCharacterComponentConstructed(entt::registry& Registry, entt::entity Entity)
     {
+        LUMINA_PROFILE_SCOPE();
+
         SCharacterPhysicsComponent& CharacterComponent = Registry.get<SCharacterPhysicsComponent>(Entity);
         STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
         
@@ -628,15 +679,20 @@ namespace Lumina::Physics
         JPH::Ref Settings                       = Memory::New<JPH::CharacterVirtualSettings>();
         Settings->mShape                        = StandingShape;
         Settings->mInnerBodyShape               = StandingShape;
-        Settings->mInnerBodyLayer               = Layers::MOVING;
+        Settings->mInnerBodyLayer               = JoltUtils::PackToObjectLayer(CharacterComponent.CollisionProfile);
         Settings->mMass                         = CharacterComponent.Mass;
         Settings->mMaxStrength                  = CharacterComponent.MaxStrength;
-        Settings->mCharacterPadding             = 0.02f;
-        Settings->mPenetrationRecoverySpeed     = 1.0f;
-        Settings->mPredictiveContactDistance    = 0.1f;
+        Settings->mMinTimeRemaining             = CharacterComponent.MinTimeRemaining;
+        Settings->mMaxConstraintIterations      = CharacterComponent.MaxConstraintIterations;
+        Settings->mMaxCollisionIterations       = CharacterComponent.MaxCollisionIterations;
+        Settings->mCollisionTolerance           = CharacterComponent.CollisionTolerance;
+        Settings->mMaxNumHits                   = CharacterComponent.MaxNumHits;
+        Settings->mHitReductionCosMaxAngle      = CharacterComponent.HitReductionCosMaxAngle;
+        Settings->mCharacterPadding             = CharacterComponent.Padding;
+        Settings->mPenetrationRecoverySpeed     = CharacterComponent.PenetrationRecoverySpeed;
+        Settings->mPredictiveContactDistance    = CharacterComponent.PredictiveContactDistance;
         Settings->mSupportingVolume             = JPH::Plane(JPH::Vec3::sAxisY(), 0.0f);
-
-
+        
         JPH::Ref Character = Memory::New<JPH::CharacterVirtual>(Settings,
             JoltUtils::ToJPHRVec3(TransformComponent.GetLocation()),
             JoltUtils::ToJPHQuat(TransformComponent.GetRotation()),
@@ -651,6 +707,7 @@ namespace Lumina::Physics
 
     void FJoltPhysicsScene::OnCharacterComponentDestroyed(entt::registry& Registry, entt::entity Entity)
     {
+        
     }
 
     void FJoltPhysicsScene::OnRigidBodyComponentUpdated(entt::registry& Registry, entt::entity Entity)
@@ -660,27 +717,20 @@ namespace Lumina::Physics
 
     void FJoltPhysicsScene::OnRigidBodyComponentConstructed(entt::registry& Registry, entt::entity Entity)
     {
-        if (!Registry.any_of<SSphereColliderComponent, SBoxColliderComponent>(Entity))
-        {
-            LOG_ERROR("Entity {} attempted to construct a rigid body without a collider!", entt::to_integral(Entity));
-            return;
-        }
-
-        SRigidBodyComponent& RigidBodyComponent = Registry.get<SRigidBodyComponent>(Entity);
-        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
+        LUMINA_PROFILE_SCOPE();
         
         JPH::ShapeRefC Shape;
-
         glm::vec3 ColliderTranslationOffset(0.0f);
         glm::vec3 ColliderRotationOffset(0.0f);
 
-        if (Registry.all_of<SBoxColliderComponent>(Entity))
+        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
+        
+        if (SBoxColliderComponent* BC = Registry.try_get<SBoxColliderComponent>(Entity))
         {
-            const SBoxColliderComponent& BC = Registry.get<SBoxColliderComponent>(Entity);
-            ColliderTranslationOffset       = BC.TranslationOffset;
-            ColliderRotationOffset          = BC.RotationOffset;
+            ColliderTranslationOffset       = BC->TranslationOffset;
+            ColliderRotationOffset          = BC->RotationOffset;
             
-            JPH::BoxShapeSettings Settings(JoltUtils::ToJPHVec3(BC.HalfExtent * TransformComponent.GetScale()));
+            JPH::BoxShapeSettings Settings(JoltUtils::ToJPHVec3(BC->HalfExtent * TransformComponent.GetScale()));
             Settings.SetEmbedded();
             auto Result = Settings.Create();
             if (Result.HasError())
@@ -690,12 +740,11 @@ namespace Lumina::Physics
             
             Shape = Result.Get();
         }
-        else if (Registry.all_of<SSphereColliderComponent>(Entity))
+        else if (SSphereColliderComponent* SC = Registry.try_get<SSphereColliderComponent>(Entity))
         {
-            const SSphereColliderComponent& SC  = Registry.get<SSphereColliderComponent>(Entity);
-            ColliderTranslationOffset           = SC.TranslationOffset;
+            ColliderTranslationOffset           = SC->TranslationOffset;
 
-            JPH::SphereShapeSettings Settings(SC.Radius * TransformComponent.MaxScale());
+            JPH::SphereShapeSettings Settings(SC->Radius * TransformComponent.MaxScale());
             Settings.SetEmbedded();
             auto Result = Settings.Create();
             if (Result.HasError())
@@ -705,8 +754,15 @@ namespace Lumina::Physics
             
             Shape = Result.Get();      
         }
+        else
+        {
+            LOG_ERROR("Entity {} attempted to construct a rigid body without a collider!", entt::to_integral(Entity));
+            return;
+        }
 
-        JPH::ObjectLayer Layer      = ToJoltObjectType(RigidBodyComponent.BodyType);
+        SRigidBodyComponent& RigidBodyComponent = Registry.get<SRigidBodyComponent>(Entity);
+        
+        JPH::ObjectLayer Layer      = JoltUtils::PackToObjectLayer(RigidBodyComponent.CollisionProfile);
         JPH::EMotionType MotionType = ToJoltMotionType(RigidBodyComponent.BodyType);
 
         glm::quat Rotation      = TransformComponent.GetRotation();
@@ -730,15 +786,27 @@ namespace Lumina::Physics
             MotionType,
             Layer);
 
-        Settings.mMaxLinearVelocity     = RigidBodyComponent.MaxLinearVelocity;
-        Settings.mMaxAngularVelocity    = RigidBodyComponent.MaxAngularVelocity;
-        Settings.mRestitution           = RigidBodyComponent.RestitutionOverride;
-        Settings.mFriction              = RigidBodyComponent.FrictionOverride;
-        Settings.mAngularDamping        = RigidBodyComponent.AngularDamping;
-        Settings.mLinearDamping         = RigidBodyComponent.LinearDamping; 
+        Settings.mNumPositionStepsOverride  = RigidBodyComponent.NumPositionStepsOverride;
+        Settings.mNumVelocityStepsOverride  = RigidBodyComponent.NumVelocityStepsOverride;
+        Settings.mIsSensor                  = RigidBodyComponent.bIsSensor;
+        Settings.mUseManifoldReduction      = RigidBodyComponent.bUseManifoldReduction;
+        Settings.mApplyGyroscopicForce      = RigidBodyComponent.bApplyGyroscopicForce;
+        Settings.mMotionQuality             = RigidBodyComponent.MotionQualityLevel == 0 ? JPH::EMotionQuality::Discrete : JPH::EMotionQuality::LinearCast;
+        Settings.mMaxLinearVelocity         = RigidBodyComponent.MaxLinearVelocity;
+        Settings.mMaxAngularVelocity        = RigidBodyComponent.MaxAngularVelocity;
+        Settings.mRestitution               = RigidBodyComponent.RestitutionOverride;
+        Settings.mFriction                  = RigidBodyComponent.FrictionOverride;
+        Settings.mAngularDamping            = RigidBodyComponent.AngularDamping;
+        Settings.mLinearDamping             = RigidBodyComponent.LinearDamping; 
 
         JPH::BodyInterface& BodyInterface   = JoltSystem->GetBodyInterface();
         JPH::Body* Body                     = BodyInterface.CreateBody(Settings);
+        
+        if (Body == nullptr)
+        {
+            LOG_ERROR("Failed to create body for Entity: {}", entt::to_integral(Entity));
+            return;
+        }
         
         Body->SetUserData(static_cast<uint64>(Entity));
         RigidBodyComponent.BodyID           = Body->GetID().GetIndexAndSequenceNumber();
@@ -752,7 +820,7 @@ namespace Lumina::Physics
         JPH::BodyInterface& BodyInterface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID(RigidBodyComponent.BodyID);
         
-        if (BodyID.IsInvalid() || BodyInterface.IsAdded(BodyID))
+        if (BodyID.IsInvalid())
         {
             return;
         }
@@ -771,6 +839,8 @@ namespace Lumina::Physics
 
     void FJoltPhysicsScene::OnImpulseEvent(const SImpulseEvent& Impulse)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Impulse.BodyID);
         JPH::RVec3 VecImpulse = JoltUtils::ToJPHRVec3(Impulse.Impulse);
@@ -785,6 +855,8 @@ namespace Lumina::Physics
     
     void FJoltPhysicsScene::OnForceEvent(const SForceEvent& Force)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Force.BodyID);
         
@@ -793,6 +865,8 @@ namespace Lumina::Physics
     
     void FJoltPhysicsScene::OnTorqueEvent(const STorqueEvent& Torque)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Torque.BodyID);
         
@@ -801,6 +875,8 @@ namespace Lumina::Physics
     
     void FJoltPhysicsScene::OnAngularImpulseEvent(const SAngularImpulseEvent& AngularImpulse)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(AngularImpulse.BodyID);
         
@@ -809,6 +885,8 @@ namespace Lumina::Physics
     
     void FJoltPhysicsScene::OnSetVelocityEvent(const SSetVelocityEvent& Velocity)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Velocity.BodyID);
         
@@ -817,6 +895,8 @@ namespace Lumina::Physics
     
     void FJoltPhysicsScene::OnSetAngularVelocityEvent(const SSetAngularVelocityEvent& AngularVelocity)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(AngularVelocity.BodyID);
         
@@ -825,24 +905,28 @@ namespace Lumina::Physics
     
     void FJoltPhysicsScene::OnAddImpulseAtPositionEvent(const SAddImpulseAtPositionEvent& Event)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Event.BodyID);
         
-        Interface.AddImpulse(BodyID, JoltUtils::ToJPHRVec3(Event.Impulse), 
-                            JoltUtils::ToJPHRVec3(Event.Position));
+        Interface.AddImpulse(BodyID, JoltUtils::ToJPHRVec3(Event.Impulse), JoltUtils::ToJPHRVec3(Event.Position));
     }
     
     void FJoltPhysicsScene::OnAddForceAtPositionEvent(const SAddForceAtPositionEvent& Event)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Event.BodyID);
         
-        Interface.AddForce(BodyID, JoltUtils::ToJPHRVec3(Event.Force), 
-                          JoltUtils::ToJPHRVec3(Event.Position));
+        Interface.AddForce(BodyID, JoltUtils::ToJPHRVec3(Event.Force), JoltUtils::ToJPHRVec3(Event.Position));
     }
     
     void FJoltPhysicsScene::OnSetGravityFactorEvent(const SSetGravityFactorEvent& Event)
     {
+        LUMINA_PROFILE_SCOPE();
+
         JPH::BodyInterface& Interface = JoltSystem->GetBodyInterface();
         JPH::BodyID BodyID = JPH::BodyID(Event.BodyID);
         

@@ -19,7 +19,6 @@ namespace Lumina
 
         void HandleExternalUpdate(TSharedPtr<FPropertyHandle> Property) override;
 
-        SScriptComponent Value;
         ImGuiTextFilter SearchFilter;
     };
 }

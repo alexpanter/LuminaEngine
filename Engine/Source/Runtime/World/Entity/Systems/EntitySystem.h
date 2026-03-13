@@ -2,15 +2,15 @@
 
 #include "SystemContext.h"
 #include "Core/Engine/Engine.h"
-#include "Scripting/ScriptTypes.h"
+#include "Scripting/Lua/ScriptTypes.h"
 #include "World/Entity/Traits.h"
 
 
 namespace Lumina
 {
     
-#define ENTITY_SYSTEM( ... )\
-FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
+    #define ENTITY_SYSTEM( ... )\
+    FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
 
     namespace Meta
     {
@@ -18,12 +18,6 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
         concept HasStartup = requires(TSystem Sys, const FSystemContext& Context)
         {
             { Sys.Startup(Context) } noexcept -> std::same_as<void>;
-        };
-    
-        template<typename TSystem>
-        concept HasBeginPlay = requires(TSystem Sys, const FSystemContext& Context)
-        {
-            { Sys.BeginPlay(Context) } noexcept -> std::same_as<void>;
         };
         
         template<typename TSystem>
@@ -33,19 +27,13 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
         };
         
         template<typename TSystem>
-        concept HasEndPlay = requires(TSystem Sys, const FSystemContext& Context)
-        {
-            { Sys.HasEndPlay(Context) } noexcept -> std::same_as<void>;
-        };
-    
-        template<typename TSystem>
         concept HasTeardown = requires(TSystem Sys, const FSystemContext& Context)
         {
             { Sys.Teardown(Context) } noexcept -> std::same_as<void>;
         };
     
         template<typename TSystem>
-        concept IsSystem = HasStartup<TSystem> || HasUpdate<TSystem> || HasTeardown<TSystem> || HasBeginPlay<TSystem> || HasEndPlay<TSystem>;
+        concept IsSystem = HasStartup<TSystem> || HasUpdate<TSystem> || HasTeardown<TSystem>;
     
         template<typename TSystem>
         void RegisterECSSystem()
@@ -61,19 +49,9 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
                 Meta.template func<&TSystem::Startup>("Startup"_hs);
             }
             
-            if constexpr (HasBeginPlay<TSystem>)
-            {
-                Meta.template func<&TSystem::BeginPlay>("BeginPlay"_hs);
-            }
-        
             if constexpr (HasUpdate<TSystem>)
             {
                 Meta.template func<&TSystem::Update>("Update"_hs);
-            }
-            
-            if constexpr (HasEndPlay<TSystem>)
-            {
-                Meta.template func<&TSystem::EndPlay>("EndPlay"_hs);
             }
         
             if constexpr (HasTeardown<TSystem>)
@@ -110,6 +88,6 @@ FUpdatePriorityList PriorityList = FUpdatePriorityList(__VA_ARGS__);
 
     private:
         
-        TWeakPtr<Scripting::FLuaScript> WeakScript;
+        TWeakPtr<Lua::FScript> WeakScript;
     };
 }

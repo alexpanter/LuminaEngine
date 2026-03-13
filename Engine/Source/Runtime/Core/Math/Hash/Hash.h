@@ -72,11 +72,18 @@ namespace Lumina::Hash
 
 	namespace FNV1a
 	{
-		constexpr uint32 GConstValue32 = 0x811c9dc5;
-		constexpr uint32 GDefaultOffsetBasis32 = 0x1000193;
-		constexpr uint64 GConstValue64 = 0xcbf29ce484222325;
-		constexpr uint64 GDefaultOffsetBasis64 = 0x100000001b3;
+		constexpr uint16 GConstValue16          = 0x811C;
+		constexpr uint16 GDefaultOffsetBasis16  = 0x0193;
+		constexpr uint32 GConstValue32			= 0x811c9dc5;
+		constexpr uint32 GDefaultOffsetBasis32	= 0x1000193;
+		constexpr uint64 GConstValue64			= 0xcbf29ce484222325;
+		constexpr uint64 GDefaultOffsetBasis64	= 0x100000001b3;
 
+		constexpr static uint16 GetHash16(const char* const str, const uint16 val = GConstValue16)
+		{
+			return (str[0] == '\0') ? val : GetHash16(&str[1], static_cast<uint16>((val ^ static_cast<uint8>(str[0])) * GDefaultOffsetBasis16));
+		}
+		
 		constexpr static uint32 GetHash32(const char* const str, const uint32 val = GConstValue32)
 		{
 			return (str[0] == '\0') ? val : GetHash32(&str[1], ((uint64)val ^ static_cast<uint32>(str[0])) * GDefaultOffsetBasis32);

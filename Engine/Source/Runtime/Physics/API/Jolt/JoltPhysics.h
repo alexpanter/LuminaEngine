@@ -2,14 +2,15 @@
 #include "Physics/Physics.h"
 #include <Jolt/Jolt.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#if JPH_DEBUG_RENDERER
 #include <Jolt/Renderer/DebugRendererSimple.h>
-
+#endif
 #include "Containers/String.h"
 #include "Jolt/Core/JobSystemThreadPool.h"
-#include "Jolt/Core/TempAllocator.h"
 
 namespace Lumina::Physics
 {
+    #if JPH_DEBUG_RENDERER
     class FJoltDebugRenderer : public JPH::DebugRendererSimple
     {
     public:
@@ -28,12 +29,14 @@ namespace Lumina::Physics
 
         CWorld* World = nullptr;
     };
-
+    #endif
+    
     struct FJoltData
     {
         TUniquePtr<JPH::JobSystemThreadPool> JobThreadPool;
+        #if JPH_DEBUG_RENDERER
         TUniquePtr<FJoltDebugRenderer> DebugRenderer;
-
+        #endif
         FString LastErrorMessage;
     };
 
@@ -47,7 +50,8 @@ namespace Lumina::Physics
         TUniquePtr<IPhysicsScene> CreatePhysicsScene(CWorld* World) override;
 
         static JPH::JobSystemThreadPool* GetThreadPool();
+        #if JPH_DEBUG_RENDERER
 		static FJoltDebugRenderer* GetDebugRenderer();
-        
+        #endif
     };
 }

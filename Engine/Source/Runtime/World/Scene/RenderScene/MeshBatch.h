@@ -1,4 +1,5 @@
 ﻿#pragma once
+
 #include <glm/glm.hpp>
 #include "Containers/Array.h"
 #include "Platform/GenericPlatform.h"
@@ -9,7 +10,6 @@ namespace Lumina
     class CMaterialInterface;
     class FDeferredRenderScene;
 
-    /** A batch of mesh elements that contain the same material and vertex buffer. */
     struct FMeshBatch
     {
         struct FElement
@@ -18,16 +18,12 @@ namespace Lumina
             uint32          NumIndices;
         };
         
-        TFixedVector<FElement, 1>   Elements;
+        glm::mat4                   RenderTransform;
         
+        TFixedVector<FElement, 1>   Elements;
         CMaterialInterface*         Material;
         
-        FRHIBuffer*                 VertexBuffer;
-        FRHIBuffer*                 IndexBuffer;
-
-        /** Index into the scene's mesh batch array */
-        size_t                      IndexID;
-
-        glm::mat4                   RenderTransform;
+        size_t                      VertexBuffer;
+        size_t                      IndexBuffer;
     };
 }

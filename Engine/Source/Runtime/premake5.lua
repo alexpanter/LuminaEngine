@@ -15,10 +15,6 @@ project "Runtime"
         "LUMINA_RENDERER_VULKAN",
         "VK_NO_PROTOTYPES",
         "LUMINA_RPMALLOC",
-        "JPH_DEBUG_RENDERER",
-        "JPH_FLOATING_POINT_EXCEPTIONS_ENABLED",
-        "JPH_EXTERNAL_PROFILE",
-        "JPH_ENABLE_ASSERTS",
         --"WITH_AFTERMATH",
     }
 
@@ -51,7 +47,6 @@ project "Runtime"
     libdirs
     {
         LuminaConfig.EnginePath("Engine/Source/ThirdParty/NvidiaAftermath/lib"),
-        LuminaConfig.EnginePath("Engine/Source/ThirdParty/lua"),
         LuminaConfig.EnginePath("External/SLang/lib"),
     }
 
@@ -75,7 +70,7 @@ project "Runtime"
         "ImGui",
         "EA",
         "Tracy",
-        "lua54",
+        "Luau",
         "EnkiTS",
         "JoltPhysics",
         "RPMalloc",

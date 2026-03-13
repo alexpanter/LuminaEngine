@@ -8,7 +8,7 @@ namespace Lumina
     struct SEditorEntityMovementSystem
     {
         GENERATED_BODY()
-        ENTITY_SYSTEM(RequiresUpdate(EUpdateStage::Paused, EUpdatePriority::Highest))
+        ENTITY_SYSTEM(RequiresUpdate(EUpdateStage::PrePhysics), RequiresUpdate(EUpdateStage::Paused))
 
         static void Update(const FSystemContext& SystemContext) noexcept;
     };

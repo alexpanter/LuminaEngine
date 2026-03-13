@@ -11,17 +11,16 @@ struct VertexOutput
 [shader("vertex")]
 VertexOutput VertexMain(uint VertexIndex: SV_VulkanVertexID, uint InstanceIndex: SV_VulkanInstanceID)
 {
-    FInstanceData InstanceData = GetInstanceData(InstanceIndex);
-    uint          Flags        = GetInstanceDataFlags(InstanceData);
+    FGPUInstance InstanceData = GetInstanceData(InstanceIndex);
 
     FVertexData VertexData;
-    if (HasFlag(Flags, INSTANCE_FLAG_SKINNED))
+    if (InstanceData.HasFlag(EInstanceFlags::Skinned))
     {
         VertexData = LoadSkinnedVertex(
             InstanceData.VBAddress,
             InstanceData.IBAddress,
             VertexIndex,
-            GetInstanceDataBoneIndex(InstanceData));
+            InstanceData.BoneOffset);
     }
     else
     {

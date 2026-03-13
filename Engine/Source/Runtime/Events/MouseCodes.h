@@ -1,7 +1,11 @@
 #pragma once
 
+#include "Core/Object/ObjectMacros.h"
+#include "MouseCodes.generated.h"
+
 namespace Lumina
 {
+    REFLECT()
     enum class EMouseMode : uint8
     {
         Hidden,
@@ -9,6 +13,7 @@ namespace Lumina
         Captured,
     };
     
+    REFLECT()
     enum class EMouseKey : uint16
     {
         Button0                = 0,

@@ -3,6 +3,7 @@
 #include "EASTL/string.h"
 #include "EASTL/vector.h"
 #include "Reflector/Utils/MetadataUtils.h"
+#include "Reflector/Types/PropertyFlags.h"
 #include "Reflector/Types/Functions/ReflectedFunction.h"
 #include "Reflector/Types/Properties/ReflectedProperty.h"
 
@@ -10,134 +11,6 @@ namespace Lumina::Reflection
 {
     class FReflectedHeader;
     class FReflectedProject;
-}
-
-#define BIT(x) (1 << (x))
-
-#define ENUM_CLASS_FLAGS(Enum) \
-inline           Enum& operator|=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
-inline           Enum& operator&=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs & (__underlying_type(Enum))Rhs); } \
-inline           Enum& operator^=(Enum& Lhs, Enum Rhs) { return Lhs = (Enum)((__underlying_type(Enum))Lhs ^ (__underlying_type(Enum))Rhs); } \
-inline constexpr Enum  operator| (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs | (__underlying_type(Enum))Rhs); } \
-inline constexpr Enum  operator& (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs & (__underlying_type(Enum))Rhs); } \
-inline constexpr Enum  operator^ (Enum  Lhs, Enum Rhs) { return (Enum)((__underlying_type(Enum))Lhs ^ (__underlying_type(Enum))Rhs); } \
-inline constexpr bool  operator! (Enum  E)             { return !(__underlying_type(Enum))E; } \
-inline constexpr Enum  operator~ (Enum  E)             { return (Enum)~(__underlying_type(Enum))E; }
-
-template<typename Enum>
-constexpr bool EnumHasAllFlags(Enum Flags, Enum Contains)
-{
-    using UnderlyingType = __underlying_type(Enum);
-    return ((UnderlyingType)Flags & (UnderlyingType)Contains) == (UnderlyingType)Contains;
-}
-
-template<typename Enum>
-constexpr bool EnumHasAnyFlags(Enum Flags, Enum Contains)
-{
-    using UnderlyingType = __underlying_type(Enum);
-    return ((UnderlyingType)Flags & (UnderlyingType)Contains) != 0;
-}
-
-template<typename Enum>
-void EnumAddFlags(Enum& Flags, Enum FlagsToAdd)
-{
-    using UnderlyingType = __underlying_type(Enum);
-    Flags = (Enum)((UnderlyingType)Flags | (UnderlyingType)FlagsToAdd);
-}
-
-template<typename Enum>
-void EnumRemoveFlags(Enum& Flags, Enum FlagsToRemove)
-{
-    using UnderlyingType = __underlying_type(Enum);
-    Flags = (Enum)((UnderlyingType)Flags & ~(UnderlyingType)FlagsToRemove);
-}
-
-
-/** This must reflect EPropertyTypeFlags found in ObjectCore.h */
-enum class EPropertyTypeFlags : uint64_t
-{
-    None = 0,
-
-    // Signed integers
-    Int8                = 1 << 0,
-    Int16               = 1 << 1,
-    Int32               = 1 << 2,
-    Int64               = 1 << 3,
-
-    // Unsigned integers
-    UInt8               = 1 << 4,
-    UInt16              = 1 << 5,
-    UInt32              = 1 << 6,
-    UInt64              = 1 << 7,
-
-    // Floats
-    Float               = 1 << 8,
-    Double              = 1 << 9,
-
-    // Other types
-    Bool                = 1 << 10,
-    Object              = 1 << 12,
-    Class               = 1 << 13,
-    Name                = 1 << 14,
-    String              = 1 << 15,
-    Enum                = 1 << 16,
-    Vector              = 1 << 17,
-    Struct              = 1 << 18,
-};
-
-/** Must be in-sync with EPropertyFlags in ObjectCore.h */
-enum class EPropertyFlags : uint16_t
-{
-    None                = 0,
-    Editable            = BIT(0),
-    ReadOnly            = BIT(1),
-    Transient           = BIT(2),
-    Const               = BIT(3),
-    Private             = BIT(4),
-    Protected           = BIT(5),
-    SubField            = BIT(6),
-    Trivial             = BIT(7),
-    Script              = BIT(8),
-    Builtin             = BIT(9),
-    BulkSerialize       = BIT(10),
-};
-
-ENUM_CLASS_FLAGS(EPropertyFlags)
-
-inline eastl::string PropertyFlagsToString(EPropertyFlags Flags)
-{
-    if (Flags == EPropertyFlags::None)
-    {
-        return "Lumina::EPropertyFlags::None";
-    }
-
-    eastl::string Result;
-
-    auto AppendFlag = [&](EPropertyFlags Flag, eastl::string_view Name)
-    {
-        if ((Flags & Flag) != EPropertyFlags::None)
-        {
-            if (!Result.empty())
-            {
-                Result += " | ";
-            }
-            Result.append_convert(Name.begin(), Name.length());
-        }
-    };
-
-    AppendFlag(EPropertyFlags::Editable,   "Lumina::EPropertyFlags::Editable");
-    AppendFlag(EPropertyFlags::ReadOnly,   "Lumina::EPropertyFlags::ReadOnly");
-    AppendFlag(EPropertyFlags::Transient,  "Lumina::EPropertyFlags::Transient");
-    AppendFlag(EPropertyFlags::Const,      "Lumina::EPropertyFlags::Const");
-    AppendFlag(EPropertyFlags::Private,    "Lumina::EPropertyFlags::Private");
-    AppendFlag(EPropertyFlags::Protected,  "Lumina::EPropertyFlags::Protected");
-    AppendFlag(EPropertyFlags::SubField,   "Lumina::EPropertyFlags::SubField");
-    AppendFlag(EPropertyFlags::Trivial,    "Lumina::EPropertyFlags::Trivial");
-    AppendFlag(EPropertyFlags::Script,    "Lumina::EPropertyFlags::Script");
-    AppendFlag(EPropertyFlags::Builtin,    "Lumina::EPropertyFlags::Builtin");
-    AppendFlag(EPropertyFlags::BulkSerialize,    "Lumina::EPropertyFlags::BulkSerialize");
-
-    return Result;
 }
 
 
@@ -181,7 +54,7 @@ namespace Lumina::Reflection
             case Hash("Lumina::TObjectPtr"):        return EPropertyTypeFlags::Object;
             case Hash("Lumina::TWeakObjectPtr"):    return EPropertyTypeFlags::Object;
             case Hash("Lumina::CObject"):           return EPropertyTypeFlags::Object;
-            default:                                   return EPropertyTypeFlags::None;
+            default:                                    return EPropertyTypeFlags::None;
         }
     }
     
@@ -205,9 +78,11 @@ namespace Lumina::Reflection
         virtual void DefineSecondaryHeader(eastl::string& Stream, const eastl::string& FileID) = 0;
         virtual void DeclareImplementation(eastl::string& Stream) = 0;
         virtual void DeclareStaticRegistration(eastl::string& Stream) = 0;
+        virtual void SetupLuaRegistration(eastl::string& Stream) = 0;
+        
+        bool HasMetadata(const eastl::string& Meta);
 
         bool DeclareAccessors(eastl::string& Stream, const eastl::string& FileID);
-        
         void GenerateMetadata(const eastl::string& InMetadata);
 
         eastl::vector<eastl::unique_ptr<FReflectedProperty>>    Props;
@@ -247,6 +122,7 @@ namespace Lumina::Reflection
         void DefineSecondaryHeader(eastl::string& Stream, const eastl::string& FileID) override;
         void DeclareImplementation(eastl::string& Stream) override;
         void DeclareStaticRegistration(eastl::string& Stream) override;
+        void SetupLuaRegistration(eastl::string& Stream) override;
 
         void AddConstant(const FConstant& Constant) { Constants.push_back(Constant); }
 
@@ -260,7 +136,7 @@ namespace Lumina::Reflection
     {
     public:
 
-        virtual ~FReflectedStruct() override;
+        ~FReflectedStruct() override;
         
         FReflectedStruct()
         {
@@ -277,6 +153,7 @@ namespace Lumina::Reflection
         void DefineSecondaryHeader(eastl::string& Stream, const eastl::string& FileID) override;
         void DeclareImplementation(eastl::string& Stream) override;
         void DeclareStaticRegistration(eastl::string& Stream) override;
+        void SetupLuaRegistration(eastl::string& Stream) override;
         
         eastl::string Parent;
     };

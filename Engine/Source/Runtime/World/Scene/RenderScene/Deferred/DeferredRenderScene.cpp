@@ -807,14 +807,14 @@ namespace Lumina
 
         void FDeferredRenderScene::CheckInstanceBufferResize(uint32 NumInstances)
         {
-            uint32 SizeRequiredBytes = NumInstances * sizeof(FInstanceData);
+            uint32 SizeRequiredBytes = NumInstances * sizeof(FGPUInstance);
             uint32 NumToReallocate = NumInstances * 2;
             
             if (InstanceDataBuffer->GetDescription().Size < SizeRequiredBytes)
             {
                 {
                     FRHIBufferDesc BufferDesc;
-                    BufferDesc.Size = sizeof(FInstanceData) * NumToReallocate;
+                    BufferDesc.Size = sizeof(FGPUInstance) * NumToReallocate;
                     BufferDesc.Usage.SetMultipleFlags(BUF_StorageBuffer);
                     BufferDesc.bKeepInitialState = true;
                     BufferDesc.InitialState = EResourceStates::ShaderResource;
@@ -1345,7 +1345,7 @@ namespace Lumina
                                     IndirectDrawArguments[BatchedDraws[SortKey]].InstanceCount++;
                                 }
 
-                                InstanceData.emplace_back(FInstanceData
+                                InstanceData.emplace_back(FGPUInstance
                                 {
                                     .Transform      = TransformMatrix,
                                     .SphereBounds   = SphereBounds,
@@ -1408,7 +1408,7 @@ namespace Lumina
                                             PackedID.z = true;
                                         }
                                 
-                                        InstanceData.emplace_back(FInstanceData
+                                        InstanceData.emplace_back(FGPUInstance
                                         {
                                             .Transform      = Matrix,
                                             .SphereBounds   = SphereBounds,
@@ -1724,7 +1724,7 @@ namespace Lumina
                     CheckLightBufferResize(LightData.NumLights);
                     
                     const SIZE_T SimpleVertexSize = SimpleVertices.size() * sizeof(FSimpleElementVertex);
-                    const SIZE_T InstanceDataSize = InstanceData.size() * sizeof(FInstanceData);
+                    const SIZE_T InstanceDataSize = InstanceData.size() * sizeof(FGPUInstance);
                     const SIZE_T IndirectArgsSize = IndirectDrawArguments.size() * sizeof(FDrawIndexedIndirectArguments);
 
                     constexpr SIZE_T LightDataHeaderSize = offsetof(FSceneLightData, Lights);
@@ -1955,7 +1955,7 @@ namespace Lumina
 
             {
                 FRHIBufferDesc BufferDesc;
-                BufferDesc.Size = sizeof(FInstanceData) * 1'000;
+                BufferDesc.Size = sizeof(FGPUInstance) * 1'000;
                 BufferDesc.Usage.SetMultipleFlags(BUF_StorageBuffer);
                 BufferDesc.bKeepInitialState = true;
                 BufferDesc.InitialState = EResourceStates::ShaderResource;

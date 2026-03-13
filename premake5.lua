@@ -28,10 +28,22 @@ workspace "Lumina"
     }
 
     defaultplatform ("Editor")
+
+    filter "configurations:Debug"
+        defines
+        {
+            "JPH_DEBUG_RENDERER",
+            "JPH_FLOATING_POINT_EXCEPTIONS_ENABLED",
+            "JPH_EXTERNAL_PROFILE",
+            "JPH_ENABLE_ASSERTS",
+            "LUAI_GCMETRICS",
+        }
+    filter {}
 		
 	defines
 	{
-		"EASTL_USER_DEFINED_ALLOCATOR=1",
+        "JPH_OBJECT_LAYER_BITS=32",
+        "EASTL_USER_DEFINED_ALLOCATOR=1",
 		"_CRT_SECURE_NO_WARNINGS",
         "_SILENCE_CXX23_ALIGNED_UNION_DEPRECATION_WARNING",
         "_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING",
@@ -41,8 +53,9 @@ workspace "Lumina"
 		"IMGUI_DEFINE_MATH_OPERATORS",
         "IMGUI_IMPL_VULKAN_USE_VOLK",
         
-        "SOL_NO_EXCEPTIONS",
-        "SOL_DEFAULT_PASS_ON_ERROR",
+        "LUA_VECTOR_SIZE=4",
+        "LUA_UTAG_LIMIT=1000",
+        "LUA_LUTAG_LIMIT=1000",
 
         "TRACY_ALLOW_SHADOW_WARNING",
         "TRACY_ENABLE",
@@ -150,7 +163,7 @@ workspace "Lumina"
 		include "Engine/Source/ThirdParty/Tracy"
         include "Engine/Source/ThirdParty/MiniAudio"
         include "Engine/Source/ThirdParty/EnkiTS"
-        include "Engine/Source/ThirdParty/Sol2"
+        include "Engine/Source/ThirdParty/Luau"
         include "Engine/Source/ThirdParty/SPDLog"
         include "Engine/Source/ThirdParty/JoltPhysics"
         include "Engine/Source/ThirdParty/RPMalloc"

@@ -1,15 +1,13 @@
 ﻿#include "pch.h"
 #include "EntityUtils.h"
-#include "Scripting/ScriptTypes.h"
 #include "Components/DirtyComponent.h"
 #include "Components/EditorComponent.h"
 #include "components/entitytags.h"
 #include "Components/RelationshipComponent.h"
-#include "Components/ScriptComponent.h"
-#include "Components/SingletonEntityComponent.h"
 #include "components/tagcomponent.h"
 #include "Components/TransformComponent.h"
 #include "Core/Object/Class.h"
+#include "Scripting/Lua/ScriptTypes.h"
 
 using namespace entt::literals; 
 
@@ -65,12 +63,6 @@ namespace Lumina::ECS::Utils
                         int64 StartOfComponentData = Ar.Tell();
 
                         StructType->SerializeTaggedProperties(Ar, ComponentPointer);
-                        
-                        if (StructType == SScriptComponent::StaticStruct())
-                        {
-                            SScriptComponent* ScriptComponent = static_cast<SScriptComponent*>(ComponentPointer);
-                            Ar << ScriptComponent->CustomData;
-                        }
 
                         int64 EndOfComponentData = Ar.Tell();
 
@@ -123,14 +115,7 @@ namespace Lumina::ECS::Utils
 
                 if (CStruct* Struct = FindObject<CStruct>(TypeName))
                 {
-                    if (Struct == SScriptComponent::StaticStruct())
-                    {
-                        SScriptComponent NewScriptComponent;
-                        Struct->SerializeTaggedProperties(Ar, &NewScriptComponent);
-                        Ar << NewScriptComponent.CustomData;
-                        Registry.emplace<SScriptComponent>(Entity, NewScriptComponent);
-                    }
-                    else if (Struct == STagComponent::StaticStruct())
+                    if (Struct == STagComponent::StaticStruct())
                     {
                         STagComponent NewTagComponent;
                         Struct->SerializeTaggedProperties(Ar, &NewTagComponent);
@@ -164,7 +149,7 @@ namespace Lumina::ECS::Utils
         if (Ar.IsWriting())
         {
             Registry.compact<>();
-            auto View = Registry.view<entt::entity>(entt::exclude<FEditorComponent, FSingletonEntityTag>);
+            auto View = Registry.view<entt::entity>(entt::exclude<FEditorComponent>);
 
             int64 PreSerializePos = Ar.Tell();
     
@@ -537,22 +522,6 @@ namespace Lumina::ECS::Utils
         return false;
     }
 
-    entt::id_type GetTypeID(const sol::table& Data)
-    {
-        auto Name = Data["__type"].get<const char*>();
-        ASSERT(Name != nullptr);
-    
-        return entt::hashed_string(Name);
-    }
-
-    entt::id_type GetTypeID(const sol::userdata& Data)
-    {
-        auto Name = Data["__type"].get<const char*>();
-        ASSERT(Name != nullptr);
-    
-        return entt::hashed_string(Name);
-    }
-
     entt::id_type GetTypeID(FStringView Name)
     {
         return entt::hashed_string(Name.data());
@@ -561,30 +530,6 @@ namespace Lumina::ECS::Utils
     entt::id_type GetTypeID(const CStruct* Type)
     {
         return entt::hashed_string(Type->GetName().c_str());
-    }
-
-    THashSet<entt::id_type> CollectTypes(const sol::variadic_args& Args)
-    {
-        THashSet<entt::id_type> Types;
-        
-        eastl::transform(Args.cbegin(), Args.cend(), eastl::inserter(Types, Types.begin()), [](const sol::object& Object)
-        {
-            return DeduceType(Object);
-        });
-        
-        return Types;
-    }
-
-    THashSet<entt::id_type> CollectTypes(const sol::table& Args)
-    {
-        THashSet<entt::id_type> Types;
-        
-        for (const auto& [key, value] : Args)
-        {
-            Types.insert(DeduceType(value));
-        }
-        
-        return Types;
     }
 
     void SetEntityBodyType(FEntityRegistry& Registry, entt::entity Entity)

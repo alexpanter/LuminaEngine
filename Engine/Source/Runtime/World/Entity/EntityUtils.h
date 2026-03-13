@@ -27,34 +27,19 @@ namespace Lumina::ECS::Utils
     RUNTIME_API void CollectChildren(FEntityRegistry& Registry, entt::entity Entity, TVector<entt::entity>& OutChildren);
     RUNTIME_API bool HasComponent(FEntityRegistry& Registry, entt::entity Entity, entt::meta_type Type);
     
-    NODISCARD RUNTIME_API entt::id_type GetTypeID(const sol::table& Data);
-    NODISCARD RUNTIME_API entt::id_type GetTypeID(const sol::userdata& Data);
     NODISCARD RUNTIME_API entt::id_type GetTypeID(FStringView Name);
     NODISCARD RUNTIME_API entt::id_type GetTypeID(const CStruct* Type);
 
     template<typename T>
     NODISCARD entt::id_type DeduceType(T&& Obj)
     {
-        switch (Obj.get_type())
-        {
-            case sol::type::number:     return Obj.template as<entt::id_type>();
-            case sol::type::table:      return GetTypeID(Obj.template as<sol::table>());
-            case sol::type::userdata:   return GetTypeID(Obj.template as<sol::userdata>());
-            case sol::type::string:     return GetTypeID(Obj.template as<const char*>());
-        }
-
-        UNREACHABLE();
+        LOG_ERROR("Failed to deduce id_type as a non-supported type: {}", (int)Obj.get_type());
         return entt::id_type{};
     }
-    
-    NODISCARD RUNTIME_API THashSet<entt::id_type> CollectTypes(const sol::variadic_args& Args);
-
-    NODISCARD RUNTIME_API THashSet<entt::id_type> CollectTypes(const sol::table& Args);
 
     template<typename ... TArgs>
     entt::meta_any InvokeMetaFunc(const entt::meta_type& MetaType, entt::id_type FunctionID, TArgs&&... Args)
     {
-        LUMINA_PROFILE_SCOPE();
         if (!MetaType)
         {
             return entt::meta_any{};

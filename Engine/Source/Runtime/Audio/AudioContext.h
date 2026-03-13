@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Containers/String.h"
+#include "Platform/Platform.h"
 
 
 namespace Lumina

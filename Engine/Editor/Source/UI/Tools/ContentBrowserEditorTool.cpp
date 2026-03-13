@@ -457,7 +457,7 @@ namespace Lumina
             AddChildrenRecursive(RootItem, "/Engine/Resources/Content");
         };
 
-        DirectoryContext.ItemSelectedFunction = [this] (FTreeListView& Tree, entt::entity Item)
+        DirectoryContext.ItemSelectedFunction = [this] (FTreeListView& Tree, entt::entity Item, bool)
         {
             if (Item == entt::null)
             {
@@ -492,6 +492,17 @@ namespace Lumina
         ActionRegistry.ProcessAllOf<FPendingDestroy>([&] (const FPendingDestroy& Destroy)
         {
             CObject* AliveObject = nullptr;
+            
+            if (VFS::HasExtension(Destroy.PendingDestroy, ".luau"))
+            {
+                if (VFS::Remove(Destroy.PendingDestroy))
+                {
+                    bWroteSomething = true;
+                    ImGuiX::Notifications::NotifySuccess("Deleted Script {0}", Destroy.PendingDestroy);
+                }
+                return;
+            }
+            
             if (VFS::HasExtension(Destroy.PendingDestroy, ".lasset"))
             {
                 if (const FAssetData* Data = FAssetRegistry::Get().GetAssetByPath(Destroy.PendingDestroy))
@@ -657,7 +668,7 @@ namespace Lumina
         Watcher.Stop();
         Watcher.Watch(ScriptPath, [&](const FFileEvent& Event)
         {
-            if (!VFS::HasExtension(Event.Path, ".lua"))
+            if (!VFS::HasExtension(Event.Path, ".luau"))
             {
                 return;
             }
@@ -676,19 +687,19 @@ namespace Lumina
             {
             case EFileAction::Added:
                 {
-                    Scripting::FScriptingContext::Get().ScriptCreated(RelativePath);
+                    Lua::FScriptingContext::Get().ScriptCreated(RelativePath);
                     RefreshContentBrowser();
                 }
                 break;
             case EFileAction::Modified:
                 {
-                    Scripting::FScriptingContext::Get().ScriptReloaded(RelativePath);
+                    Lua::FScriptingContext::Get().ScriptReloaded(RelativePath);
                     RefreshContentBrowser();
                 }
                 break;
             case EFileAction::Removed:
                 {
-                    Scripting::FScriptingContext::Get().ScriptDeleted(RelativePath);
+                    Lua::FScriptingContext::Get().ScriptDeleted(RelativePath);
                     RefreshContentBrowser();
                 }
                 break;
@@ -702,7 +713,7 @@ namespace Lumina
                     }
                     
                     RelativePath.append_convert(Prefix.data(), Prefix.size()).append_convert(Event.OldPath.substr(OldPos + Prefix.size()));
-                    Scripting::FScriptingContext::Get().ScriptRenamed(RelativePath, RelativeOldPath);
+                    Lua::FScriptingContext::Get().ScriptRenamed(RelativePath, RelativeOldPath);
                     RefreshContentBrowser();
                 }
                 break;
@@ -1229,8 +1240,31 @@ namespace Lumina
     {
         if (ImGui::MenuItem(LE_ICON_OPEN_IN_NEW " New Script"))
         {
-            FFixedString NewScriptPath = SelectedPath + "/" + "NewScript.lua";
-            VFS::WriteFile(NewScriptPath, "-- New Lua Script");
+            FFixedString NewScriptPath = SelectedPath + "/" + "NewScript.luau";
+            VFS::WriteFile(NewScriptPath, R"(
+NewScript = { }
+
+
+function NewScript:OnAttach()
+    -- Called when the entity is created
+end
+
+function NewScript:OnReady()
+    -- Called when the entity hierarchy is initialized
+end
+
+function NewScript:Update(DeltaTime: number)
+    -- Called every frame.
+end
+            
+function NewScript:OnDetach()
+    -- Called when the entity is destroyed.
+end
+
+
+return NewScript
+)");
+            
         }
     }
 

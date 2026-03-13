@@ -13,7 +13,6 @@ namespace Lumina
         Game,
         Simulation,
         Editor,
-        Tool,
     };
     
 }

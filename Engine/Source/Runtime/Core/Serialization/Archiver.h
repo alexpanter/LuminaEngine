@@ -204,6 +204,46 @@ namespace Lumina
         
             return *this;
         }
+        
+        virtual FArchive& operator<<(FFixedString& Str)
+        {
+            if (IsReading())
+            {
+                size_t SaveNum = 0;
+                *this << SaveNum;
+            
+                if (SaveNum > GetMaxSerializeSize())
+                {
+                    SetHasError(true);
+                    LOG_ERROR("Archiver is corrupted, string is too large! (Size: {0}, Max: {1})", SaveNum, GetMaxSerializeSize());
+                    return *this;
+                }
+            
+                if (SaveNum)
+                {
+                    Str.clear();
+                    Str.shrink_to_fit();
+                    Str.resize(SaveNum);
+                    Serialize(Str.data(), SaveNum);
+                }
+                else
+                {
+                    Str.clear();
+                }
+            }
+            else
+            {
+                size_t SaveNum = Str.size();
+                *this << SaveNum;
+
+                if (SaveNum)
+                {
+                    Serialize(Str.data(), SaveNum);
+                }
+            }
+        
+            return *this;
+        }
 
         virtual FArchive& operator<<(FName& Name)
         {

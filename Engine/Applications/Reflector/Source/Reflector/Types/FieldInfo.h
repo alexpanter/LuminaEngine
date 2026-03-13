@@ -1,6 +1,7 @@
 #pragma once
 #include <clang-c/Index.h>
 #include "EASTL/string.h"
+#include "Reflector/Types/PropertyFlags.h"
 
 
 namespace Lumina

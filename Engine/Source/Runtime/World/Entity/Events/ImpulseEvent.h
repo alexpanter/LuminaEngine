@@ -5,7 +5,7 @@
 
 namespace Lumina
 {
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SImpulseEvent
     {
         GENERATED_BODY()
@@ -17,7 +17,7 @@ namespace Lumina
         glm::vec3 Impulse;
     };
     
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SForceEvent
     {
         GENERATED_BODY()
@@ -29,7 +29,7 @@ namespace Lumina
         glm::vec3 Force;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct STorqueEvent
     {
         GENERATED_BODY()
@@ -41,7 +41,7 @@ namespace Lumina
         glm::vec3 Torque;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SAngularImpulseEvent
     {
         GENERATED_BODY()
@@ -53,7 +53,7 @@ namespace Lumina
         glm::vec3 AngularImpulse;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SSetVelocityEvent
     {
         GENERATED_BODY()
@@ -65,7 +65,7 @@ namespace Lumina
         glm::vec3 Velocity;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SSetAngularVelocityEvent
     {
         GENERATED_BODY()
@@ -77,7 +77,7 @@ namespace Lumina
         glm::vec3 AngularVelocity;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SAddImpulseAtPositionEvent
     {
         GENERATED_BODY()
@@ -92,7 +92,7 @@ namespace Lumina
         glm::vec3 Position;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SAddForceAtPositionEvent
     {
         GENERATED_BODY()
@@ -107,7 +107,7 @@ namespace Lumina
         glm::vec3 Position;
     };
 
-    REFLECT(Component, HideInComponentList)
+    REFLECT(Event)
     struct SSetGravityFactorEvent
     {
         GENERATED_BODY()

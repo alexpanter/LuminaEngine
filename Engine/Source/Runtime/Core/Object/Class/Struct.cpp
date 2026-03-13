@@ -137,6 +137,12 @@ namespace Lumina
     
     void CStruct::SerializeTaggedProperties(FArchive& Ar, void* Data)
     {
+        if (StructOps && StructOps->HasSerializer())
+        {
+            StructOps->Serialize(Ar, Data);
+            return;
+        }
+        
         if (Ar.IsWriting())
         {
             uint32 NumProperties = 0;

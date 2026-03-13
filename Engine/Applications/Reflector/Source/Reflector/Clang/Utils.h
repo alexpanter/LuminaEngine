@@ -8,6 +8,7 @@
 #include <EASTL/algorithm.h>
 #include <EASTL/string.h>
 #include "xxhash.h"
+#include "spdlog/spdlog.h"
 
 
 namespace Lumina::ClangUtils
@@ -194,6 +195,11 @@ namespace Lumina::ClangUtils
         {
             const clang::QualType QualType = pType->getAs<clang::PointerType>()->getPointeeType();
             QualifiedName = QualType.getAsString().c_str();
+        }
+        else if (pType->isReferenceType())
+        {
+            const clang::QualType QualType = pType->getAs<clang::ReferenceType>()->getPointeeType();
+            QualifiedName = QualType.getUnqualifiedType().getAsString().c_str();
         }
         if (pType->isRecordType())
         {

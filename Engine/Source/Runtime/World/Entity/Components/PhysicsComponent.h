@@ -18,7 +18,14 @@ namespace Lumina
         float Mass = 1.0f;
         
         PROPERTY(Script, Editable, Category = "Physics")
-        bool bAllowSleeping = true;
+        FCollisionProfile CollisionProfile;
+        
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        uint32 NumVelocityStepsOverride = 0;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        uint32 NumPositionStepsOverride = 0;
         
         PROPERTY(Script, Editable, ClampMin = 0.001f, Category = "Physics")
         float MaxLinearVelocity = 500.0f;
@@ -38,8 +45,24 @@ namespace Lumina
         PROPERTY(Script, Editable, ClampMin = 0.001f, ClampMax = 1.0f, Category = "Physics")
         float AngularDamping = 0.05f;
         
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        uint8 MotionQualityLevel = 0;
+        
         PROPERTY(Script, Editable, Category = "Physics")
         EBodyType BodyType = EBodyType::Dynamic;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        bool bIsSensor = false;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        bool bUseManifoldReduction = false;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        bool bApplyGyroscopicForce = false;
+        
+        PROPERTY(Script, Editable, Category = "Physics")
+        bool bAllowSleeping = true;
         
         PROPERTY(Script, Editable, Category = "Physics")
         bool bUseGravity = true;

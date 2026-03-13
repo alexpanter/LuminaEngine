@@ -16,8 +16,24 @@ namespace Lumina
     EPropertyChangeOp FVec2PropertyCustomization::DrawProperty(TSharedPtr<FPropertyHandle> Property)
     {
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
+        FStructProperty* Prop = static_cast<FStructProperty*>(Property->Property);
+
+        TOptional<float> MinOpt;
+        TOptional<float> MaxOpt;
+
+        if (Prop->HasMetadata("ClampMin"))
+        {
+            MinOpt = std::stof(Prop->GetMetadata("ClampMin").c_str());
+        }
+        if (Prop->HasMetadata("ClampMax"))
+        {
+            MaxOpt = std::stof(Prop->GetMetadata("ClampMax").c_str());
+        }
+
+        float Min = MinOpt ? MinOpt.value() : 0.0f;
+        float Max = MaxOpt ? MaxOpt.value() : 0.0f;
         
-        ImGui::DragFloat2("##", glm::value_ptr(DisplayValue), 0.01f);
+        ImGui::DragFloat2("##", glm::value_ptr(DisplayValue), 0.01f, Min, Max);
 
         ImGui::PopItemWidth();
         
@@ -43,17 +59,33 @@ namespace Lumina
 
     EPropertyChangeOp FVec3PropertyCustomization::DrawProperty(TSharedPtr<FPropertyHandle> Property)
     {
-        FStructProperty* StructProperty = static_cast<FStructProperty*>(Property->Property);
+        FStructProperty* Prop = static_cast<FStructProperty*>(Property->Property);
 
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 
-        if (StructProperty->Metadata.HasMetadata("Color"))
+        if (Prop->Metadata.HasMetadata("Color"))
         {
             ImGui::ColorEdit3("##", glm::value_ptr(DisplayValue));
         }
         else
         {
-            ImGui::DragFloat3("##", glm::value_ptr(DisplayValue), 0.01f);
+            TOptional<float> MinOpt;
+            TOptional<float> MaxOpt;
+
+            if (Prop->HasMetadata("ClampMin"))
+            {
+                MinOpt = std::stof(Prop->GetMetadata("ClampMin").c_str());
+            }
+            if (Prop->HasMetadata("ClampMax"))
+            {
+                MaxOpt = std::stof(Prop->GetMetadata("ClampMax").c_str());
+            }
+
+            float Min = MinOpt ? MinOpt.value() : 0.0f;
+            float Max = MaxOpt ? MaxOpt.value() : 0.0f;
+        
+            
+            ImGui::DragFloat3("##", glm::value_ptr(DisplayValue), 0.01f, Min, Max);
         }
         
         ImGui::PopItemWidth();
@@ -80,17 +112,32 @@ namespace Lumina
 
     EPropertyChangeOp FVec4PropertyCustomization::DrawProperty(TSharedPtr<FPropertyHandle> Property)
     {
-        FStructProperty* StructProperty = static_cast<FStructProperty*>(Property->Property);
+        FStructProperty* Prop = static_cast<FStructProperty*>(Property->Property);
 
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
 
-        if (StructProperty->Metadata.HasMetadata("Color"))
+        if (Prop->Metadata.HasMetadata("Color"))
         {
             ImGui::ColorEdit4("##", glm::value_ptr(DisplayValue));
         }
         else
         {
-            ImGui::DragFloat4("##", glm::value_ptr(DisplayValue), 0.01f);
+            TOptional<float> MinOpt;
+            TOptional<float> MaxOpt;
+
+            if (Prop->HasMetadata("ClampMin"))
+            {
+                MinOpt = std::stof(Prop->GetMetadata("ClampMin").c_str());
+            }
+            if (Prop->HasMetadata("ClampMax"))
+            {
+                MaxOpt = std::stof(Prop->GetMetadata("ClampMax").c_str());
+            }
+
+            float Min = MinOpt ? MinOpt.value() : 0.0f;
+            float Max = MaxOpt ? MaxOpt.value() : 0.0f;
+                    
+            ImGui::DragFloat4("##", glm::value_ptr(DisplayValue), 0.01f, Min, Max);
         }
 
         ImGui::PopItemWidth();
@@ -145,7 +192,6 @@ namespace Lumina
 
     EPropertyChangeOp FTransformPropertyCustomization::DrawProperty(TSharedPtr<FPropertyHandle> Property)
     {
-
         bool bWasChanged = false;
         ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
         
