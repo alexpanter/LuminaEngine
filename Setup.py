@@ -262,37 +262,31 @@ def main():
         print(f"{Fore.WHITE}Welcome to the Lumina Engine setup utility.")
         print(f"{Fore.WHITE}This will download dependencies and configure your project.\n")
         
-        # Configuration
-        dropbox_url = "https://www.dropbox.com/scl/fi/xkgu0zkwcza98ovobind5/External.zip?rlkey=a7mf53v9ywn0f60c8tzvdk0vd&st=2iexb83z&dl=0"
+        dropbox_url = "https://www.dropbox.com/scl/fi/xul7gd2ryx1yatc0axuc8/External.7z?rlkey=ntnen331j7s8gkm6t03t07325&st=jsjtc3zu&dl=0"
         archive_file = "External.7z"
         extract_location = "."
         generation_script = Path("BuildScripts") / "GenerateProjectFiles.py"
         
         total_steps = 4
         
-        # Step 1: Download dependencies
         SetupDisplay.step(1, total_steps, "Downloading Dependencies")
         downloader = DependencyDownloader(dropbox_url, archive_file)
         if not downloader.download():
             sys.exit(1)
         
-        # Step 2: Extract archive
         SetupDisplay.step(2, total_steps, "Extracting Dependencies")
         extractor = ArchiveExtractor(archive_file, extract_location)
         if not extractor.extract():
             sys.exit(1)
         
-        # Step 3: Generate project files
         SetupDisplay.step(3, total_steps, "Generating Project Files")
         generator = ProjectGenerator(generation_script)
         if not generator.generate():
             sys.exit(1)
         
-        # Step 4: Cleanup
         SetupDisplay.step(4, total_steps, "Cleaning Up")
         cleanup_file(archive_file)
         
-        # Completion
         print()
         SetupDisplay.header("SETUP COMPLETE")
         SetupDisplay.success("Lumina Engine is ready to use!")
