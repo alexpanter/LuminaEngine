@@ -11,7 +11,11 @@ end
 
 
 function NewScript:Update(DeltaTime: number)
-    local x, z = 0.0, 0.0    
+    local x, z = 0.0, 0.0
+
+    for i = 1, 100 do
+    World:NewEntity()
+    end
 
     if Input.IsKeyDown(EKey.W) then z =  1.0 end
     if Input.IsKeyDown(EKey.S) then z = -1.0 end

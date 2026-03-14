@@ -18,6 +18,7 @@ namespace Lumina
 
 namespace Lumina::Lua
 {
+    class FRef;
     struct FScript;
     DECLARE_MULTICAST_DELEGATE(FScriptTransactionDelegate, FStringView);
     
@@ -75,6 +76,7 @@ namespace Lumina::Lua
         RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "");
         RUNTIME_API TVector<TSharedPtr<FScript>> GetAllRegisteredScripts();
         RUNTIME_API void RunGC();
+        RUNTIME_API FRef GetGlobalsRef() const;
         
         #if LUAI_GCMETRICS
         RUNTIME_API const GCMetrics* GetGCMetrics() const;  

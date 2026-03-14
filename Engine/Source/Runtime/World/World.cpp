@@ -34,12 +34,24 @@ namespace Lumina
     {
     }
 
+    void CWorld::RegisterLuaModule(Lua::FRef& GlobalRef)
+    {
+        GlobalRef.NewClass<CWorld>("CWorld")
+            .AddFunction<&CWorld::DestroyEntity>("DestroyEntity")
+            .AddFunction<&CWorld::GetEntityByTag>("GetEntityByTag")
+            .AddFunction<&CWorld::GetEntityByName>("GetEntityByName")
+            .AddFunction<[](CWorld* World) { return World->GetEntityRegistry().create(); }>("NewEntity")
+            .AddFunction<[](CWorld* World, entt::entity Entity) { return World->GetEntityRegistry().valid(Entity); }>("IsEntityValid")
+            .Register();
+    }
+
     void CWorld::Serialize(FArchive& Ar)
     {
         CObject::Serialize(Ar);
         
         if (Ar.IsReading())
         {
+            RegistryPending.clear<>();
             ECS::Utils::SerializeRegistry(Ar, RegistryPending);
         }
         else
@@ -459,18 +471,8 @@ namespace Lumina
             
             ScriptComponent.Script->Reference.Set("Entity", Entity);
             ScriptComponent.Script->Reference.Set("Registry", &EntityRegistry);
-            ScriptComponent.Script->Reference.Set("World", (void*)this);
-            ScriptComponent.Script->Environment.SetFunction<&CWorld::IsGameWorld>("IsGameWorld", this);
-            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetDefaultWorldSettings>("GetDefaultWorldSettings", this);
-            ScriptComponent.Script->Environment.SetFunction<&CWorld::MarkTransformDirty>("MarkTransformDirty", this);
-            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetEntityByTag>("GetEntityByTag", this);
-            ScriptComponent.Script->Environment.SetFunction<&CWorld::GetEntityByName>("GetEntityByName", this);
+            ScriptComponent.Script->Environment.Set("World", this);
             
-            constexpr auto CreateFn = static_cast<entt::entity(entt::registry::*)()>(&entt::registry::create);
-            ScriptComponent.Script->Environment.SetFunction<CreateFn>("CreateEntity", &EntityRegistry);
-            
-            constexpr auto DestroyFn = static_cast<entt::registry::version_type(entt::registry::*)(entt::entity)>(&entt::registry::destroy);
-            ScriptComponent.Script->Environment.SetFunction<DestroyFn>("DestroyEntity", &EntityRegistry);
 
             ScriptComponent.AttachFunc = ScriptComponent.Script->Reference["OnAttach"];
             ScriptComponent.ReadyFunc  = ScriptComponent.Script->Reference["OnReady"];

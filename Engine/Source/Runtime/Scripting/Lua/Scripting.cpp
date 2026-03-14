@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Scripting.h"
-
 #include "lstate.h"
 #include "luacode.h"
 #include "lualib.h"
@@ -11,6 +10,7 @@
 #include "Input/InputProcessor.h"
 #include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
+#include "World/World.h"
 #include "World/Entity/Registry/EntityRegistry.h"
 #include "World/Entity/Systems/SystemContext.h"
 
@@ -97,12 +97,7 @@ namespace Lumina::Lua
         lua_pushvalue(L, LUA_GLOBALSINDEX);
         FRef GlobalsRef(L, -1);
         
-        struct Foobar
-        {
-            
-        };
-        
-        auto Class = GlobalsRef.NewClass<Foobar>("Foobar");
+        CWorld::RegisterLuaModule(GlobalsRef);
         
         FRef InputTable = GlobalsRef.NewTable("Input");
         InputTable.SetFunction<&FInputProcessor::IsKeyDown>("IsKeyDown", &FInputProcessor::Get());
@@ -279,7 +274,13 @@ namespace Lumina::Lua
         
     }
 
-    #if LUAI_GCMETRICS
+    FRef FScriptingContext::GetGlobalsRef() const
+    {
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        return FRef(L, -1);
+    }
+
+#if LUAI_GCMETRICS
     const GCMetrics* FScriptingContext::GetGCMetrics() const
     {
         return &L->global->gcmetrics;

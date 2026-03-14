@@ -1,5 +1,6 @@
 #pragma once
 #include "Core/Object/ObjectMacros.h"
+#include "Core/Object/ObjectHandleTyped.h"
 #include "SimpleAnimationComponent.generated.h"
 
 namespace Lumina

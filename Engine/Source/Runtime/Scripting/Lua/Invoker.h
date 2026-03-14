@@ -61,12 +61,6 @@ namespace Lumina::Lua
         
         auto Dispatch = [&]<size_t... Is>(eastl::index_sequence<Is...>)
         {
-            
-            if (lua_gettop(L) != TraitsT::ArgCount + 1)
-            {
-                luaL_errorL(L, "[%s] Expected %d arguments but got %d", __FUNCSIG__, TraitsT::ArgCount, lua_gettop(L) - 1);
-            }
-            
             if constexpr (eastl::is_member_function_pointer_v<decltype(TFunc)>)
             {
                 using ClassT  = TraitsT::ClassType;
@@ -128,11 +122,6 @@ namespace Lumina::Lua
     
         auto Dispatch = [&]<size_t... Is>(eastl::index_sequence<Is...>)
         {
-            if (lua_gettop(L) != TraitsT::ArgCount)
-            {
-                luaL_errorL(L, "[%s] Expected %d arguments but got %d", __FUNCSIG__, TraitsT::ArgCount, lua_gettop(L) - 1);
-            }
-            
             if constexpr (eastl::is_member_function_pointer_v<decltype(TFunc)>)
             {
                 using ClassT = TraitsT::ClassType;

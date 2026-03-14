@@ -352,7 +352,7 @@ namespace Lumina::Lua
     {
         static FStringView TypeName(lua_State* State)   { return lua_typename(State, LUA_TNUMBER); }
         static void Push(lua_State* State, T Value)     { lua_pushinteger(State, (int)Value); }
-        static T  Get(lua_State* State, int Index)      { return (T)lua_tointeger(State, Index); }
+        static T  Get(lua_State* State, int Index)      { return (T)luaL_checkinteger(State, Index); }
         static bool Check(lua_State* State, int Index)  { return lua_isnumber(State, Index); }
     };
 }

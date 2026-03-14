@@ -27,7 +27,7 @@ namespace Lumina
 
 namespace Lumina
 {
-    REFLECT()
+    REFLECT(NoLua)
     class RUNTIME_API CWorld : public CObject, public IPrimitiveDrawInterface
     {
         GENERATED_BODY()
@@ -41,6 +41,7 @@ namespace Lumina
         using FSystemVariant = TVariant<FEntitySystemWrapper, FEntityScriptSystem>;
 
         CWorld();
+        static void RegisterLuaModule(Lua::FRef& GlobalRef);
 
         //~ Begin CObject Interface
         void Serialize(FArchive& Ar) override;
