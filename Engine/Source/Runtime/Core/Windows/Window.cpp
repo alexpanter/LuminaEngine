@@ -91,7 +91,6 @@ namespace Lumina
 			glfwInitAllocator(&CustomAllocator);
 			glfwInit();
 			glfwSetErrorCallback(GLFWErrorCallback);
-			glfwWindowHint(GLFW_MAXIMIZED, GLFW_TRUE);
 
 			glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 #if WITH_EDITOR
@@ -105,13 +104,16 @@ namespace Lumina
 			GLFWmonitor* Monitor = glfwGetPrimaryMonitor();
 			const GLFWvidmode* Mode = glfwGetVideoMode(Monitor);
 
-			Specs.Extent.x = Mode->width - 25;
-			Specs.Extent.y = Mode->height - 25;
+			Specs.Extent.x = Mode->width - 300;
+			Specs.Extent.y = Mode->height - 300;
 
 			Window = glfwCreateWindow(Specs.Extent.x, Specs.Extent.y, Specs.Title.c_str(), nullptr, nullptr);
 			glfwSetWindowAttrib(Window, GLFW_RESIZABLE, GLFW_TRUE);
-
-
+			
+			const int PosX = (Mode->width  - Specs.Extent.x) / 2;
+			const int PosY = (Mode->height - Specs.Extent.y) / 2;
+			glfwSetWindowPos(Window, PosX, PosY);			
+			
 			LOG_TRACE("Initializing Window: {} (Width: {}p Height: {}p)", Specs.Title, Specs.Extent.x, Specs.Extent.y);
 
 			GLFWimage Icon;
@@ -187,8 +189,7 @@ namespace Lumina
 	{
 		return glfwGetWindowAttrib(Window, GLFW_ICONIFIED);
 	}
-
-
+	
 	void FWindow::Minimize()
 	{
 		glfwIconifyWindow(Window);

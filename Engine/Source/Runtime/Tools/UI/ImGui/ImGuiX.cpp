@@ -709,8 +709,7 @@ namespace Lumina::ImGuiX
         {
             Window->Minimize();
         }
-
-        
+    	
         if (ImGuiX::FlatButton(LE_ICON_WINDOW_RESTORE "##Res", ImVec2(WindowControlButtonWidth, -1)))
         {
             if (Window->IsWindowMaximized())
@@ -722,8 +721,7 @@ namespace Lumina::ImGuiX
                 Window->Maximize();
             }
         }
-
-
+    	
         ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
         if (ImGuiX::FlatButton(LE_ICON_WINDOW_CLOSE "##X", ImVec2(WindowControlButtonWidth, -1)))
         {
@@ -741,40 +739,36 @@ namespace Lumina::ImGuiX
     {
         Rect = glm::vec4(1.0f);
     
-        ImVec2 const titleBarPadding(0, 8);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, titleBarPadding);
+        const ImVec2 TitleBarPadding(0, 8);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, TitleBarPadding);
         ImGuiViewport* pViewport = ImGui::GetMainViewport();
     
         if (ImGui::BeginViewportSideBar("TitleBar", pViewport, ImGuiDir_Up, 40, ImGuiWindowFlags_NoDecoration))
         {
             ImGui::PopStyleVar();
     
-            // Calculate sizes
-            float const titleBarWidth = ImGui::GetWindowSize().x;
-            float const titleBarHeight = ImGui::GetWindowSize().y;
+            const float titleBarWidth = ImGui::GetWindowSize().x;
+            const float titleBarHeight = ImGui::GetWindowSize().y;
             Rect = glm::vec4(0.0f, 0.0f, titleBarWidth, titleBarHeight);
     
-            float const windowControlsWidth = GetWindowsControlsWidth();
-            float const windowControlsStartPosX = std::max( 0.0f, ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - windowControlsWidth );
-            ImVec2 const windowControlsStartPos( windowControlsStartPosX, ImGui::GetCursorPosY() - titleBarPadding.y );
+            const float windowControlsWidth = GetWindowsControlsWidth();
+            const float windowControlsStartPosX = eastl::max(0.0f, ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - windowControlsWidth);
+            const ImVec2 windowControlsStartPos(windowControlsStartPosX, ImGui::GetCursorPosY() - TitleBarPadding.y);
 
-            // Calculate the available space
-            float const availableSpace = titleBarWidth - windowControlsWidth - s_minimumDraggableGap - ( s_sectionPadding * 2 );
+            const float availableSpace = titleBarWidth - windowControlsWidth - s_minimumDraggableGap - ( s_sectionPadding * 2 );
             float remainingSpace = availableSpace;
 
-            // Calculate section widths
-            float const menuSectionFinalWidth = ( remainingSpace - menuSectionDesiredWidth ) > 0 ? menuSectionDesiredWidth : std::max( 0.0f, remainingSpace );
+            const float menuSectionFinalWidth = ( remainingSpace - menuSectionDesiredWidth ) > 0 ? menuSectionDesiredWidth : eastl::max( 0.0f, remainingSpace );
             remainingSpace -= menuSectionFinalWidth;
-            ImVec2 const menuSectionStartPos( s_sectionPadding, ImGui::GetCursorPosY() );
+            const ImVec2 menuSectionStartPos( s_sectionPadding, ImGui::GetCursorPosY() );
 
-            float const controlSectionFinalWidth = ( remainingSpace - controlsSectionDesiredWidth ) > 0 ? controlsSectionDesiredWidth : std::max( 0.0f, remainingSpace );
+            const float controlSectionFinalWidth = ( remainingSpace - controlsSectionDesiredWidth ) > 0 ? controlsSectionDesiredWidth : eastl::max( 0.0f, remainingSpace );
             remainingSpace -= controlSectionFinalWidth;
-            ImVec2 const controlSectionStartPos( windowControlsStartPos.x - s_sectionPadding - controlSectionFinalWidth, ImGui::GetCursorPosY() );
+            const ImVec2 controlSectionStartPos( windowControlsStartPos.x - s_sectionPadding - controlSectionFinalWidth, ImGui::GetCursorPosY() );
 
             ImVec2 DragAreaStartPos = menuSectionStartPos;
             DragAreaStartPos.x += menuSectionFinalWidth + 10;
             
-            // Dragging Logic
             ImGui::SetCursorPos(DragAreaStartPos);
             ImGui::InvisibleButton("TitleBarDragZone", ImVec2(remainingSpace, titleBarHeight));
             
@@ -805,7 +799,6 @@ namespace Lumina::ImGuiX
             }
 
     
-            // Draw menu section
             if (menuSectionDesiredWidth > 0)
             {
                 ImGui::SetCursorPos(menuSectionStartPos);
