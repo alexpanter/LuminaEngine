@@ -339,6 +339,11 @@ namespace Lumina
                 CopyEntity(New, Entity);
             }
         });
+        
+        if (ImGui::IsKeyPressed(ImGuiKey_F))
+        {
+            FocusViewportToEntity(GetLastSelectedEntity());
+        }
     }
 
     void FWorldEditorTool::EndFrame()
@@ -1438,7 +1443,7 @@ namespace Lumina
     
         if (ImGuiX::IconButton(LE_ICON_CROSSHAIRS, "##FocusSelection", 0xFFFFFFFF, BtnSize))
         {
-            //FocusViewportToEntity(SelectedEntity);
+            FocusViewportToEntity(GetLastSelectedEntity());
         }
     
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
@@ -1917,6 +1922,8 @@ namespace Lumina
             World = CWorld::DuplicateWorld(ProxyWorld);
             World->InitializeWorld(EWorldType::Game);
             
+            WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
+            
             OutlinerListView.ClearTree();
             OutlinerListView.MarkTreeDirty();
 
@@ -1937,6 +1944,8 @@ namespace Lumina
             
             SetWorld(ProxyWorld);
             ProxyWorld->SetActive(true);
+            
+            WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
             
             ProxyWorld = nullptr;
             
@@ -1971,12 +1980,8 @@ namespace Lumina
             ProxyWorld->DestroyEntity(EditorEntity);
             EditorEntity = entt::null;
             
-            //entt::entity PreviousSelectedEntity = SelectedEntity;
-            //SetSelectedEntity(entt::null);
-            
             SetupWorldForTool();
-
-            //SetSelectedEntity(PreviousSelectedEntity);
+            WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
             
             World->GetEntityRegistry().patch<STransformComponent>(EditorEntity, [TransformCopy](STransformComponent& Patch)
             {
@@ -2006,8 +2011,6 @@ namespace Lumina
 
             STransformComponent TransformCopy = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
             SCameraComponent CameraCopy =  World->GetEntityRegistry().get<SCameraComponent>(EditorEntity);
-
-            //entt::entity PreviousSelectedEntity = SelectedEntity;
             
             World->DestroyEntity(EditorEntity);
             EditorEntity = entt::null;
@@ -2015,7 +2018,7 @@ namespace Lumina
             SetWorld(ProxyWorld);
             ProxyWorld->SetActive(true);
             
-            //SetSelectedEntity(PreviousSelectedEntity);
+            WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
             
             World->GetEntityRegistry().patch<STransformComponent>(EditorEntity, [TransformCopy](STransformComponent& Patch)
             {
@@ -3083,7 +3086,6 @@ namespace Lumina
     void FWorldEditorTool::RebuildPropertyTables(entt::entity Entity)
     {
         using namespace entt::literals;
-        WorldSettingsPropertyTable = MakeUnique<FPropertyTable>(&World->GetDefaultWorldSettings(), SDefaultWorldSettings::StaticStruct());
 
         PropertyTables.clear();
 

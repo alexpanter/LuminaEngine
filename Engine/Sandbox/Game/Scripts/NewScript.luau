@@ -12,7 +12,7 @@ end
 
 function NewScript:OnReady()
     if(World:GetEntityRegistry():EntityCount() < 10000) then
-        World:GetEntityRegistry():Duplicate(self.Entity)
+        --World:GetEntityRegistry():Duplicate(self.Entity)
     end
 end
 

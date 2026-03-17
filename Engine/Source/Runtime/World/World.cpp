@@ -32,14 +32,6 @@
 
 namespace Lumina
 {
-    namespace Binds
-    {
-        static void OnScriptComponentReady(const FScriptComponentPendingReady& Event)
-        {
-            
-        }
-    }
-    
     namespace LuaBinds
     {
         using namespace entt::literals;
@@ -202,8 +194,15 @@ namespace Lumina
 
         EntityRegistry.ctx().emplace<entt::dispatcher&>(SingletonDispatcher);
         
-        for (auto Entity : EntityRegistry.view<SDefaultWorldSettings>())
+        auto WorldSettingsView = EntityRegistry.view<SDefaultWorldSettings>();
+        for (auto Entity : WorldSettingsView)
         {
+            if (!ALERT_IF_NOT(WorldSettingsView->size() == 1, "Multiple world settings were detected in the world! {}", WorldSettingsView->size()))
+            {
+                EntityRegistry.clear<SDefaultWorldSettings>();
+                break;
+            }
+            
             SingletonEntity = Entity;
             break;
         }

@@ -335,7 +335,7 @@ namespace Lumina
         const STransformComponent& EntityTransform = World->GetEntityRegistry().get<STransformComponent>(Entity);
         STransformComponent& EditorTransform = World->GetEntityRegistry().get<STransformComponent>(EditorEntity);
         
-        float FocusDistance = 3.0f;
+        float FocusDistance = 10.0f;
     
         glm::vec3 CurrentForward = EditorTransform.GetForward();
         glm::vec3 NewPosition = EntityTransform.GetLocation() - CurrentForward * FocusDistance;

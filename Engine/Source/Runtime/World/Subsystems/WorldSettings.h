@@ -13,5 +13,11 @@ namespace Lumina
         PROPERTY(Editable)
         float WorldKillHeight = -5'000;
         
+        PROPERTY(Editable)
+        float GravityScale = 1.0f;
+        
+        PROPERTY(Editable)
+        float FixedPhysicsTimestep = 60.0f;
+        
     };
 }

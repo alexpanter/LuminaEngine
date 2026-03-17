@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "JoltPhysicsScene.h"
-#include <algorithm>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
@@ -144,6 +143,7 @@ namespace Lumina::Physics
 
     void FJoltContactListener::GetFrictionAndRestitution(const JPH::Body& inBody, const JPH::SubShapeID& inSubShapeID, float& outFriction, float& outRestitution) const
     {
+        
     }
     
     FJoltPhysicsScene::FJoltPhysicsScene(CWorld* InWorld)
@@ -153,7 +153,7 @@ namespace Lumina::Physics
         JoltSystem = MakeUnique<JPH::PhysicsSystem>();
         
         JoltSystem->Init(65536, 0, 131072, 262144, GJoltLayerInterface, GObjectVsBroadPhaseLayerFilter, GObjectVsObjectLayerFilter);
-        JoltSystem->SetGravity(JPH::Vec3Arg(0.0f, GEarthGravity, 0.0f));
+        JoltSystem->SetGravity(JPH::Vec3Arg(0.0f, GEarthGravity * World->GetDefaultWorldSettings().GravityScale, 0.0f));
 
         JPH::PhysicsSettings JoltSettings;
         JoltSystem->SetPhysicsSettings(JoltSettings);
@@ -266,11 +266,13 @@ namespace Lumina::Physics
         constexpr double MaxDeltaTime = 0.25;
         constexpr int MaxSteps = 5;
     
-        DeltaTime = std::min(DeltaTime, MaxDeltaTime);
+        DeltaTime = eastl::min(DeltaTime, MaxDeltaTime);
         Accumulator += DeltaTime;
+        
+        float FixedTimeStep = 1.0f / World->GetDefaultWorldSettings().FixedPhysicsTimestep;
 
         CollisionSteps = static_cast<int>(Accumulator / FixedTimeStep);
-        CollisionSteps = std::min(CollisionSteps, MaxSteps);
+        CollisionSteps = eastl::min(CollisionSteps, MaxSteps);
         
         #if JPH_DEBUG_RENDERER
         if (FConsoleRegistry::Get().GetAs<bool>("Jolt.Debug.Draw"))
@@ -295,7 +297,7 @@ namespace Lumina::Physics
         {
             PreUpdate();
 
-            JoltSystem->Update(static_cast<float>(FixedTimeStep), CollisionSteps, &Allocator, FJoltPhysicsContext::GetThreadPool());
+            JoltSystem->Update(FixedTimeStep, CollisionSteps, &Allocator, FJoltPhysicsContext::GetThreadPool());
         
             PostUpdate();
             
@@ -304,7 +306,7 @@ namespace Lumina::Physics
             // Clamp accumulator if we hit max steps
             if (CollisionSteps >= MaxSteps)
             {
-                Accumulator = std::min(Accumulator, FixedTimeStep);
+                Accumulator = eastl::min(Accumulator, (double)FixedTimeStep);
             }
         }
         
@@ -412,7 +414,6 @@ namespace Lumina::Physics
         auto View = Registry.view<SRigidBodyComponent, STransformComponent>();
         View.each([&](entt::entity EntityID, const SRigidBodyComponent& BodyComponent, STransformComponent& TransformComponent)
         {
-            LUMINA_PROFILE_SECTION("Sync Entity Transform");
             const JPH::Body* Body = LockInterface.TryGetBody(JPH::BodyID(BodyComponent.BodyID));
             if (Body == nullptr || !Body->IsActive() || Body->IsStatic())
             {
