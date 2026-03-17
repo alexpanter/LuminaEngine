@@ -60,6 +60,14 @@ namespace Lumina
             return Meta.cast<size_t>();
         }
         
+        static Lua::FRef EmplaceComponent_Lua(FEntityRegistry& Registry, entt::entity Entity, Lua::FRef Ref)
+        {
+            LUMINA_PROFILE_SECTION("Emplace Component [Lua]");
+            entt::id_type Type = ECS::Utils::GetTypeID(Ref);
+            auto Meta = ECS::Utils::InvokeMetaFunc(Type, "emplace_lua"_hs, entt::forward_as_meta(Registry), Entity, entt::forward_as_meta(Ref));
+            return Meta.cast<Lua::FRef>();
+        }
+        
         static entt::runtime_view RuntimeView_Lua(FEntityRegistry& Registry, Lua::FVariadicArgs Args)
         {
             LUMINA_PROFILE_SCOPE();
@@ -147,12 +155,14 @@ namespace Lumina
         GlobalRef.NewClass<FEntityRegistry>("FEntityRegistry")
             .AddFunction<&FEntityRegistry::valid>("Valid")
             .AddFunction<&FEntityRegistry::orphan>("Orphan")
+            .AddFunction<&FEntityRegistry::compact<>>("Compact")
             .AddFunction<&LuaBinds::EntityCount_Lua>("EntityCount")
             .AddFunction<&LuaBinds::RemoveComponent_Lua>("Remove")
             .AddFunction<&LuaBinds::CreateEntity_Lua>("Create")
             .AddFunction<&LuaBinds::DuplicateEntity_Lua>("Duplicate")
             .AddFunction<&LuaBinds::DestroyEntity_Lua>("Destroy")
             .AddFunction<&LuaBinds::HasComponent_Lua>("Has")
+            .AddFunction<&LuaBinds::EmplaceComponent_Lua>("Emplace")
             .AddFunction<&LuaBinds::GetComponent_Lua>("Get")
             .AddFunction<&LuaBinds::RuntimeView_Lua>("RuntimeView")
             .Register();

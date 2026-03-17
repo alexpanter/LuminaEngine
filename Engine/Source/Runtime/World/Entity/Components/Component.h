@@ -61,10 +61,25 @@ namespace Lumina
         template<typename TComponent>
         Lua::FRef GetComponent_Lua(entt::registry& Registry, entt::entity Entity, const Lua::FRef& Ref)
         {
-
             TComponent& Component = Registry.get<TComponent>(Entity);
             Lua::TStack<TComponent&>::Push(Ref.GetState(), Component);
             return Lua::FRef(Ref.GetState(), -1);
+        }
+        
+        template<typename TComponent>
+        Lua::FRef EmplaceComponent_Lua(entt::registry& Registry, entt::entity Entity, const Lua::FRef& Ref)
+        {
+            if constexpr (eastl::is_empty_v<TComponent>)
+            {
+                Registry.emplace<TComponent>(Entity);
+                return Lua::FNil{};
+            }
+            else
+            {
+                TComponent& New = Registry.emplace_or_replace<TComponent>(Entity);
+                Lua::TStack<TComponent&>::Push(Ref.GetState(), New);
+                return Lua::FRef(Ref.GetState(), -1);
+            }
         }
 
         template<typename TComponent>
@@ -94,6 +109,7 @@ namespace Lumina
             .template func<&RemoveComponent<TComponent>>("remove"_hs)
             .template func<&ClearComponent<TComponent>>("clear"_hs)
             .template func<&EmplaceComponent<TComponent>>("emplace"_hs)
+            .template func<&EmplaceComponent_Lua<TComponent>>("emplace_lua"_hs)
             .template func<&HasComponent<TComponent>>("has"_hs);
             
             if constexpr (!eastl::is_empty_v<TComponent>)
