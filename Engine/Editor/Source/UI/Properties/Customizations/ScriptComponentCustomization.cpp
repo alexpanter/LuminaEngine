@@ -84,7 +84,7 @@ namespace Lumina
                         if (ImGui::Selectable(SelectableLabel.c_str()))
                         {
                             ScriptComponent->ScriptPath.Path = FileInfo.VirtualPath;
-                            ScriptComponent->World->OnScriptComponentCreated(ScriptComponent->Entity, *ScriptComponent);
+                            ScriptComponent->World->OnScriptComponentCreated(ScriptComponent->Entity, *ScriptComponent, true);
                             ImGui::CloseCurrentPopup();
                             bWasChanged = true;
                         }

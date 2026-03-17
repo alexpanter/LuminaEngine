@@ -255,8 +255,9 @@ namespace Lumina
 
     bool FEditorTool::DrawViewport(const FUpdateContext& UpdateContext, ImTextureRef ViewportTexture)
     {
-        const ImVec2 ViewportSize(eastl::max(ImGui::GetContentRegionAvail().x, 64.0f), eastl::max(ImGui::GetContentRegionAvail().y, 64.0f));
-        const ImVec2 WindowPosition = ImGui::GetWindowPos();
+        const ImVec2 ContentRegion = ImGui::GetContentRegionAvail();
+        const ImVec2 ViewportSize(eastl::max(ContentRegion.x, 64.0f), eastl::max(ContentRegion.y, 64.0f));
+        const ImVec2 WindowPosition = ImGui::GetCursorScreenPos();
         const ImVec2 WindowBottomRight = { WindowPosition.x + ViewportSize.x, WindowPosition.y + ViewportSize.y };
         float AspectRatio = (ViewportSize.x / ViewportSize.y);
         float t = (ViewportSize.x - 500) / (1200 - 500);

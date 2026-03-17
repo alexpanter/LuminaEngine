@@ -24,8 +24,11 @@ namespace Lumina
         Lua::FRef ReadyFunc;
         Lua::FRef UpdateFunc;
         Lua::FRef DetachFunc;
+        Lua::FRef ScriptMetaTable;
 
         CWorld* World           = nullptr;
         entt::entity Entity     = entt::null;
+        
+        bool bRunInEditor = false;
     };
 }

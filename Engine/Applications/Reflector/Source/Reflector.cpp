@@ -52,9 +52,11 @@ int main(int argc, char* argv[])
     for (const auto& Project : Data["Projects"])
     {
         eastl::string ProjectName = Project["Name"].get<std::string>().c_str();
+        eastl::string ProjectPath = Project["Path"].get<std::string>().c_str();
         
         auto ReflectedProject = eastl::make_unique<FReflectedProject>(&Workspace);
         ReflectedProject->Name = eastl::move(ProjectName);
+        ReflectedProject->Path = eastl::move(ProjectPath);
         
         for (const auto& IncludeDirJson : Project["IncludeDirs"])
         {

@@ -186,6 +186,11 @@ namespace Lumina::Reflection
         Stream += "}\n";
     }
 
+    void FReflectedEnum::DefineLuaAPI(eastl::string& Stream)
+    {
+        Stream += "declare " + DisplayName + ": number\n";
+    }
+
     //---------------------------------------------------------------------------------------------------------------------
     
     FReflectedStruct::~FReflectedStruct()
@@ -521,7 +526,7 @@ namespace Lumina::Reflection
                     continue;
                 }
                 
-                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")&>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
+                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
             }
             
             Stream += "\t\tdefault: return 0;\n";
@@ -606,21 +611,172 @@ namespace Lumina::Reflection
             Stream += "\t\tRegistry->remove<" + QualifiedName + ">(Entity);\n";
             Stream += "\t\treturn 0;\n";
             Stream += "\t}, \"Remove\");\n";
-            Stream += "\tlua_setfield(L, -2, \"Remove\");\n\n";
+            Stream += "\tlua_setfield(L, -2, \"Remove\");\n\n"; 
         }
         
-        Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
-        Stream += "\t{\n";
-        Stream += "\t\treturn 0;\n";
-        Stream += "\t}, \"new\");\n";
+        Stream += "\tlua_pushunsigned(L, entt::hashed_string(\"" + DisplayName + "\"));\n";
+        Stream += "\tlua_setfield(L, MetaTableIdx, \"__type_id\");\n";
+        Stream += "\n";
+        
+        //@TODO Find a better way.
+        if (!dynamic_cast<FReflectedClass*>(this))
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
+            Stream += "\t{\n";
+            Stream += "\t\tvoid* Block = lua_newuserdatataggedwithmetatable(State, sizeof(Lumina::Lua::TUserdataHeader<" + QualifiedName + ">), Lumina::Lua::TClassTraits<" + QualifiedName + ">::Tag());\n";
+            Stream += "\t\tauto* Header = new (Block) Lumina::Lua::TUserdataHeader<" + QualifiedName + ">{};\n";
+            Stream += "\t\tauto Instance = " + QualifiedName + "{};\n";
+            Stream += "\t\tHeader->Emplace(Instance);\n";
+            Stream += "\t\treturn 1;\n";
+            Stream += "\t}, \"new\");\n";
+            Stream += "\tlua_setfield(L, -2, \"new\");\n";
+        }
             
-        Stream += "\tlua_setfield(L, -2, \"new\");\n";
         Stream += "\n";
         Stream += "\tlua_setglobal(L, \"" + DisplayName + "\");\n";
             
         Stream += "\tDEBUG_ASSERT(BindingTop == lua_gettop(L));\n";
         
         Stream += "}\n";
+    }
+
+    void FReflectedStruct::DefineLuaAPI(eastl::string& Stream)
+    {
+        
+        Stream += "declare " + DisplayName + ": { }\n";
+        
+        Stream += "declare class " + DisplayName + "\n";
+
+        for (const auto& Prop : Props)
+        {
+            if (Prop->bInner || Prop->GetLuaType().empty())
+            {
+                continue;
+            }
+            
+            
+            Stream += "\t" + Prop->Name + ": " + Prop->GetLuaType().data() + "\n";
+        }
+
+        for (const auto& Function : Functions)
+        {
+            if (Function->Arguments.empty())
+            {
+                Stream += "\tfunction " + Function->Name + "(self): any\n"; 
+            }
+            else
+            {
+                Stream += "\tfunction " + Function->Name + "(self, ";
+                
+                uint32_t Count = 0;
+                for (const FFieldInfo& Info : Function->Arguments)
+                {
+                    Stream += Info.Name + ": ";
+                    switch (Info.Flags)
+                    {
+                    case EPropertyTypeFlags::None:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Int8:
+                    case EPropertyTypeFlags::Int16:
+                    case EPropertyTypeFlags::Int32:
+                    case EPropertyTypeFlags::Int64:
+                    case EPropertyTypeFlags::UInt8:
+                    case EPropertyTypeFlags::UInt16:
+                    case EPropertyTypeFlags::UInt32:
+                    case EPropertyTypeFlags::UInt64:
+                    case EPropertyTypeFlags::Float:
+                    case EPropertyTypeFlags::Double:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Bool:
+                        Stream += "boolean";
+                        break;
+                    case EPropertyTypeFlags::Object:
+                        Stream += ClangUtils::StripNamespace(Info.TypeName);
+                        break;
+                    case EPropertyTypeFlags::Class:
+                        Stream += ClangUtils::StripNamespace(Info.TypeName);
+                        break;
+                    case EPropertyTypeFlags::Name:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::String:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::Enum:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Vector:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Struct:
+                        Stream += ClangUtils::StripNamespace(Info.TypeName);
+                        break;
+                    }
+                    
+                    if (Count != Function->Arguments.size() - 1)
+                    {
+                        Stream += ", ";
+                    }
+                    
+                    Count++;
+                }
+                
+                Stream += ")";
+                
+                if (Function->Return.has_value())
+                {
+                    Stream += ": ";
+                    switch (Function->Return->Flags)
+                    {
+                    case EPropertyTypeFlags::None:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Int8:
+                    case EPropertyTypeFlags::Int16:
+                    case EPropertyTypeFlags::Int32:
+                    case EPropertyTypeFlags::Int64:
+                    case EPropertyTypeFlags::UInt8:
+                    case EPropertyTypeFlags::UInt16:
+                    case EPropertyTypeFlags::UInt32:
+                    case EPropertyTypeFlags::UInt64:
+                    case EPropertyTypeFlags::Float:
+                    case EPropertyTypeFlags::Double:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Bool:
+                        Stream += "boolean";
+                        break;
+                    case EPropertyTypeFlags::Object:
+                        Stream += ClangUtils::StripNamespace(Function->Return->TypeName);
+                        break;
+                    case EPropertyTypeFlags::Class:
+                        Stream += ClangUtils::StripNamespace(Function->Return->TypeName);
+                        break;
+                    case EPropertyTypeFlags::Name:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::String:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::Enum:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Vector:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Struct:
+                        Stream += ClangUtils::StripNamespace(Function->Return->TypeName);
+                        break;
+                    }
+                }
+                
+                Stream += "\n";
+            }
+        }
+        
+        Stream += "end\n";
     }
 
 
@@ -741,6 +897,7 @@ namespace Lumina::Reflection
             Stream += "\tstatic const Lumina::FPropertyParams* const PropPointers[];\n";
         }
         
+        SetupLuaRegistration(Stream);
         
         Stream += "};\n\n";
         
@@ -781,6 +938,8 @@ namespace Lumina::Reflection
         
         Stream += "const Lumina::FClassParams Construct_CClass_" + Namespace + "_" + DisplayName + "_Statics::ClassParams = {\n";
         Stream += "\t&" + Namespace + "::" + DisplayName + "::StaticClass,\n";
+        Stream += "\t&SetupLuaBindings,\n";
+
         if (!Props.empty())
         {
             Stream += "\tPropPointers,\n";

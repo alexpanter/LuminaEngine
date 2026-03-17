@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "Scripting.h"
-
 #include "lstate.h"
 #include "luacode.h"
 #include "lualib.h"
@@ -11,6 +10,8 @@
 #include "Input/InputProcessor.h"
 #include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
+#include "Paths/Paths.h"
+#include "World/World.h"
 #include "World/Entity/Registry/EntityRegistry.h"
 #include "World/Entity/Systems/SystemContext.h"
 
@@ -97,21 +98,19 @@ namespace Lumina::Lua
         lua_pushvalue(L, LUA_GLOBALSINDEX);
         FRef GlobalsRef(L, -1);
         
-        struct Foobar
-        {
-            
-        };
-        
-        auto Class = GlobalsRef.NewClass<Foobar>("Foobar");
+        CWorld::RegisterLuaModule(GlobalsRef);
         
         FRef InputTable = GlobalsRef.NewTable("Input");
         InputTable.SetFunction<&FInputProcessor::IsKeyDown>("IsKeyDown", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyUp>("IsKeyUp", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyPressed>("IsKeyPressed", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyRepeated>("IsKeyRepeated", &FInputProcessor::Get());
-        
-        luaL_newmetatable(L, "EntityRegistry");
-        lua_setuserdatametatable(L, TClassTraits<FEntityRegistry>::Tag());
+        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaX>("GetMouseDeltaX", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaY>("GetMouseDeltaY", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseX>("GetMouseX", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseY>("GetMouseY", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseZ>("GetMouseZ", &FInputProcessor::Get());
+
     }
 
     void FScriptingContext::SandboxGlobals()
@@ -195,10 +194,18 @@ namespace Lumina::Lua
         }
         
         FStringView FileName = VFS::FileName(Path);
-        return LoadUniqueScript(ScriptData, FileName);
+        TSharedPtr<FScript> Script = LoadUniqueScript(ScriptData, FileName);
+        if (Script == nullptr)
+        {
+            return {};
+        }
+        
+        Script->Path = Path;
+        RegisteredScripts[Path].emplace_back(Script);
+        return Move(Script); // Won't elide.
     }
 
-    TSharedPtr<FScript> FScriptingContext::LoadUniqueScript(FStringView Code, FStringView Name)
+    TSharedPtr<FScript> FScriptingContext::LoadUniqueScript(FStringView Code, FStringView Name) const
     {
         LUMINA_PROFILE_SCOPE();
         
@@ -279,7 +286,13 @@ namespace Lumina::Lua
         
     }
 
-    #if LUAI_GCMETRICS
+    FRef FScriptingContext::GetGlobalsRef() const
+    {
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        return FRef(L, -1);
+    }
+
+#if LUAI_GCMETRICS
     const GCMetrics* FScriptingContext::GetGCMetrics() const
     {
         return &L->global->gcmetrics;

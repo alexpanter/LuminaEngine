@@ -19,7 +19,9 @@ namespace Lumina
 
         bool GenerateLuaBinding(eastl::string& Stream) override;
         
-        virtual const char* GetPropertyParamType() const override { return "FStringPropertyParams"; } \
+        const char* GetPropertyParamType() const override { return "FStringPropertyParams"; }
+        eastl::string_view GetLuaType() override { return "string"; }
+
 
     };
 
@@ -36,7 +38,7 @@ namespace Lumina
             AppendPropertyDef(Stream, PropertyFlagStr.c_str(), "Lumina::EPropertyTypeFlags::Name");
         }
 
-        virtual const char* GetPropertyParamType() const override { return "FNamePropertyParams"; } \
-
+        const char* GetPropertyParamType() const override { return "FNamePropertyParams"; }
+        eastl::string_view GetLuaType() override { return "string"; }
     };
 }

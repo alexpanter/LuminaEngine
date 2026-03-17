@@ -323,6 +323,11 @@ namespace Lumina
             
             VFS::DirectoryIterator(SelectedPath, [&](const VFS::FFileInfo& FileInfo)
             {
+                if (FileInfo.IsHidden())
+                {
+                    return;
+                }
+                
                 if (!FileInfo.IsDirectory())
                 {
                     if (!FileInfo.IsLAsset() && !FileInfo.IsLua())

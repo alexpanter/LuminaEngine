@@ -782,7 +782,7 @@ namespace Lumina
         ASSERT(TopLevelDockspaceID != 0);
 
         bool bIsToolStillOpen = true;
-        bool* bIsToolOpen = (EditorTool == WorldEditorTool) ? nullptr : &bIsToolStillOpen; // Prevent closing the map-editor editor tool
+        bool* bIsToolOpen = (EditorTool == WorldEditorTool || EditorTool == ContentBrowser || EditorTool == ConsoleLogTool) ? nullptr : &bIsToolStillOpen; // Prevent closing the map-editor editor tool
         
         // Top level editors can only be docked with each others
         ImGui::SetNextWindowClass(&EditorWindowClass);
@@ -1044,12 +1044,12 @@ namespace Lumina
                 {
                     LUMINA_PROFILE_SECTION("Draw Tool Window");
 
-                    ImGuiWindowFlags ToolWindowFlags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNavFocus;
+                    ImGuiWindowFlags ToolWindowFlags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse;
 
                     ImGui::SetNextWindowClass(&Tool->ToolWindowsClass);
 
                     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().WindowPadding);
-                    bool const DrawToolWindow = ImGui::Begin(ToolWindowName.c_str(), &Window->bOpen, ToolWindowFlags);
+                    bool const DrawToolWindow = ImGui::Begin(ToolWindowName.c_str(), nullptr, ToolWindowFlags);
                     ImGui::PopStyleVar();
 
                     if (DrawToolWindow)
@@ -2473,9 +2473,19 @@ namespace Lumina
             Platform::LaunchURL(TEXT("https://discord.gg/UhTmzB8UdY"));
         }
 
-        if (ImGui::MenuItem(LE_ICON_BOOK " Documentation", "F1"))
+        if (ImGui::BeginMenu(LE_ICON_BOOK " Documentation"))
         {
-            Platform::LaunchURL(TEXT("https://discord.gg/UhTmzB8UdY"));
+            if (ImGui::MenuItem(LE_ICON_GROUP " Lumina"))
+            {
+                Platform::LaunchURL(TEXT("https://discord.gg/UhTmzB8UdY"));
+            }
+            
+            if (ImGui::MenuItem(LE_ICON_LANGUAGE_LUA " Luau"))
+            {
+                Platform::LaunchURL(TEXT("https://luau.org/getting-started/"));
+            }
+            
+            ImGui::EndMenu();
         }
     
         if (ImGui::MenuItem(LE_ICON_ACCOUNT_QUESTION " Tutorials"))

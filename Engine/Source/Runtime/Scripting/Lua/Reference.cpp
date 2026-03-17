@@ -4,6 +4,12 @@
 
 namespace Lumina::Lua
 {
+    FRef::FRef(FNil)
+        : State(nullptr)
+        , Ref(LUA_NOREF)
+    {
+    }
+
     FRef::FRef(lua_State* L, int Index)
     : State(L)
     {
@@ -118,14 +124,18 @@ namespace Lumina::Lua
     {
         if (!Push())
         {
-            return {};
+            return FNil{};
         }
         
+        if (!lua_istable(State, -1))
+        {
+            return FNil{};
+        }
         int Type = lua_getfield(State, -1, Key.data());
         if (Type <= LUA_TNIL)
         {
             lua_pop(State, 2);
-            return {};
+            return FNil{};
         }
         
         FRef Result(State, -1);

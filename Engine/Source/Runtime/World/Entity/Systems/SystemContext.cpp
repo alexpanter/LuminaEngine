@@ -57,13 +57,9 @@ namespace Lumina
     {
         World->PhysicsScene->ChangeBodyMotionType(BodyID, NewType);
     }
+    
 
-    TOptional<FRayResult> FSystemContext::CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug, float DebugDuration, uint32 LayerMask, int64 IgnoreBody) const
-    {
-        return World->CastRay(Start, End, bDrawDebug, DebugDuration, LayerMask, IgnoreBody);
-    }
-
-    TVector<FRayResult> FSystemContext::CastSphere(const FSphereCastSettings& Settings) const
+    TVector<SRayResult> FSystemContext::CastSphere(const SSphereCastSettings& Settings) const
     {
         return World->CastSphere(Settings);
     }

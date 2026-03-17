@@ -20,6 +20,7 @@ namespace Lumina::Reflection
         FReflectedProject(FReflectedWorkspace* InWorkspace);
         
         eastl::string                                                       Name;
+        eastl::string                                                       Path;
         FReflectedWorkspace*                                                Workspace;
         eastl::hash_map<FStringHash, eastl::unique_ptr<FReflectedHeader>>   Headers;
         eastl::vector<eastl::string>                                        IncludeDirs;

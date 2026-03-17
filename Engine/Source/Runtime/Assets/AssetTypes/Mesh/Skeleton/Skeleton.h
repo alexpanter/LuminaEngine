@@ -2,7 +2,7 @@
 
 #include "Core/Object/Object.h"
 #include "Renderer/MeshData.h"
-#include "Core/Math/Transform.h"
+#include "Core/Object/ObjectHandleTyped.h"
 #include "Memory/SmartPtr.h"
 #include "Skeleton.generated.h"
 

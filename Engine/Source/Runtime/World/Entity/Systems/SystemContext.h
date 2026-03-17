@@ -135,8 +135,7 @@ namespace Lumina
         RUNTIME_API void DeactivateBody(uint32 BodyID);
         RUNTIME_API void ChangeBodyMotionType(uint32 BodyID, EBodyType NewType);
         
-        RUNTIME_API TOptional<FRayResult> CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug = false, float DebugDuration = 0.0f, uint32 LayerMask = 0xFFFFFFFF, int64 IgnoreBody = -1) const;
-        RUNTIME_API TVector<FRayResult> CastSphere(const FSphereCastSettings& Settings) const;
+        RUNTIME_API TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings) const;
 
         
         RUNTIME_API STransformComponent& GetEntityTransform(entt::entity Entity) const;

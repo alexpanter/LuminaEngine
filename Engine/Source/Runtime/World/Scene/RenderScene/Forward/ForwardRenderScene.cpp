@@ -39,10 +39,6 @@ namespace Lumina
         , LightData()
         , SceneGlobalData()
         , ShadowAtlas(FShadowAtlasConfig())
-        , DepthMeshPass()
-        , OpaqueMeshPass()
-        , TranslucentMeshPass()
-        , ShadowMeshPass()
     {
     }
 
@@ -66,7 +62,6 @@ namespace Lumina
         GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::DirectionalLightIcon]);
         GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::SpotLightIcon]);
         #endif
-        
     }
 
     void FForwardRenderScene::Shutdown()
@@ -150,10 +145,14 @@ namespace Lumina
 
     void FForwardRenderScene::SwapchainResized(glm::vec2 NewSize)
     {
-        SceneViewport = GRenderContext->CreateViewport(NewSize, "Forward Renderer Viewport");
-        InitFrameResources();
-        
+        GRenderContext->ClearCommandListCache();
+        GRenderContext->ClearBindingCaches();
         BindingCache.ReleaseResources();
+        
+        SceneViewport = GRenderContext->CreateViewport(NewSize, "Forward Renderer Viewport");
+        
+        InitBuffers();
+        InitFrameResources();
     }
 
     void FForwardRenderScene::CompileDrawCommands(FRenderGraph& RenderGraph)
@@ -915,6 +914,15 @@ namespace Lumina
         for (int i = 0; i < (int)ELightType::Num; ++i)
         {
             PackedShadows[i].clear();
+        }
+        
+        if (DrawCommands.empty())
+        {
+            FRGPassDescriptor* Descriptor = RenderGraph.AllocDescriptor();
+            RenderGraph.AddPass(RG_Compute, FRGEvent("Clear Depth Pass"), Descriptor, [&] (ICommandList& CmdList)
+            {
+               CmdList.ClearImageUInt(GetNamedImage(ENamedImage::DepthAttachment), AllSubresources, 0); 
+            });
         }
     }
 
@@ -2038,7 +2046,7 @@ namespace Lumina
             ImageDesc.Dimension         = EImageDimension::Texture2D;
             ImageDesc.DebugName         = "Depth Pyramid";
             
-            NamedImages[(int)ENamedImage::DepthPyramid]                = GRenderContext->CreateImage(ImageDesc);
+            NamedImages[(int)ENamedImage::DepthPyramid] = GRenderContext->CreateImage(ImageDesc);
         }
 
         //==================================================================================================
@@ -2083,6 +2091,7 @@ namespace Lumina
         float SizeY = (float)GetNamedImage(ENamedImage::HDR)->GetSizeY();
         float SizeX = (float)GetNamedImage(ENamedImage::HDR)->GetSizeX();
 
+        SceneViewportState = {};
         SceneViewportState.Viewports.emplace_back(FViewport(SizeX, SizeY));
         SceneViewportState.Scissors.emplace_back(FRect((int)SizeX, (int)SizeY));
         

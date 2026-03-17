@@ -16,6 +16,7 @@ namespace Lumina
         void AppendDefinition(eastl::string& Stream) const override;
 
         const char* GetPropertyParamType() const override { return "FStructPropertyParams"; }
+        eastl::string_view GetLuaType() override;
 
         bool CanDeclareCrossModuleReferences() const override { return true; }
         void DeclareCrossModuleReference(const eastl::string& API, eastl::string& Stream) override

@@ -2,6 +2,7 @@
 #include "Object.h"
 #include "Class.h"
 #include "Core/Reflection/Type/LuminaTypes.h"
+#include "Core/Serialization/ObjectArchiver.h"
 #include "Package/Package.h"
 
 /** Low level CObject registration. */
@@ -72,13 +73,15 @@ namespace Lumina
                 {
                     void* ValuePtr = Current->IsA(EPropertyTypeFlags::Vector) ? this : Current->GetValuePtr<void>(this);
                     FMemoryWriter Writer(Bytes);
-                    Current->Serialize(Writer, ValuePtr);
+                    FObjectProxyArchiver WriterProxy(Writer, true);
+                    Current->Serialize(WriterProxy, ValuePtr);
                 }
                 
                 {
                     void* ValuePtr = Current->IsA(EPropertyTypeFlags::Vector) ? Duplicate : Current->GetValuePtr<void>(Duplicate);
                     FMemoryReader Reader(Bytes);
-                    Current->Serialize(Reader, ValuePtr);
+                    FObjectProxyArchiver ReaderProxy(Reader, true);
+                    Current->Serialize(ReaderProxy, ValuePtr);
                 }
             }
         }

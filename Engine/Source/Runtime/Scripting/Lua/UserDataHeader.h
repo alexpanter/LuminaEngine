@@ -1,27 +1,40 @@
 ﻿#pragma once
 
+#include "Core/Variant/Variant.h"
 
 namespace Lumina::Lua
 {
     template<typename T>
     struct TUserdataHeader
     {
+        using RawT                      = eastl::remove_pointer_t<eastl::decay_t<T>>;
+        
         template<typename... TArgs>
-        void Emplace(TArgs&&... args)
+        void Emplace(TArgs&&... Args)
         {
-            new (Storage) T(eastl::forward<TArgs>(args)...);
+            Storage.template emplace<RawT>(eastl::forward<TArgs>(Args)...);
         }
 
-        T* Underlying()
+        void SetExternal(RawT* Ptr)
         {
-            return reinterpret_cast<T*>(Storage);
+            Storage.template emplace<RawT*>(Ptr);
         }
 
-        const T* Underlying() const
+        RawT* Underlying()
         {
-            return reinterpret_cast<const T*>(Storage);
+            if (auto* Obj = eastl::get_if<RawT>(&Storage))
+            {
+                return Obj;
+            }
+            
+            return *eastl::get_if<RawT*>(&Storage);
+        }
+        
+        void InvokeDtor()
+        {
+            Storage = {};
         }
 
-        alignas(T) unsigned char Storage[sizeof(T)];
+        TVariant<eastl::monostate, RawT, RawT*> Storage;
     };
 }

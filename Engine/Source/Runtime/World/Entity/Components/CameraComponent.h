@@ -43,13 +43,13 @@ namespace Lumina
         const FViewVolume& GetViewVolume() const { return ViewVolume; }
         
         FUNCTION(Script)
-        const glm::vec3& GetPosition() const { return ViewVolume.GetViewPosition(); }
+        glm::vec3 GetPosition() const { return ViewVolume.GetViewPosition(); }
         
         FUNCTION(Script)
-        const glm::vec3& GetForwardVector() const { return ViewVolume.GetForwardVector(); }
+        glm::vec3 GetForwardVector() const { return ViewVolume.GetForwardVector(); }
         
         FUNCTION(Script)
-        const glm::vec3& GetRightVector() const { return ViewVolume.GetRightVector(); }
+        glm::vec3 GetRightVector() const { return ViewVolume.GetRightVector(); }
 
         PROPERTY(Editable, Category = "Camera")
         float FOV = 0.0f;

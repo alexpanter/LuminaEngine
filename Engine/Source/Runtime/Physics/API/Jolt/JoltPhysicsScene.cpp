@@ -5,6 +5,7 @@
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
+#include "Physics/Ray/RayCast.h"
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
@@ -279,6 +280,17 @@ namespace Lumina::Physics
         }
         #endif
         
+        while (!PendingRigidBodyCreations.empty())
+        {
+            entt::entity Entity = PendingRigidBodyCreations.front();
+            PendingRigidBodyCreations.pop();
+            
+            if (World->GetEntityRegistry().valid(Entity))
+            {
+                OnRigidBodyComponentConstructed(World->GetEntityRegistry(), Entity);
+            }
+        }
+        
         if (CollisionSteps > 0)
         {
             PreUpdate();
@@ -441,7 +453,7 @@ namespace Lumina::Physics
         });
     }
 
-    TOptional<FRayResult> FJoltPhysicsScene::CastRay(const FRayCastSettings& Settings)
+    TOptional<SRayResult> FJoltPhysicsScene::CastRay(const SRayCastSettings& Settings)
     {
         LUMINA_PROFILE_SCOPE();
 
@@ -499,7 +511,7 @@ namespace Lumina::Physics
         
         JPH::Vec3 SurfaceNormal = Body->GetWorldSpaceSurfaceNormal(Hit.mSubShapeID2, Ray.GetPointOnRay(Hit.mFraction));
         
-        FRayResult Result
+        SRayResult Result
         {
             .BodyID     = Hit.mBodyID.GetIndexAndSequenceNumber(),
             .Entity     = static_cast<uint32>(Body->GetUserData()),
@@ -513,7 +525,7 @@ namespace Lumina::Physics
         return Result;
     }
 
-    TVector<FRayResult> FJoltPhysicsScene::CastSphere(const FSphereCastSettings& Settings)
+    TVector<SRayResult> FJoltPhysicsScene::CastSphere(const SSphereCastSettings& Settings)
     {
         LUMINA_PROFILE_SCOPE();
 
@@ -613,7 +625,7 @@ namespace Lumina::Physics
         
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         
-        TVector<FRayResult> Results;
+        TVector<SRayResult> Results;
         Results.reserve(Collector.Results.size());
         
         for (const JPH::ShapeCastResult& Hit : Collector.Results)
@@ -628,7 +640,7 @@ namespace Lumina::Physics
             JPH::Vec3 SurfaceNormal = Hit.mPenetrationAxis.Normalized();
             
             
-            FRayResult Result
+            SRayResult Result
             {
                 .BodyID     = Hit.mBodyID2.GetIndexAndSequenceNumber(),
                 .Entity     = static_cast<uint32>(Body->GetUserData()),
@@ -648,7 +660,7 @@ namespace Lumina::Physics
             Results.push_back(Result);
         }
         
-        eastl::sort(Results.begin(), Results.end(), [](const FRayResult& A, const FRayResult& B)
+        eastl::sort(Results.begin(), Results.end(), [](const SRayResult& A, const SRayResult& B)
         {
             return A.Fraction < B.Fraction;
         });
@@ -718,7 +730,7 @@ namespace Lumina::Physics
     void FJoltPhysicsScene::OnRigidBodyComponentConstructed(entt::registry& Registry, entt::entity Entity)
     {
         LUMINA_PROFILE_SCOPE();
-        
+
         JPH::ShapeRefC Shape;
         glm::vec3 ColliderTranslationOffset(0.0f);
         glm::vec3 ColliderRotationOffset(0.0f);
@@ -756,11 +768,15 @@ namespace Lumina::Physics
         }
         else
         {
-            LOG_ERROR("Entity {} attempted to construct a rigid body without a collider!", entt::to_integral(Entity));
+            PendingRigidBodyCreations.push(Entity);
             return;
         }
 
         SRigidBodyComponent& RigidBodyComponent = Registry.get<SRigidBodyComponent>(Entity);
+        if (RigidBodyComponent.BodyID != JPH::BodyID::cInvalidBodyID)
+        {
+            return;
+        }
         
         JPH::ObjectLayer Layer      = JoltUtils::PackToObjectLayer(RigidBodyComponent.CollisionProfile);
         JPH::EMotionType MotionType = ToJoltMotionType(RigidBodyComponent.BodyType);

@@ -532,6 +532,17 @@ namespace Lumina::ECS::Utils
         return entt::hashed_string(Type->GetName().c_str());
     }
 
+    entt::id_type GetTypeID(const Lua::FRef& Obj)
+    {
+        auto Ref = Obj["__type_id"];
+        if (Ref.IsValid())
+        {
+            return Ref.Get<entt::id_type>();
+        }
+        
+        return entt::id_type{};
+    }
+
     void SetEntityBodyType(FEntityRegistry& Registry, entt::entity Entity)
     {
         Registry.emplace_or_replace<FNeedsPhysicsBodyUpdate>(Entity);

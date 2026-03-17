@@ -12,13 +12,16 @@ namespace Lumina
         LUMINA_PROFILE_SCOPE(); 
         
         auto View = Context.CreateView<SScriptComponent>(entt::exclude<SDisabledTag>);
-        View.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
+        View.each([&](entt::entity, SScriptComponent& ScriptComponent)
         {
             if (const TSharedPtr<Lua::FScript>& Script = ScriptComponent.Script)
             {
-                if (ScriptComponent.UpdateFunc.IsValid())
+                if ((Context.GetWorldType() == EWorldType::Editor) == ScriptComponent.bRunInEditor)
                 {
-                    ScriptComponent.UpdateFunc(Script->Reference, Context.GetDeltaTime());
+                    if (ScriptComponent.UpdateFunc.IsValid())
+                    {
+                        ScriptComponent.UpdateFunc(Script->Reference, Context.GetDeltaTime());
+                    }
                 }
             }
         });

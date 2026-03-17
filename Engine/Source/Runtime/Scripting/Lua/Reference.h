@@ -20,7 +20,68 @@ namespace Lumina::Lua
     {
     public:
         
+        class FIterator
+        {
+        public:
+            
+            FIterator(lua_State* L, int InTableRef, bool bEnd = false)
+                : State(L)
+                , TableRef(InTableRef)
+                , bAtEnd(bEnd)
+            {
+                if (!bAtEnd)
+                {
+                    lua_rawgeti(L, LUA_REGISTRYINDEX, TableRef);
+                    KeyIndex = lua_gettop(L);
+                    ValueIndex = KeyIndex + 1;
+                    
+                    if (!lua_next(L, KeyIndex))
+                    {
+                        bAtEnd = true;
+                        lua_pop(L, 1);
+                    }
+                }
+            }
+            
+            ~FIterator()
+            {
+                if (!bAtEnd)
+                {
+                    lua_pop(State, 2);
+                }
+            }
+            
+            TPair<FRef, FRef> operator*() const
+            {
+                return eastl::make_pair(FRef(State, KeyIndex), FRef(State, ValueIndex));
+            }
+            
+            FIterator& operator++()
+            {
+                lua_pop(State, 1);
+                if (!lua_next(State, KeyIndex))
+                {
+                    bAtEnd = true;
+                    lua_pop(State, 1);
+                }
+                return *this;
+            }
+            
+            bool operator==(const FIterator& Other) const { return bAtEnd == Other.bAtEnd; }
+            bool operator!=(const FIterator& Other) const { return !(*this == Other); }
+            
+            
+        private:
+            
+            lua_State* State = nullptr;
+            int TableRef = 0;
+            int KeyIndex = 0;
+            int ValueIndex = 0;
+            bool bAtEnd = false;
+        };
+        
         FRef() = default;
+        FRef(FNil);
         FRef(lua_State* L, int Index);
         ~FRef();
         
@@ -58,10 +119,9 @@ namespace Lumina::Lua
         template<typename T>
         NODISCARD TClass<T> NewClass(FStringView Name);
         
+        
         void Reset();
-        bool Push() const;
-        
-        
+        NODISCARD bool Push() const;
         NODISCARD FRef NewTable(FStringView Key) const;
         NODISCARD bool IsValid() const;
         NODISCARD FRef GetField(FStringView Key) const;
@@ -69,6 +129,16 @@ namespace Lumina::Lua
         NODISCARD bool IsTable() const;
         NODISCARD lua_State* GetState() const { return State; }
     
+        NODISCARD FIterator begin() const
+        {
+            DEBUG_ASSERT(IsTable());
+            return {State, Ref, false};
+        }
+        
+        NODISCARD FIterator end() const
+        {
+            return {State, Ref, true};
+        }
         
     public:
         
@@ -168,7 +238,7 @@ namespace Lumina::Lua
     template <typename T>
     T FRef::Get() const
     {
-        (void)Push();
+        DEBUG_ASSERT(Push());
         T Result = TStack<T>::Get(State, -1);
         lua_pop(State, 1);
         return Result;
@@ -190,12 +260,7 @@ namespace Lumina::Lua
     template <typename ... TArgs>
     FRef FRef::Invoke(TArgs&&... Args)
     {
-        if (!IsValid())
-        {
-            return {};
-        }
-        
-        lua_checkstack(State, sizeof...(Args) + 2);
+        LUMINA_PROFILE_SCOPE();
         
         if (!Push())
         {
@@ -203,12 +268,12 @@ namespace Lumina::Lua
         }
         
         (TStack<eastl::decay_t<TArgs>>::Push(State, eastl::forward<TArgs>(Args)), ...);
-    
+        
         int Status = lua_pcall(State, sizeof...(Args), 1, 0);
         
         if (Status != LUA_OK)
         {
-            FString ErrMsg = lua_tostring(State, -1);
+            const char* ErrMsg = lua_tostring(State, -1);
             LOG_ERROR("[Lua] - Invoke Failed {}", ErrMsg);
             lua_pop(State, 1);
             return {};
@@ -246,25 +311,10 @@ namespace Lumina::Lua
     template <typename T>
     TClass<T> FRef::NewClass(FStringView Name)
     {
-        int Top = lua_gettop(State);
-        if (!Push())
-        {
-            return TClass<T>(State, Name);
-        }
-        
-        ASSERT(lua_istable(State, -1));
+        DEBUG_ASSERT(Push());
         TClass<T> Class(State, Name);
-        
-        lua_pop(State, 1);
-        DEBUG_ASSERT(lua_gettop(State) == Top);
         return Class;
     }
-    
-    
-    
-    
-    
-    
     
     template<>
     struct TStack<FRef>

@@ -47,12 +47,12 @@ newaction
         end
 
         ProjectFiles[prj.name] = {
+            Path = prj.basedir,
             Files = {},
             IncludeDirs = {}
         }
         
         for Config in p.project.eachconfig(prj) do
-            
             for _, IncludePath in ipairs(Config.includedirs) do
                 local Path = path.getabsolute(IncludePath)
                 
@@ -93,9 +93,10 @@ newaction
     
         for Name, ProjectData in pairs(ProjectFiles) do
             table.insert(Data.Projects, {
-                Name = Name,
+                Name        = Name,
                 IncludeDirs = ProjectData.IncludeDirs,
-                Files = ProjectData.Files
+                Files       = ProjectData.Files,
+                Path        = ProjectData.Path
             })
         end
     
@@ -115,8 +116,14 @@ newaction
         local ReflectionDirectory = path.join(os.getenv("LUMINA_DIR"), "Binaries", SystemName .. "64", "Reflector" .. Extension)
         local CmdLine = ReflectionDirectory .. " " .. path.getabsolute("Reflection_Files.json")
 
+        
+        if SystemName == "Windows" then
+            CmdLine = CmdLine:gsub("/", "\\")
+        end
+        
+        Logger.Info("Executing Command Line " .. CmdLine)
         local Result = os.execute(CmdLine)
-    
+
         if Result == 0 or Result == true then
             Logger.Success("Reflection completed successfully!")
             os.remove("Reflection_Files.json")

@@ -3,10 +3,12 @@
 
 namespace Lumina
 {
-    class FObjectReferenceReplacerArchive : public FArchive, public INonCopyable
+    class FObjectReferenceReplacerArchive : public FArchive
     {
     public:
         
+        LE_NO_COPY(FObjectReferenceReplacerArchive);
+
         FObjectReferenceReplacerArchive(CObject* InToReplace, CObject* InReplacement)
             : ToReplace(InToReplace)
             , Replacement(InReplacement)

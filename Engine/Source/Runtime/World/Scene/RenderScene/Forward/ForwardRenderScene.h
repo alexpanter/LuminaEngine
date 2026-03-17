@@ -16,7 +16,10 @@ namespace Lumina
     class FForwardRenderScene : public IRenderScene
     {
     public:
+        
         FForwardRenderScene(CWorld* InWorld);
+        ~FForwardRenderScene() override = default;
+        LE_NO_COPYMOVE(FForwardRenderScene);
         
         enum class ENamedBuffer : uint8
         {
@@ -97,6 +100,9 @@ namespace Lumina
         entt::entity GetEntityAtPixel(uint32 X, uint32 Y) const override;
         THashSet<entt::entity> GetEntitiesInPixelRange(uint32 MinX, uint32 MinY, uint32 MaxX, uint32 MaxY) const override;
         
+        
+    private:
+        
         FViewportState                      SceneViewportState;
         FDelegateHandle                     SwapchainResizedHandle;
         CWorld*                             World = nullptr;
@@ -129,15 +135,10 @@ namespace Lumina
         TArray<FRHIImageRef, (int)ENamedImage::Num>     NamedImages = {};
         
         /** Packed array of per-instance data */
-        TVector<FGPUInstance>                  InstanceData;
+        TVector<FGPUInstance>                   InstanceData;
         TVector<glm::mat4>                      BonesData;
         
         FShadowAtlas                            ShadowAtlas;
-        
-        FMeshPass DepthMeshPass;
-        FMeshPass OpaqueMeshPass;
-        FMeshPass TranslucentMeshPass;
-        FMeshPass ShadowMeshPass;
         
         /** Packed array of all cached mesh draw commands */
         TVector<FMeshDrawCommand>               DrawCommands;

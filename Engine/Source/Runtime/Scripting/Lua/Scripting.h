@@ -1,11 +1,9 @@
 #pragma once
 #include "Containers/String.h"
 #include "Core/Delegates/Delegate.h"
-#include "Core/Object/Class.h"
 #include "Core/Reflection/Type/LuminaTypes.h"
 #include "Memory/SmartPtr.h"
 #include "Tools/Actions/DeferredActions.h"
-#include "World/Entity/Components/Component.h"
 
 
 struct GCMetrics;
@@ -18,6 +16,7 @@ namespace Lumina
 
 namespace Lumina::Lua
 {
+    class FRef;
     struct FScript;
     DECLARE_MULTICAST_DELEGATE(FScriptTransactionDelegate, FStringView);
     
@@ -72,9 +71,10 @@ namespace Lumina::Lua
         RUNTIME_API void ScriptRenamed(FStringView NewPath, FStringView OldPath);
         RUNTIME_API void ScriptDeleted(FStringView ScriptPath);
         RUNTIME_API TSharedPtr<FScript> LoadUniqueScriptPath(FStringView Path);
-        RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "");
+        RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "") const;
         RUNTIME_API TVector<TSharedPtr<FScript>> GetAllRegisteredScripts();
         RUNTIME_API void RunGC();
+        RUNTIME_API FRef GetGlobalsRef() const;
         
         #if LUAI_GCMETRICS
         RUNTIME_API const GCMetrics* GetGCMetrics() const;  

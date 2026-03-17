@@ -11,6 +11,7 @@
 #include "Reflector/ReflectionCore/ReflectedHeader.h"
 #include "Reflector/ReflectionCore/ReflectedProject.h"
 #include "Reflector/Types/Properties/ReflectedProperty.h"
+#include "spdlog/spdlog.h"
 
 
 #define STREAM_INITIAL_BUFFER_SIZE 10'240 // 10 KiB
@@ -40,6 +41,8 @@ namespace Lumina::Reflection
 	{
 		eastl::hash_map<FReflectedProject*, eastl::string> ProjectOutputs;
 		eastl::hash_set<FReflectedProject*> DirtyProjects;
+		
+		eastl::string LuaAPIString;
 
 		for (const auto& [Header, _] : ReflectionDatabase->ReflectedTypes)
 		{
@@ -50,6 +53,8 @@ namespace Lumina::Reflection
 			}
 
 			Output += "#include \"" + Header->FileName + ".generated.cpp\"\n";
+			
+			GenerateReflectionCodeForLuaAPI(LuaAPIString, Header);
 
 			if (!Header->bDirty)
 			{
@@ -59,24 +64,37 @@ namespace Lumina::Reflection
 			DirtyProjects.insert(Header->Project);
 
 			GenerateReflectionCodeForHeader(Header);
-
 			GenerateReflectionCodeForSource(Header);
 		}
 
-		for (auto& DirtyProject : DirtyProjects)
+		for (auto& Project : Workspace->ReflectedProjects)
 		{
-			const eastl::string& Output = ProjectOutputs[DirtyProject];
-
-			eastl::string ReflectionDataPath = Workspace->GetPath() + R"(\Intermediates\Reflection\)" + DirtyProject->Name + R"(\)" + "ReflectionUnity.gen.cpp";
-			std::filesystem::path outputPath(ReflectionDataPath.c_str());
-			std::filesystem::create_directories(outputPath.parent_path());
-
-			std::ofstream OutputFile(ReflectionDataPath.c_str());
-
+			eastl::string ScriptingDirectoryPath = Project->Path + R"(\Game\Scripts\Definitions\GlobalDefs.d.luau)";
+			std::ofstream OutputFile(ScriptingDirectoryPath.c_str());
+			
 			if (OutputFile.is_open())
 			{
-				OutputFile.write(Output.c_str(), (std::streamsize)Output.size());
+				OutputFile.write(LuaAPIString.c_str(), (std::streamsize)LuaAPIString.size());
 				OutputFile.close();
+			}
+		}
+		
+		for (auto& DirtyProject : DirtyProjects)
+		{
+			{
+				const eastl::string& Output = ProjectOutputs[DirtyProject];
+
+				eastl::string ReflectionDataPath = Workspace->GetPath() + R"(\Intermediates\Reflection\)" + DirtyProject->Name + R"(\)" + "ReflectionUnity.gen.cpp";
+				std::filesystem::path outputPath(ReflectionDataPath.c_str());
+				std::filesystem::create_directories(outputPath.parent_path());
+
+				std::ofstream OutputFile(ReflectionDataPath.c_str());
+
+				if (OutputFile.is_open())
+				{
+					OutputFile.write(Output.c_str(), (std::streamsize)Output.size());
+					OutputFile.close();
+				}
 			}
 		}
 	}
@@ -117,6 +135,18 @@ namespace Lumina::Reflection
 		if (OutputFile.is_open())
 		{
 			OutputFile.write(Stream.c_str(), static_cast<std::streamsize>(Stream.size()));
+		}
+	}
+
+	void FCodeGenerator::GenerateReflectionCodeForLuaAPI(eastl::string& Stream, FReflectedHeader* Header)
+	{
+		const eastl::vector<eastl::unique_ptr<FReflectedType>>& ReflectedTypes = ReflectionDatabase->ReflectedTypes.at(Header);
+		
+		Stream += "\n";
+
+		for (const auto& Type : ReflectedTypes)
+		{
+			Type->DefineLuaAPI(Stream);
 		}
 	}
 

@@ -2,6 +2,7 @@
 
 #include "Core/Math/AABB.h"
 #include "Core/Object/Object.h"
+#include "Core/Object/ObjectHandleTyped.h"
 #include "Memory/SmartPtr.h"
 #include "Animation.generated.h"
 

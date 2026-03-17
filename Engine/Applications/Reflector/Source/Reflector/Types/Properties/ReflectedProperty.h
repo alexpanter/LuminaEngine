@@ -22,8 +22,10 @@ namespace Lumina
         void AppendPropertyDef(eastl::string& Stream, const char* PropertyFlagsStr, const char* TypeFlags, const eastl::string& CustomData = "") const;
         
         virtual const char* GetPropertyParamType() const { return "FPropertyParams"; }
-
+        
         virtual const char* GetTypeName() = 0;
+        virtual eastl::string_view GetLuaType() = 0;
+        
         eastl::string GetDisplayName() const { return Name; }
         void GenerateMetadata(const eastl::string& InMetadata) override;
 

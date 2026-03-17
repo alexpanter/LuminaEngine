@@ -1,14 +1,12 @@
 ﻿#pragma once
 
 #include "ConstructObjectParams.h"
-#include "lua.h"
-#include "Lumina.h"
 #include "ObjectFlags.h"
-#include "ObjectHandleTyped.h"
 #include "Containers/Array.h"
 #include "Containers/Function.h"
 #include "Core/LuminaMacros.h"
 #include "Platform/GenericPlatform.h"
+#include <lua.h>
 
 
 namespace Lumina
@@ -329,6 +327,8 @@ namespace Lumina
     struct FClassParams
     {
         CClass*                         (*RegisterFunc)();
+        void                            (*LuaRegisterFn)(lua_State*);
+
         const FPropertyParams* const*   Params;
         uint32                          NumProperties;
         

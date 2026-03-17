@@ -16,6 +16,7 @@ namespace Lumina::Reflection
 
         void GenerateReflectionCodeForHeader(FReflectedHeader* Header);
         void GenerateReflectionCodeForSource(FReflectedHeader* Header);
+        void GenerateReflectionCodeForLuaAPI(eastl::string& Stream, FReflectedHeader* Header);
     
     private:
 

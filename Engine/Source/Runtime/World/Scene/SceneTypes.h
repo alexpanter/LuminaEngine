@@ -12,11 +12,4 @@ namespace Lumina
         Game,
         Tool,
     };
-    
-
-    struct FRayResult
-    {
-        
-    };
-    
 }

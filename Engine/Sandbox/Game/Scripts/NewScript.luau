@@ -1,26 +1,25 @@
-NewScript = { }
+-- Do not use these example/testing scripts as a reference. They will have bad habbits.
+
+local NewScript = {
+}
+
+NewScript.__meta = {
+    bRunInEditor = false,
+}
 
 function NewScript:OnAttach()
 end
 
 function NewScript:OnReady()
-    self.CC  = SCharacterControllerComponent.Get(self.Registry, self.Entity)
-    self.CMC = SCharacterMovementComponent.Get(self.Registry, self.Entity)
-    self.T   = STransformComponent.Get(self.Registry, self.Entity)
+    if(World:GetEntityRegistry():EntityCount() < 10000) then
+        World:GetEntityRegistry():Duplicate(self.Entity)
+    end
 end
 
-
 function NewScript:Update(DeltaTime: number)
-    local x, z = 0.0, 0.0    
+end
 
-    if Input.IsKeyDown(EKey.W) then z =  1.0 end
-    if Input.IsKeyDown(EKey.S) then z = -1.0 end
-    if Input.IsKeyDown(EKey.A) then x =  1.0 end
-    if Input.IsKeyDown(EKey.D) then x = -1.0 end
-
-    if x ~= 0.0 or z ~= 0.0 then
-        self.CC:AddMovementInput(vector.create(x, 0.0, z))
-    end
+function NewScript:OnDetach()
 end
 
 return NewScript
