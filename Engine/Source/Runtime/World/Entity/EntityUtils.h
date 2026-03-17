@@ -31,7 +31,7 @@ namespace Lumina::ECS::Utils
 
 	NODISCARD RUNTIME_API entt::id_type GetTypeID(FStringView Name);
 	NODISCARD RUNTIME_API entt::id_type GetTypeID(const CStruct* Type);
-	NODISCARD RUNTIME_API entt::id_type GetTypeID(Lua::FRef Obj);
+	NODISCARD RUNTIME_API entt::id_type GetTypeID(const Lua::FRef& Obj);
 
 
 	template<typename ... TArgs>

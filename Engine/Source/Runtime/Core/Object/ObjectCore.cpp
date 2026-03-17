@@ -426,6 +426,9 @@ namespace Lumina
             FinalClass->Metadata.AddValue(Param.NameUTF8, Param.ValueUTF8);
         }
         
+        lua_State* LuaVM = Lua::FScriptingContext::Get().GetVM();
+        Params.LuaRegisterFn(LuaVM);
+        
         // Link this class to its parent. (if it has one).
         //FinalClass->Link();
     }

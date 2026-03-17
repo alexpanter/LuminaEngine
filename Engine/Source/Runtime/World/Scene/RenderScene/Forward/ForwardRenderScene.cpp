@@ -916,6 +916,15 @@ namespace Lumina
         {
             PackedShadows[i].clear();
         }
+        
+        if (DrawCommands.empty())
+        {
+            FRGPassDescriptor* Descriptor = RenderGraph.AllocDescriptor();
+            RenderGraph.AddPass(RG_Compute, FRGEvent("Clear Depth Pass"), Descriptor, [&] (ICommandList& CmdList)
+            {
+               CmdList.ClearImageUInt(GetNamedImage(ENamedImage::DepthAttachment), AllSubresources, 0); 
+            });
+        }
     }
 
     void FForwardRenderScene::CullPass(FRenderGraph& RenderGraph)

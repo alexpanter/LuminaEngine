@@ -327,6 +327,8 @@ namespace Lumina
     struct FClassParams
     {
         CClass*                         (*RegisterFunc)();
+        void                            (*LuaRegisterFn)(lua_State*);
+
         const FPropertyParams* const*   Params;
         uint32                          NumProperties;
         

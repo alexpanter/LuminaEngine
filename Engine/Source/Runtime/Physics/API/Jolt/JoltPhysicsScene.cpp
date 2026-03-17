@@ -280,6 +280,17 @@ namespace Lumina::Physics
         }
         #endif
         
+        while (!PendingRigidBodyCreations.empty())
+        {
+            entt::entity Entity = PendingRigidBodyCreations.front();
+            PendingRigidBodyCreations.pop();
+            
+            if (World->GetEntityRegistry().valid(Entity))
+            {
+                OnRigidBodyComponentConstructed(World->GetEntityRegistry(), Entity);
+            }
+        }
+        
         if (CollisionSteps > 0)
         {
             PreUpdate();
@@ -719,7 +730,7 @@ namespace Lumina::Physics
     void FJoltPhysicsScene::OnRigidBodyComponentConstructed(entt::registry& Registry, entt::entity Entity)
     {
         LUMINA_PROFILE_SCOPE();
-        
+
         JPH::ShapeRefC Shape;
         glm::vec3 ColliderTranslationOffset(0.0f);
         glm::vec3 ColliderRotationOffset(0.0f);
@@ -757,11 +768,15 @@ namespace Lumina::Physics
         }
         else
         {
-            LOG_ERROR("Entity {} attempted to construct a rigid body without a collider!", entt::to_integral(Entity));
+            PendingRigidBodyCreations.push(Entity);
             return;
         }
 
         SRigidBodyComponent& RigidBodyComponent = Registry.get<SRigidBodyComponent>(Entity);
+        if (RigidBodyComponent.BodyID != JPH::BodyID::cInvalidBodyID)
+        {
+            return;
+        }
         
         JPH::ObjectLayer Layer      = JoltUtils::PackToObjectLayer(RigidBodyComponent.CollisionProfile);
         JPH::EMotionType MotionType = ToJoltMotionType(RigidBodyComponent.BodyType);

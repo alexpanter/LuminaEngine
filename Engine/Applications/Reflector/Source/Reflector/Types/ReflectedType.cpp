@@ -526,7 +526,7 @@ namespace Lumina::Reflection
                     continue;
                 }
                 
-                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")&>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
+                Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"" + Prop->Name + "\")): Lumina::Lua::TStack<decltype(" + QualifiedName + "::" + Prop->Name + ")>::Push(VM, ThisType->" + Prop->Name + "); break;\n";
             }
             
             Stream += "\t\tdefault: return 0;\n";
@@ -618,12 +618,20 @@ namespace Lumina::Reflection
         Stream += "\tlua_setfield(L, MetaTableIdx, \"__type_id\");\n";
         Stream += "\n";
         
-        Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
-        Stream += "\t{\n";
-        Stream += "\t\treturn 0;\n";
-        Stream += "\t}, \"new\");\n";
+        //@TODO Find a better way.
+        if (!dynamic_cast<FReflectedClass*>(this))
+        {
+            Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
+            Stream += "\t{\n";
+            Stream += "\t\tvoid* Block = lua_newuserdatataggedwithmetatable(State, sizeof(Lumina::Lua::TUserdataHeader<" + QualifiedName + ">), Lumina::Lua::TClassTraits<" + QualifiedName + ">::Tag());\n";
+            Stream += "\t\tauto* Header = new (Block) Lumina::Lua::TUserdataHeader<" + QualifiedName + ">{};\n";
+            Stream += "\t\tauto Instance = " + QualifiedName + "{};\n";
+            Stream += "\t\tHeader->Emplace(Instance);\n";
+            Stream += "\t\treturn 1;\n";
+            Stream += "\t}, \"new\");\n";
+            Stream += "\tlua_setfield(L, -2, \"new\");\n";
+        }
             
-        Stream += "\tlua_setfield(L, -2, \"new\");\n";
         Stream += "\n";
         Stream += "\tlua_setglobal(L, \"" + DisplayName + "\");\n";
             
@@ -889,6 +897,7 @@ namespace Lumina::Reflection
             Stream += "\tstatic const Lumina::FPropertyParams* const PropPointers[];\n";
         }
         
+        SetupLuaRegistration(Stream);
         
         Stream += "};\n\n";
         
@@ -929,6 +938,8 @@ namespace Lumina::Reflection
         
         Stream += "const Lumina::FClassParams Construct_CClass_" + Namespace + "_" + DisplayName + "_Statics::ClassParams = {\n";
         Stream += "\t&" + Namespace + "::" + DisplayName + "::StaticClass,\n";
+        Stream += "\t&SetupLuaBindings,\n";
+
         if (!Props.empty())
         {
             Stream += "\tPropPointers,\n";

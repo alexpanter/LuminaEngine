@@ -15,7 +15,7 @@ namespace Lumina::Lua
         {
             return TStack<BaseT>::Get(L, Index);
         }
-        else if constexpr (eastl::is_pointer_v<TParam>)
+        else if constexpr (eastl::is_pointer_v<BaseT>)
         {
             return TStack<TParam>::Get(L, Index);
         }
@@ -30,25 +30,25 @@ namespace Lumina::Lua
     }
     
     template<typename TParam>
-    static bool CheckArg(lua_State* L, int Index)
+    static void PushArg(lua_State* L, TParam&& Param)
     {
-        using BaseT = eastl::remove_cvref_t<TParam>;
+        using BaseT = eastl::decay_t<TParam>;
     
         if constexpr (TLuaNativeType<BaseT>::value)
         {
-            return TStack<BaseT>::Check(L, Index);
+            TStack<BaseT>::Push(L, Param);
         }
-        else if constexpr (eastl::is_pointer_v<TParam>)
+        else if constexpr (eastl::is_pointer_v<BaseT>)
         {
-            return TStack<TParam>::Check(L, Index);
+            TStack<BaseT>::Push(L, Param);
         }
         else if constexpr (eastl::is_enum_v<BaseT>)
         {
-            return TStack<BaseT>::Check(L, Index);
+            TStack<BaseT>::Push(L, Param);
         }
         else
         {
-            return TStack<BaseT&>::Check(L, Index);
+           TStack<TParam>::Push(L, Param);
         }
     }
     
@@ -88,7 +88,7 @@ namespace Lumina::Lua
                 else
                 {
                     decltype(auto) Ret = (Self->*TFunc)(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 2)...);
-                    TStack<decltype(Ret)>::Push(L, Ret);
+                    PushArg(L, eastl::forward<decltype(Ret)>(Ret));
                     return 1;
                 }
             }
@@ -101,8 +101,8 @@ namespace Lumina::Lua
                 }
                 else
                 {
-                    auto Ret = TFunc(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 1)...);
-                    TStack<decltype(Ret)>::Push(L, Ret);
+                    decltype(auto) Ret = TFunc(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 1)...);
+                    PushArg(L, eastl::forward<decltype(Ret)>(Ret));
                     return 1;
                 }
             }
@@ -119,7 +119,6 @@ namespace Lumina::Lua
         using ReturnT = TraitsT::ReturnType;
         using ArgsT   = TraitsT::ArgsTuple;
         
-    
         auto Dispatch = [&]<size_t... Is>(eastl::index_sequence<Is...>)
         {
             if constexpr (eastl::is_member_function_pointer_v<decltype(TFunc)>)
@@ -139,8 +138,8 @@ namespace Lumina::Lua
                 }
                 else
                 {
-                    auto Ret = (Self->*TFunc)(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 1)...);
-                    TStack<decltype(Ret)>::Push(L, Ret);
+                    decltype(auto) Ret = (Self->*TFunc)(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 1)...);
+                    PushArg(L, eastl::forward<decltype(Ret)>(Ret));
                     return 1;
                 }
             }
@@ -153,8 +152,8 @@ namespace Lumina::Lua
                 }
                 else
                 {
-                    auto Ret = TFunc(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 1)...);
-                    TStack<decltype(Ret)>::Push(L, Ret);
+                    decltype(auto) Ret = TFunc(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 1)...);
+                    PushArg(L, eastl::forward<decltype(Ret)>(Ret));
                     return 1;
                 }
             }

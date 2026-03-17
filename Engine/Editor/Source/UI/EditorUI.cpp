@@ -2473,9 +2473,19 @@ namespace Lumina
             Platform::LaunchURL(TEXT("https://discord.gg/UhTmzB8UdY"));
         }
 
-        if (ImGui::MenuItem(LE_ICON_BOOK " Documentation", "F1"))
+        if (ImGui::BeginMenu(LE_ICON_BOOK " Documentation"))
         {
-            Platform::LaunchURL(TEXT("https://discord.gg/UhTmzB8UdY"));
+            if (ImGui::MenuItem(LE_ICON_GROUP " Lumina"))
+            {
+                Platform::LaunchURL(TEXT("https://discord.gg/UhTmzB8UdY"));
+            }
+            
+            if (ImGui::MenuItem(LE_ICON_LANGUAGE_LUA " Luau"))
+            {
+                Platform::LaunchURL(TEXT("https://luau.org/getting-started/"));
+            }
+            
+            ImGui::EndMenu();
         }
     
         if (ImGui::MenuItem(LE_ICON_ACCOUNT_QUESTION " Tutorials"))

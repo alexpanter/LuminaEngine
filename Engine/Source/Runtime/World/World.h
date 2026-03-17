@@ -87,6 +87,11 @@ namespace Lumina
         FUNCTION(Script)
         void MarkTransformDirty(entt::entity Entity);
 
+        FUNCTION(Script)
+        TOptional<SRayResult> CastRay(const SRayCastSettings& Settings);
+
+        FUNCTION(Script)
+        TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings);
         
         entt::entity GetFirstEntityWith(entt::id_type Type);
         
@@ -133,10 +138,6 @@ namespace Lumina
         void DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness = 1.0f, bool bDepthTest = true, float Duration = -1.0f) override;
         //~ End Debug Drawing
         
-        TOptional<SRayResult> CastRay(const SRayCastSettings& Settings);
-        TOptional<SRayResult> CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug = false, float DebugDuration = 0.0f, uint32 LayerMask = 0xFFFFFFFF, int64 IgnoreBody = -1);
-        TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings);
-
         FORCEINLINE bool IsGameWorld() const { return WorldType == EWorldType::Game; }
         
         void SetEntityTransform(entt::entity Entity, const FTransform& NewTransform);

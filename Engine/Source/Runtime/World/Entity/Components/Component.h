@@ -3,6 +3,8 @@
 #include "Core/Engine/Engine.h"
 #include "Core/Object/Class.h"
 #include "Core/Serialization/Archiver.h"
+#include "Scripting/Lua/Reference.h"
+#include "Scripting/Lua/Stack.h"
 #include "Traits/ComponentTraits.h"
 #include "World/Entity/Traits.h"
 
@@ -55,6 +57,15 @@ namespace Lumina
         {
             return Registry.get<TComponent>(Entity);
         }
+        
+        template<typename TComponent>
+        Lua::FRef GetComponent_Lua(entt::registry& Registry, entt::entity Entity, const Lua::FRef& Ref)
+        {
+
+            TComponent& Component = Registry.get<TComponent>(Entity);
+            Lua::TStack<TComponent&>::Push(Ref.GetState(), Component);
+            return Lua::FRef(Ref.GetState(), -1);
+        }
 
         template<typename TComponent>
         void Serialize(FArchive& Ar, entt::meta_any& Any)
@@ -88,6 +99,7 @@ namespace Lumina
             if constexpr (!eastl::is_empty_v<TComponent>)
             {
                 Meta.template func<&GetComponent<TComponent>>("get"_hs);
+                Meta.template func<&GetComponent_Lua<TComponent>>("get_lua"_hs);
                 Meta.template func<&PatchComponent<TComponent>>("patch"_hs);
                 Meta.template func<&Serialize<TComponent>>("serialize"_hs);
             }

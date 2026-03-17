@@ -111,6 +111,7 @@ namespace Lumina::Physics
 
     private:
     	
+    	TQueue<entt::entity>				PendingRigidBodyCreations;
     	JPH::TempAllocatorImpl				Allocator;
     	TUniquePtr<FJoltContactListener>	ContactListener;
         TUniquePtr<JPH::PhysicsSystem>		JoltSystem;

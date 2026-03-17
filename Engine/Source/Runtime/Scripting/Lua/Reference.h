@@ -260,12 +260,7 @@ namespace Lumina::Lua
     template <typename ... TArgs>
     FRef FRef::Invoke(TArgs&&... Args)
     {
-        if (!IsValid())
-        {
-            return {};
-        }
-        
-        lua_checkstack(State, sizeof...(Args) + 2);
+        LUMINA_PROFILE_SCOPE();
         
         if (!Push())
         {
@@ -273,12 +268,12 @@ namespace Lumina::Lua
         }
         
         (TStack<eastl::decay_t<TArgs>>::Push(State, eastl::forward<TArgs>(Args)), ...);
-    
+        
         int Status = lua_pcall(State, sizeof...(Args), 1, 0);
         
         if (Status != LUA_OK)
         {
-            FString ErrMsg = lua_tostring(State, -1);
+            const char* ErrMsg = lua_tostring(State, -1);
             LOG_ERROR("[Lua] - Invoke Failed {}", ErrMsg);
             lua_pop(State, 1);
             return {};

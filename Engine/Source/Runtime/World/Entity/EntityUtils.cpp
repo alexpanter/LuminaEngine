@@ -532,7 +532,7 @@ namespace Lumina::ECS::Utils
         return entt::hashed_string(Type->GetName().c_str());
     }
 
-    entt::id_type GetTypeID(Lua::FRef Obj)
+    entt::id_type GetTypeID(const Lua::FRef& Obj)
     {
         auto Ref = Obj["__type_id"];
         if (Ref.IsValid())

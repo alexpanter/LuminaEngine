@@ -12,7 +12,7 @@ namespace Lumina
         GENERATED_BODY()
         
         PROPERTY(Script, ReadOnly, Category = "Physics")
-        uint32 BodyID = UINT32_MAX;
+        uint32 BodyID = 0xFFFFFFFF;
         
         PROPERTY(Script, Editable, Category = "Physics")
         float Mass = 1.0f;

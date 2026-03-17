@@ -9,3 +9,7 @@ declare Input: {
 	GetMouseY: () -> number,
 	GetMouseZ: () -> number,
 }
+
+declare World: {
+	
+}

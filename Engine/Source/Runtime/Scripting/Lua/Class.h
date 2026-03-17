@@ -118,8 +118,18 @@ namespace Lumina::Lua
 
                     return 0;
                 }, "__newindex", 1);
+                
 
                 lua_setfield(L, MetaTableIdx, "__newindex");
+            }
+            
+            if constexpr (eastl::is_destructible_v<ClassT>)
+            {
+                lua_setuserdatadtor(L, MetaTableIdx, +[](lua_State* L, void* Userdata)
+                {
+                    auto* Header = static_cast<TUserdataHeader<ClassT>*>(Userdata);
+                    Header->InvokeDtor();
+                });
             }
             
             lua_setuserdatametatable(L, TClassTraits<T>::Tag());

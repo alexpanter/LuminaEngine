@@ -1,5 +1,7 @@
 #include "pch.h"
 #include "World.h"
+
+#include <utility>
 #include "WorldManager.h"
 #include "Core/Delegates/CoreDelegates.h"
 #include "Core/Engine/Engine.h"
@@ -18,9 +20,9 @@
 #include "Entity/Components/SingletonEntityComponent.h"
 #include "entity/components/tagcomponent.h"
 #include "Physics/Physics.h"
+#include "lua.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
-#include "Scripting/Lua/Stack.h"
 #include "Scripting/Lua/VariadicArgs.h"
 #include "Subsystems/FCameraManager.h"
 #include "Subsystems/WorldSettings.h"
@@ -29,6 +31,104 @@
 
 namespace Lumina
 {
+    namespace LuaBinds
+    {
+        using namespace entt::literals;
+
+        static bool HasComponent_Lua(FEntityRegistry& Registry, entt::entity Entity, Lua::FRef Ref)
+        {
+            LUMINA_PROFILE_SECTION("Has Component [Lua]");
+            entt::id_type Type = ECS::Utils::GetTypeID(eastl::move(Ref));
+            auto Meta = ECS::Utils::InvokeMetaFunc(Type, "has"_hs, entt::forward_as_meta(Registry), Entity);
+            return Meta.cast<bool>();
+        }
+        
+        static Lua::FRef GetComponent_Lua(FEntityRegistry& Registry, entt::entity Entity, Lua::FRef Ref)
+        {
+            LUMINA_PROFILE_SECTION("Get Component [Lua]");
+            entt::id_type Type = ECS::Utils::GetTypeID(Ref);
+            auto Meta = ECS::Utils::InvokeMetaFunc(Type, "get_lua"_hs, entt::forward_as_meta(Registry), Entity, entt::forward_as_meta(Ref));
+            return Meta.cast<Lua::FRef>();
+        }
+        
+        static size_t RemoveComponent_Lua(FEntityRegistry& Registry, entt::entity Entity, Lua::FRef Ref)
+        {
+            LUMINA_PROFILE_SECTION("Remove Component [Lua]");
+            entt::id_type Type = ECS::Utils::GetTypeID(Ref);
+            auto Meta = ECS::Utils::InvokeMetaFunc(Type, "remove"_hs, entt::forward_as_meta(Registry), Entity);
+            return Meta.cast<size_t>();
+        }
+        
+        static entt::runtime_view RuntimeView_Lua(FEntityRegistry& Registry, Lua::FVariadicArgs Args)
+        {
+            LUMINA_PROFILE_SCOPE();
+
+            entt::runtime_view RuntimeView;
+
+            for (int i = 0; i < Args.Count(); ++i)
+            {
+                entt::id_type Type = ECS::Utils::GetTypeID(Args.Get<Lua::FRef>(i));
+                
+                entt::meta_type Meta = entt::resolve(Type);
+                if (!Meta)
+                {
+                    if (entt::basic_sparse_set<>* Storage = Registry.storage(Type))
+                    {
+                        RuntimeView.iterate(*Storage);
+                    }
+                }
+                else if (entt::basic_sparse_set<>* Storage = Registry.storage(Meta.info().hash()))
+                {
+                    RuntimeView.iterate(*Storage);
+                }
+            }
+
+            return RuntimeView;
+        }
+        
+        static uint64 EntityCount_Lua(FEntityRegistry& Registry)
+        {
+            return Registry.view<entt::entity>()->size();
+        }
+        
+        static entt::entity CreateEntity_Lua(FEntityRegistry& Registry)
+        {
+            return Registry.create();
+        }
+        
+        static uint32 DestroyEntity_Lua(FEntityRegistry& Registry, entt::entity Entity)
+        {
+            return Registry.destroy(Entity);
+        }
+        
+        static entt::entity DuplicateEntity_Lua(FEntityRegistry& Registry, entt::entity Entity)
+        {
+            entt::entity To = Registry.create();
+        
+            for (auto&& [ID, Storage]: Registry.storage())
+            {
+                // We also need to check the entity we're creating, in-case another component adds it.
+                if(Storage.contains(Entity) && !Storage.contains(To))
+                {
+                    Storage.push(To, Storage.value(Entity));
+                }
+            }
+            
+            return To;
+        }
+        
+        static void ForEachInRuntimeView_Lua(entt::runtime_view& View, Lua::FRef Func)
+        {
+            LUMINA_PROFILE_SCOPE();
+
+            View.each([&](entt::entity Entity)
+            {
+                Func(Entity);
+            });
+        }
+    }
+    
+    
     CWorld::CWorld()
         : SingletonEntity(entt::null)
         , SystemContext(this)
@@ -38,19 +138,22 @@ namespace Lumina
 
     void CWorld::RegisterLuaModule(Lua::FRef& GlobalRef)
     {
-        using namespace entt::literals;
+        GlobalRef.NewClass<entt::runtime_view>("RuntimeView")
+            .AddFunction<&entt::runtime_view::contains>("Contains")
+            .AddFunction<&LuaBinds::ForEachInRuntimeView_Lua>("Each")
+            .Register();
         
         GlobalRef.NewClass<FEntityRegistry>("FEntityRegistry")
-            .AddFunction<[](FEntityRegistry& Registry) { return Registry.create(); }>("Create")
-            .AddFunction<[](FEntityRegistry& Registry, entt::entity Entity) { Registry.destroy(Entity); }>("Destroy")
             .AddFunction<&FEntityRegistry::valid>("Valid")
-            .AddFunction<[](entt::registry& Registry, entt::entity Entity, Lua::FRef Ref)
-            {
-                entt::id_type Type = ECS::Utils::GetTypeID(Ref);
-                auto Meta = ECS::Utils::InvokeMetaFunc(Type, "has"_hs, entt::forward_as_meta(Registry), Entity);
-                return Meta.cast<bool>();
-                
-            }>("Has")
+            .AddFunction<&FEntityRegistry::orphan>("Orphan")
+            .AddFunction<&LuaBinds::EntityCount_Lua>("EntityCount")
+            .AddFunction<&LuaBinds::RemoveComponent_Lua>("Remove")
+            .AddFunction<&LuaBinds::CreateEntity_Lua>("Create")
+            .AddFunction<&LuaBinds::DuplicateEntity_Lua>("Duplicate")
+            .AddFunction<&LuaBinds::DestroyEntity_Lua>("Destroy")
+            .AddFunction<&LuaBinds::HasComponent_Lua>("Has")
+            .AddFunction<&LuaBinds::GetComponent_Lua>("Get")
+            .AddFunction<&LuaBinds::RuntimeView_Lua>("RuntimeView")
             .Register();
     }
 
@@ -479,6 +582,7 @@ namespace Lumina
             }
             
             ScriptComponent.Script->Reference.Set("Entity", Entity);
+            ScriptComponent.Script->Reference.Set("Transform", EntityRegistry.try_get<STransformComponent>(Entity));
             ScriptComponent.Script->Environment.Set("World", this);
             
 
@@ -586,19 +690,6 @@ namespace Lumina
         }
         
         return Move(Result);
-    }
-
-    TOptional<SRayResult> CWorld::CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug, float DebugDuration, uint32 LayerMask, int64 IgnoreBody)
-    {
-        SRayCastSettings Settings;
-        Settings.DebugDuration = DebugDuration;
-        Settings.Start = Start;
-        Settings.End = End;
-        Settings.LayerMask = LayerMask;
-        Settings.bDrawDebug = bDrawDebug;
-        Settings.IgnoreBodies.push_back(IgnoreBody);
-        
-        return CastRay(Settings);
     }
     
     TVector<SRayResult> CWorld::CastSphere(const SSphereCastSettings& Settings)
