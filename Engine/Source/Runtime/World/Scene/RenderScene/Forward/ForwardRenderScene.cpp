@@ -2088,11 +2088,10 @@ namespace Lumina
     {
         InitImages();
         
-        SceneViewportState = {};
-        
         float SizeY = (float)GetNamedImage(ENamedImage::HDR)->GetSizeY();
         float SizeX = (float)GetNamedImage(ENamedImage::HDR)->GetSizeX();
 
+        SceneViewportState = {};
         SceneViewportState.Viewports.emplace_back(FViewport(SizeX, SizeY));
         SceneViewportState.Scissors.emplace_back(FRect((int)SizeX, (int)SizeY));
         
