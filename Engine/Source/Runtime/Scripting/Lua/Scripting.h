@@ -71,7 +71,7 @@ namespace Lumina::Lua
         RUNTIME_API void ScriptRenamed(FStringView NewPath, FStringView OldPath);
         RUNTIME_API void ScriptDeleted(FStringView ScriptPath);
         RUNTIME_API TSharedPtr<FScript> LoadUniqueScriptPath(FStringView Path);
-        RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "");
+        RUNTIME_API TSharedPtr<FScript> LoadUniqueScript(FStringView Code, FStringView Name = "") const;
         RUNTIME_API TVector<TSharedPtr<FScript>> GetAllRegisteredScripts();
         RUNTIME_API void RunGC();
         RUNTIME_API FRef GetGlobalsRef() const;

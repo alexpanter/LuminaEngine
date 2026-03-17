@@ -20,6 +20,7 @@
 
 namespace Lumina
 {
+    struct FScriptComponentPendingReady;
     struct SScriptComponent;
     struct SDefaultWorldSettings;
     struct FLineBatcherComponent;
@@ -91,7 +92,7 @@ namespace Lumina
         TOptional<SRayResult> CastRay(const SRayCastSettings& Settings);
 
         FUNCTION(Script)
-        TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings);
+        TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings) const;
         
         entt::entity GetFirstEntityWith(entt::id_type Type);
         
@@ -128,7 +129,7 @@ namespace Lumina
 
         void OnRelationshipComponentDestroyed(entt::registry& Registry, entt::entity Entity);
         void OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity);
-        void OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent);
+        void OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent, bool bRunReady);
         void OnScriptComponentDestroyed(entt::registry& Registry, entt::entity Entity);
 
         void RegisterSystems();
@@ -151,11 +152,13 @@ namespace Lumina
         
     private:
         
+        void OnScriptComponentPendingReady(const FScriptComponentPendingReady& Event);
+        
+        void InitializeScriptEntities();
         bool RegisterSystem(const FSystemVariant& NewSystem);
         void TickSystems(FSystemContext& Context);
     
     private:
-        
         
         FEntityRegistry                                     RegistryPending;
         FEntityRegistry                                     EntityRegistry;

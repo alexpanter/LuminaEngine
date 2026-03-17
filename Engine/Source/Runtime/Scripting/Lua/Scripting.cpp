@@ -194,10 +194,18 @@ namespace Lumina::Lua
         }
         
         FStringView FileName = VFS::FileName(Path);
-        return LoadUniqueScript(ScriptData, FileName);
+        TSharedPtr<FScript> Script = LoadUniqueScript(ScriptData, FileName);
+        if (Script == nullptr)
+        {
+            return {};
+        }
+        
+        Script->Path = Path;
+        RegisteredScripts[Path].emplace_back(Script);
+        return Move(Script); // Won't elide.
     }
 
-    TSharedPtr<FScript> FScriptingContext::LoadUniqueScript(FStringView Code, FStringView Name)
+    TSharedPtr<FScript> FScriptingContext::LoadUniqueScript(FStringView Code, FStringView Name) const
     {
         LUMINA_PROFILE_SCOPE();
         

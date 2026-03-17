@@ -3,15 +3,23 @@
 local NewScript = {
 }
 
+NewScript.__meta = {
+    bRunInEditor = false,
+}
+
 function NewScript:OnAttach()
-    
 end
 
 function NewScript:OnReady()
+    if(World:GetEntityRegistry():EntityCount() < 10000) then
+        World:GetEntityRegistry():Duplicate(self.Entity)
+    end
 end
 
 function NewScript:Update(DeltaTime: number)
-    
+end
+
+function NewScript:OnDetach()
 end
 
 return NewScript

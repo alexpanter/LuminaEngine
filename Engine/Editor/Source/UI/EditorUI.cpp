@@ -782,7 +782,7 @@ namespace Lumina
         ASSERT(TopLevelDockspaceID != 0);
 
         bool bIsToolStillOpen = true;
-        bool* bIsToolOpen = (EditorTool == WorldEditorTool) ? nullptr : &bIsToolStillOpen; // Prevent closing the map-editor editor tool
+        bool* bIsToolOpen = (EditorTool == WorldEditorTool || EditorTool == ContentBrowser || EditorTool == ConsoleLogTool) ? nullptr : &bIsToolStillOpen; // Prevent closing the map-editor editor tool
         
         // Top level editors can only be docked with each others
         ImGui::SetNextWindowClass(&EditorWindowClass);

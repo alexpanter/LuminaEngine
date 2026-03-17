@@ -21,6 +21,7 @@
 #include "entity/components/tagcomponent.h"
 #include "Physics/Physics.h"
 #include "lua.h"
+#include "Entity/Events/WorldEvents.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
 #include "Scripting/Lua/VariadicArgs.h"
@@ -31,6 +32,14 @@
 
 namespace Lumina
 {
+    namespace Binds
+    {
+        static void OnScriptComponentReady(const FScriptComponentPendingReady& Event)
+        {
+            
+        }
+    }
+    
     namespace LuaBinds
     {
         using namespace entt::literals;
@@ -229,10 +238,11 @@ namespace Lumina
             eastl::visit([&](const auto& Sys) { Sys.Startup(SystemContext); }, System);
         });
         
-        EntityRegistry.on_destroy   <FRelationshipComponent>()  .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
-        EntityRegistry.on_construct <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentConstruct>(this);
-        EntityRegistry.on_destroy   <SScriptComponent>()        .connect<&ThisClass::OnScriptComponentDestroyed>(this);
-        SystemContext.EventSink     <FSwitchActiveCameraEvent>().connect<&ThisClass::OnChangeCameraEvent>(this);
+        EntityRegistry.on_destroy   <FRelationshipComponent>()      .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
+        EntityRegistry.on_construct <SScriptComponent>()            .connect<&ThisClass::OnScriptComponentConstruct>(this);
+        EntityRegistry.on_destroy   <SScriptComponent>()            .connect<&ThisClass::OnScriptComponentDestroyed>(this);
+        SystemContext.EventSink     <FSwitchActiveCameraEvent>()    .connect<&ThisClass::OnChangeCameraEvent>(this);
+        SystemContext.EventSink     <FScriptComponentPendingReady>().connect<&ThisClass::OnScriptComponentPendingReady>(this);
         
         auto CameraView = EntityRegistry.view<SCameraComponent>(entt::exclude<SDisabledTag>);
         CameraView.each([&](entt::entity Entity, const SCameraComponent& Camera)
@@ -243,58 +253,7 @@ namespace Lumina
            }
         });
         
-        auto ScriptView = EntityRegistry.view<SScriptComponent>(entt::exclude<SDisabledTag>);
-        ScriptView.each([&](entt::entity Entity, SScriptComponent& Component)
-        {
-            OnScriptComponentCreated(Entity, Component); 
-        });
-        
-        auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
-        RootView.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
-        {
-            if (ScriptComponent.Script == nullptr)
-            {
-                return;
-            }
-            
-            if (ScriptComponent.ReadyFunc.IsValid())
-            {
-                ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
-            }
-        });
-        
-        auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
-        RelationshipView.each([&](entt::entity Entity, SScriptComponent& Script, const FRelationshipComponent& Relationship)
-        {
-            if (Relationship.Parent == entt::null)
-            {
-                ECS::Utils::ForEachDescendantReverse(EntityRegistry, Entity, [&](entt::entity Descendant)
-                {
-                    if (SScriptComponent* ScriptComp = EntityRegistry.try_get<SScriptComponent>(Descendant))
-                    {
-                        if (ScriptComp->Script == nullptr)
-                        {
-                            return;
-                        }
-                        
-                        if (ScriptComp->ReadyFunc.IsValid())
-                        {
-                            ScriptComp->ReadyFunc(ScriptComp->Script->Reference);
-                        }
-                    }
-                });
-                
-                if (Script.Script == nullptr)
-                {
-                    return;
-                }
-
-                if (Script.ReadyFunc.IsValid())
-                {
-                    Script.ReadyFunc(Script.Script->Reference);
-                }
-            }
-        });
+        InitializeScriptEntities();
         
         if (WorldType == EWorldType::Simulation || WorldType == EWorldType::Game)
         {
@@ -357,6 +316,8 @@ namespace Lumina
         SystemContext.Time          = TimeSinceCreation;
         SystemContext.UpdateStage   = Stage;
         
+        SingletonDispatcher.update<FScriptComponentPendingReady>();
+
         TickSystems(SystemContext);
     }
 
@@ -369,7 +330,93 @@ namespace Lumina
         
         RenderScene->RenderScene(RenderGraph, ViewVolume);
     }
-    
+
+    void CWorld::OnScriptComponentPendingReady(const FScriptComponentPendingReady& Event)
+    {
+        entt::entity Entity = Event.Entity;
+        
+        if (!EntityRegistry.valid(Entity))
+        {
+            return;
+        }
+            
+        SScriptComponent* ScriptComponent = EntityRegistry.try_get<SScriptComponent>(Entity);
+        if (!ScriptComponent)
+        {
+            return;
+        }
+            
+        if (ScriptComponent->ReadyFunc.IsValid())
+        {
+            ScriptComponent->ReadyFunc(ScriptComponent->Script->Reference);
+        }
+    }
+
+    void CWorld::InitializeScriptEntities()
+    {
+        auto ScriptView = EntityRegistry.view<SScriptComponent>(entt::exclude<SDisabledTag>);
+        ScriptView.each([&](entt::entity Entity, SScriptComponent& Component)
+        {
+            OnScriptComponentCreated(Entity, Component, false); 
+        });
+        
+        auto RootView = EntityRegistry.view<SScriptComponent>(entt::exclude<FRelationshipComponent, SDisabledTag>);
+        RootView.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
+        {
+            if (ScriptComponent.Script == nullptr)
+            {
+                return;
+            }
+            
+            if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
+            {
+                if (ScriptComponent.ReadyFunc.IsValid())
+                {
+                    ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
+                }
+            }
+        });
+        
+        auto RelationshipView = EntityRegistry.view<SScriptComponent, FRelationshipComponent>(entt::exclude<SDisabledTag>);
+        RelationshipView.each([&](entt::entity Entity, SScriptComponent& Script, const FRelationshipComponent& Relationship)
+        {
+            if (Relationship.Parent == entt::null)
+            {
+                ECS::Utils::ForEachDescendantReverse(EntityRegistry, Entity, [&](entt::entity Descendant)
+                {
+                    if (SScriptComponent* ScriptComp = EntityRegistry.try_get<SScriptComponent>(Descendant))
+                    {
+                        if (ScriptComp->Script == nullptr)
+                        {
+                            return;
+                        }
+                        
+                        if ((WorldType == EWorldType::Editor) == ScriptComp->bRunInEditor)
+                        {
+                            if (ScriptComp->ReadyFunc.IsValid())
+                            {
+                                ScriptComp->ReadyFunc(ScriptComp->Script->Reference);
+                            }
+                        }
+                    }
+                });
+                
+                if (Script.Script == nullptr)
+                {
+                    return;
+                }
+                
+                if ((WorldType == EWorldType::Editor) == Script.bRunInEditor)
+                {
+                    if (Script.ReadyFunc.IsValid())
+                    {
+                        Script.ReadyFunc(Script.Script->Reference);
+                    }
+                }
+            }
+        });
+    }
+
     bool CWorld::RegisterSystem(const FSystemVariant& NewSystem)
     {
         const FUpdatePriorityList& PriorityList = eastl::visit([&](const auto& System) { return System.GetUpdatePriorityList(); }, NewSystem);
@@ -564,14 +611,14 @@ namespace Lumina
 
     void CWorld::OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity)
     {
-        SScriptComponent& ScriptComponent   = Registry.get<SScriptComponent>(Entity);
-        OnScriptComponentCreated(Entity, ScriptComponent);
+        SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
+        OnScriptComponentCreated(Entity, ScriptComponent, true);
     }
 
-    void CWorld::OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent)
+    void CWorld::OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent, bool bRunReady)
     {
-        ScriptComponent.Entity              = Entity;
-        ScriptComponent.World               = this;
+        ScriptComponent.Entity = Entity;
+        ScriptComponent.World  = this;
         
         if (!ScriptComponent.ScriptPath.Path.empty())
         {
@@ -585,25 +632,28 @@ namespace Lumina
             ScriptComponent.Script->Reference.Set("Transform", EntityRegistry.try_get<STransformComponent>(Entity));
             ScriptComponent.Script->Environment.Set("World", this);
             
-
-            ScriptComponent.AttachFunc = ScriptComponent.Script->Reference["OnAttach"];
-            ScriptComponent.ReadyFunc  = ScriptComponent.Script->Reference["OnReady"];
-            ScriptComponent.UpdateFunc = ScriptComponent.Script->Reference["Update"];
-            ScriptComponent.DetachFunc = ScriptComponent.Script->Reference["OnDetach"];
+            ScriptComponent.ScriptMetaTable = ScriptComponent.Script->Reference["__meta"];
+            ScriptComponent.AttachFunc      = ScriptComponent.Script->Reference["OnAttach"];
+            ScriptComponent.ReadyFunc       = ScriptComponent.Script->Reference["OnReady"];
+            ScriptComponent.UpdateFunc      = ScriptComponent.Script->Reference["Update"];
+            ScriptComponent.DetachFunc      = ScriptComponent.Script->Reference["OnDetach"];
             
-            if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+            Lua::FRef RunInEditor = ScriptComponent.ScriptMetaTable.GetField("bRunInEditor");
+            if (RunInEditor.IsValid())
+            {
+                ScriptComponent.bRunInEditor = RunInEditor.GetOr<bool>(false);
+            }
+            
+            if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
             {
                 if (ScriptComponent.AttachFunc.IsValid())
                 {
                     ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
                 }
-
-                if (!bInitializing)
+                
+                if (bRunReady)
                 {
-                    if (ScriptComponent.ReadyFunc.IsValid())
-                    {
-                        ScriptComponent.ReadyFunc(ScriptComponent.Script->Reference);
-                    }
+                    SingletonDispatcher.enqueue<FScriptComponentPendingReady>(Entity);
                 }
             }
         }
@@ -612,15 +662,14 @@ namespace Lumina
     void CWorld::OnScriptComponentDestroyed(entt::registry& Registry, entt::entity Entity)
     {
         SScriptComponent& ScriptComponent = Registry.get<SScriptComponent>(Entity);
-        if (WorldType == EWorldType::Game || WorldType == EWorldType::Simulation)
+        if (ScriptComponent.Script == nullptr || !ScriptComponent.DetachFunc.IsValid())
         {
-            if (ScriptComponent.Script != nullptr)
-            {
-                if (ScriptComponent.DetachFunc.IsValid())
-                {
-                    ScriptComponent.DetachFunc(ScriptComponent.Script->Reference);
-                }
-            }
+            return;
+        }
+        
+        if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
+        {
+            ScriptComponent.DetachFunc(ScriptComponent.Script->Reference);
         }
     }
 
@@ -692,7 +741,7 @@ namespace Lumina
         return Move(Result);
     }
     
-    TVector<SRayResult> CWorld::CastSphere(const SSphereCastSettings& Settings)
+    TVector<SRayResult> CWorld::CastSphere(const SSphereCastSettings& Settings) const
     {
         LUMINA_PROFILE_SCOPE();
 
