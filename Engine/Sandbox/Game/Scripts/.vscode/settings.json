@@ -1,6 +1,7 @@
 {
   "luau-lsp.types.definitionFiles": {
-    "@globals": "../Test.d.luau"
+    "@globals": "Definitions/GlobalDefs.d.luau",
+    "@others":  "Definitions/AdditionalDefs.d.luau",
   },
   "luau-lsp.plugin.enabled": false,
   "luau-lsp.platform.type": "standard",

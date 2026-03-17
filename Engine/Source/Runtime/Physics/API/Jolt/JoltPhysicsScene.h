@@ -1,10 +1,8 @@
 ﻿#pragma once
 
-#include "entt/entt.hpp"
+#include "Jolt/Physics/PhysicsSystem.h"
 #include "Memory/SmartPtr.h"
 #include "Physics/PhysicsScene.h"
-#include "Jolt/Jolt.h"
-#include "Jolt/Physics/PhysicsSystem.h"
 #include "World/Entity/Events/ImpulseEvent.h"
 
 
@@ -20,8 +18,8 @@ namespace Lumina::Physics
 	{
 	public:
 		FJoltContactListener(entt::dispatcher& InDispatcher, const JPH::BodyLockInterfaceNoLock* InBodyLockInterface)
-			: BodyLockInterface(InBodyLockInterface)
-			, EventDispatcher(InDispatcher)
+			: EventDispatcher(InDispatcher)
+			, BodyLockInterface(InBodyLockInterface)
 		{ }
 
 		/// Called after detecting a collision between a body pair, but before calling OnContactAdded and before adding the contact constraint.
@@ -87,8 +85,8 @@ namespace Lumina::Physics
     	
     	void SyncTransforms() const;
     	
-    	TOptional<FRayResult> CastRay(const FRayCastSettings& Settings) override;
-		TVector<FRayResult> CastSphere(const FSphereCastSettings& Settings) override;
+    	TOptional<SRayResult> CastRay(const SRayCastSettings& Settings) override;
+		TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings) override;
     	
     	void OnCharacterComponentConstructed(entt::registry& Registry, entt::entity Entity);
     	void OnCharacterComponentDestroyed(entt::registry& Registry, entt::entity Entity);

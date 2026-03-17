@@ -5,6 +5,7 @@
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
 #include <Jolt/Physics/Collision/RayCast.h>
+#include "Physics/Ray/RayCast.h"
 #include <Jolt/Physics/Collision/ShapeCast.h>
 #include <Jolt/Physics/Collision/Shape/CapsuleShape.h>
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
@@ -441,7 +442,7 @@ namespace Lumina::Physics
         });
     }
 
-    TOptional<FRayResult> FJoltPhysicsScene::CastRay(const FRayCastSettings& Settings)
+    TOptional<SRayResult> FJoltPhysicsScene::CastRay(const SRayCastSettings& Settings)
     {
         LUMINA_PROFILE_SCOPE();
 
@@ -499,7 +500,7 @@ namespace Lumina::Physics
         
         JPH::Vec3 SurfaceNormal = Body->GetWorldSpaceSurfaceNormal(Hit.mSubShapeID2, Ray.GetPointOnRay(Hit.mFraction));
         
-        FRayResult Result
+        SRayResult Result
         {
             .BodyID     = Hit.mBodyID.GetIndexAndSequenceNumber(),
             .Entity     = static_cast<uint32>(Body->GetUserData()),
@@ -513,7 +514,7 @@ namespace Lumina::Physics
         return Result;
     }
 
-    TVector<FRayResult> FJoltPhysicsScene::CastSphere(const FSphereCastSettings& Settings)
+    TVector<SRayResult> FJoltPhysicsScene::CastSphere(const SSphereCastSettings& Settings)
     {
         LUMINA_PROFILE_SCOPE();
 
@@ -613,7 +614,7 @@ namespace Lumina::Physics
         
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         
-        TVector<FRayResult> Results;
+        TVector<SRayResult> Results;
         Results.reserve(Collector.Results.size());
         
         for (const JPH::ShapeCastResult& Hit : Collector.Results)
@@ -628,7 +629,7 @@ namespace Lumina::Physics
             JPH::Vec3 SurfaceNormal = Hit.mPenetrationAxis.Normalized();
             
             
-            FRayResult Result
+            SRayResult Result
             {
                 .BodyID     = Hit.mBodyID2.GetIndexAndSequenceNumber(),
                 .Entity     = static_cast<uint32>(Body->GetUserData()),
@@ -648,7 +649,7 @@ namespace Lumina::Physics
             Results.push_back(Result);
         }
         
-        eastl::sort(Results.begin(), Results.end(), [](const FRayResult& A, const FRayResult& B)
+        eastl::sort(Results.begin(), Results.end(), [](const SRayResult& A, const SRayResult& B)
         {
             return A.Fraction < B.Fraction;
         });

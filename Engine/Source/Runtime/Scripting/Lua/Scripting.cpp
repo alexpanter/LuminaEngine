@@ -10,6 +10,7 @@
 #include "Input/InputProcessor.h"
 #include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
+#include "Paths/Paths.h"
 #include "World/World.h"
 #include "World/Entity/Registry/EntityRegistry.h"
 #include "World/Entity/Systems/SystemContext.h"
@@ -104,9 +105,12 @@ namespace Lumina::Lua
         InputTable.SetFunction<&FInputProcessor::IsKeyUp>("IsKeyUp", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyPressed>("IsKeyPressed", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyRepeated>("IsKeyRepeated", &FInputProcessor::Get());
-        
-        luaL_newmetatable(L, "EntityRegistry");
-        lua_setuserdatametatable(L, TClassTraits<FEntityRegistry>::Tag());
+        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaX>("GetMouseDeltaX", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaY>("GetMouseDeltaY", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseX>("GetMouseX", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseY>("GetMouseY", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseZ>("GetMouseZ", &FInputProcessor::Get());
+
     }
 
     void FScriptingContext::SandboxGlobals()

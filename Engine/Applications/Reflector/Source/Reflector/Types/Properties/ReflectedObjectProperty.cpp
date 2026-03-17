@@ -13,10 +13,16 @@ namespace Lumina
 
     bool FReflectedObjectProperty::GenerateLuaBinding(eastl::string& Stream)
     {
-        Stream += "\t\t\"" + GetDisplayName() + "\", "
-        "sol::property([](" + Outer + "& Self) { return nullptr; })";//\n"
-        //"\t\t[](" + Outer + "& Self, " + TypeName + "* Obj) { Self." + Name + " = Obj; })";
-
         return true;
+    }
+
+    eastl::string_view FReflectedObjectProperty::GetLuaType()
+    {
+        size_t Pos = TypeName.find_last_of(':');
+        if (Pos != eastl::string::npos)
+        {
+            return eastl::string_view(TypeName).substr(Pos + 1);
+        }
+        return TypeName;
     }
 }

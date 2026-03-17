@@ -21,7 +21,7 @@ namespace Lumina::Physics
         virtual void ActivateBody(uint32 BodyID) = 0;
         virtual void ChangeBodyMotionType(uint32 BodyID, EBodyType NewType) = 0;
         
-        virtual TOptional<FRayResult> CastRay(const FRayCastSettings& Settings) = 0;
-        virtual TVector<FRayResult> CastSphere(const FSphereCastSettings& Settings) = 0;
+        virtual TOptional<SRayResult> CastRay(const SRayCastSettings& Settings) = 0;
+        virtual TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings) = 0;
     };
 }

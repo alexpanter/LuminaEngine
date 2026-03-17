@@ -2,6 +2,7 @@
 #include "Components/RelationshipComponent.h"
 #include "Core/Serialization/Archiver.h"
 #include "Registry/EntityRegistry.h"
+#include "Scripting/Lua/Reference.h"
 
 
 namespace Lumina
@@ -30,13 +31,8 @@ namespace Lumina::ECS::Utils
 
 	NODISCARD RUNTIME_API entt::id_type GetTypeID(FStringView Name);
 	NODISCARD RUNTIME_API entt::id_type GetTypeID(const CStruct* Type);
+	NODISCARD RUNTIME_API entt::id_type GetTypeID(Lua::FRef Obj);
 
-	template<typename T>
-	NODISCARD entt::id_type DeduceType(T&& Obj)
-	{
-		LOG_ERROR("Failed to deduce id_type as a non-supported type: {}", (int)Obj.get_type());
-		return entt::id_type{};
-	}
 
 	template<typename ... TArgs>
 	entt::meta_any InvokeMetaFunc(const entt::meta_type& MetaType, entt::id_type FunctionID, TArgs&&... Args)

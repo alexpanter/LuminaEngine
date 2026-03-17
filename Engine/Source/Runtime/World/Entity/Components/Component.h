@@ -13,28 +13,24 @@ namespace Lumina
         template<typename TComponent>
         bool HasComponent(entt::registry& Registry, entt::entity Entity)
         {
-            LUMINA_PROFILE_SCOPE();
             return Registry.any_of<TComponent>(Entity);
         }
 
         template<typename TComponent>
         auto RemoveComponent(entt::registry& Registry, entt::entity Entity)
         {
-            LUMINA_PROFILE_SCOPE();
             return Registry.remove<TComponent>(Entity);
         }
 
         template<typename TComponent>
         void ClearComponent(entt::registry& Registry)
         {
-            LUMINA_PROFILE_SCOPE();
             Registry.clear<TComponent>();
         }
 
         template<typename TComponent>
         decltype(auto) EmplaceComponent(entt::registry& Registry, entt::entity Entity, const entt::meta_any& Any)
         {
-            LUMINA_PROFILE_SCOPE();
             if constexpr (eastl::is_empty_v<TComponent>)
             {
                 Registry.emplace<TComponent>(Entity);
@@ -48,7 +44,6 @@ namespace Lumina
         template<typename TComponent>
         TComponent& PatchComponent(entt::registry& Registry, entt::entity Entity, const entt::meta_any& Any)
         {
-            LUMINA_PROFILE_SCOPE();
             return Registry.patch<TComponent>(Entity, [&](TComponent& Type)
             {
                 Type = Any.cast<const TComponent&>();
@@ -58,14 +53,12 @@ namespace Lumina
         template<typename TComponent>
         TComponent& GetComponent(entt::registry& Registry, entt::entity Entity)
         {
-            LUMINA_PROFILE_SCOPE();
             return Registry.get<TComponent>(Entity);
         }
 
         template<typename TComponent>
         void Serialize(FArchive& Ar, entt::meta_any& Any)
         {
-            LUMINA_PROFILE_SCOPE();
             CStruct* Struct = TComponent::StaticStruct();
             TComponent& Instance = Any.cast<TComponent&>();
             Struct->SerializeTaggedProperties(Ar, &Instance);
@@ -85,8 +78,9 @@ namespace Lumina
                 .type(TComponent::StaticStruct()->GetName().c_str())
                 .traits(ECS::ETraits::Component)
                 .template func<&GetStructType<TComponent>>("static_struct"_hs);
-            
-            Meta.template func<&RemoveComponent<TComponent>>("remove"_hs)
+
+            Meta
+            .template func<&RemoveComponent<TComponent>>("remove"_hs)
             .template func<&ClearComponent<TComponent>>("clear"_hs)
             .template func<&EmplaceComponent<TComponent>>("emplace"_hs)
             .template func<&HasComponent<TComponent>>("has"_hs);

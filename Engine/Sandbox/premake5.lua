@@ -1,7 +1,7 @@
 project "Sandbox"
 	kind "SharedLib"
 	rtti "off"
-	enablereflection "Off" --@TODO Cannot have a project with no reflected files.
+	enablereflection "On" --@TODO Cannot have a project with no reflected files.
 
 	libdirs
 	{

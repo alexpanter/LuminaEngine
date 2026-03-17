@@ -24,6 +24,7 @@ namespace Lumina
         }
 
         const char* GetPropertyParamType() const override { return "FEnumPropertyParams"; }
+        eastl::string_view GetLuaType() override { return "number"; }
 
         bool CanDeclareCrossModuleReferences() const override { return true; }
         void DeclareCrossModuleReference(const eastl::string& API, eastl::string& Stream) override

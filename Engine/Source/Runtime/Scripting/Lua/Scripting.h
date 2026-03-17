@@ -1,11 +1,9 @@
 #pragma once
 #include "Containers/String.h"
 #include "Core/Delegates/Delegate.h"
-#include "Core/Object/Class.h"
 #include "Core/Reflection/Type/LuminaTypes.h"
 #include "Memory/SmartPtr.h"
 #include "Tools/Actions/DeferredActions.h"
-#include "World/Entity/Components/Component.h"
 
 
 struct GCMetrics;

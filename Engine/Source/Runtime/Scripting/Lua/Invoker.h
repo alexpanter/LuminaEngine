@@ -87,7 +87,7 @@ namespace Lumina::Lua
                 }
                 else
                 {
-                    auto Ret = (Self->*TFunc)(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 2)...);
+                    decltype(auto) Ret = (Self->*TFunc)(GetArg<eastl::tuple_element_t<Is, ArgsT>>(L, Is + 2)...);
                     TStack<decltype(Ret)>::Push(L, Ret);
                     return 1;
                 }

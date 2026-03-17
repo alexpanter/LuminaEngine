@@ -81,6 +81,7 @@ namespace Lumina::Lua
         };
         
         FRef() = default;
+        FRef(FNil);
         FRef(lua_State* L, int Index);
         ~FRef();
         
@@ -319,12 +320,6 @@ namespace Lumina::Lua
         TClass<T> Class(State, Name);
         return Class;
     }
-    
-    
-    
-    
-    
-    
     
     template<>
     struct TStack<FRef>

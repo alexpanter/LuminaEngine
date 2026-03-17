@@ -20,6 +20,8 @@
 #include "Physics/Physics.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
+#include "Scripting/Lua/Stack.h"
+#include "Scripting/Lua/VariadicArgs.h"
 #include "Subsystems/FCameraManager.h"
 #include "Subsystems/WorldSettings.h"
 #include "World/Entity/Components/RelationshipComponent.h"
@@ -36,12 +38,19 @@ namespace Lumina
 
     void CWorld::RegisterLuaModule(Lua::FRef& GlobalRef)
     {
-        GlobalRef.NewClass<CWorld>("CWorld")
-            .AddFunction<&CWorld::DestroyEntity>("DestroyEntity")
-            .AddFunction<&CWorld::GetEntityByTag>("GetEntityByTag")
-            .AddFunction<&CWorld::GetEntityByName>("GetEntityByName")
-            .AddFunction<[](CWorld* World) { return World->GetEntityRegistry().create(); }>("NewEntity")
-            .AddFunction<[](CWorld* World, entt::entity Entity) { return World->GetEntityRegistry().valid(Entity); }>("IsEntityValid")
+        using namespace entt::literals;
+        
+        GlobalRef.NewClass<FEntityRegistry>("FEntityRegistry")
+            .AddFunction<[](FEntityRegistry& Registry) { return Registry.create(); }>("Create")
+            .AddFunction<[](FEntityRegistry& Registry, entt::entity Entity) { Registry.destroy(Entity); }>("Destroy")
+            .AddFunction<&FEntityRegistry::valid>("Valid")
+            .AddFunction<[](entt::registry& Registry, entt::entity Entity, Lua::FRef Ref)
+            {
+                entt::id_type Type = ECS::Utils::GetTypeID(Ref);
+                auto Meta = ECS::Utils::InvokeMetaFunc(Type, "has"_hs, entt::forward_as_meta(Registry), Entity);
+                return Meta.cast<bool>();
+                
+            }>("Has")
             .Register();
     }
 
@@ -470,7 +479,6 @@ namespace Lumina
             }
             
             ScriptComponent.Script->Reference.Set("Entity", Entity);
-            ScriptComponent.Script->Reference.Set("Registry", &EntityRegistry);
             ScriptComponent.Script->Environment.Set("World", this);
             
 
@@ -546,7 +554,7 @@ namespace Lumina
         LineBatcherComponent->DrawLine(Start, End, Color, Thickness, bDepthTest, Duration);
     }
     
-    TOptional<FRayResult> CWorld::CastRay(const FRayCastSettings& Settings)
+    TOptional<SRayResult> CWorld::CastRay(const SRayCastSettings& Settings)
     {
         LUMINA_PROFILE_SCOPE();
         
@@ -555,13 +563,13 @@ namespace Lumina
             return eastl::nullopt;
         }
         
-        TOptional<FRayResult> Result = PhysicsScene->CastRay(Settings);
+        TOptional<SRayResult> Result = PhysicsScene->CastRay(Settings);
         
         if (Settings.bDrawDebug)
         {
             if (Result.has_value())
             {
-                FRayResult RayResult = Result.value();
+                SRayResult RayResult = Result.value();
                 DrawLine(Settings.Start, RayResult.Location, FColor(Settings.DebugMissColor), 1.0f, true, Settings.DebugDuration);
                 
                 glm::vec3 NormalEnd = RayResult.Location + RayResult.Normal * 0.5f;
@@ -580,9 +588,9 @@ namespace Lumina
         return Move(Result);
     }
 
-    TOptional<FRayResult> CWorld::CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug, float DebugDuration, uint32 LayerMask, int64 IgnoreBody)
+    TOptional<SRayResult> CWorld::CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug, float DebugDuration, uint32 LayerMask, int64 IgnoreBody)
     {
-        FRayCastSettings Settings;
+        SRayCastSettings Settings;
         Settings.DebugDuration = DebugDuration;
         Settings.Start = Start;
         Settings.End = End;
@@ -593,7 +601,7 @@ namespace Lumina
         return CastRay(Settings);
     }
     
-    TVector<FRayResult> CWorld::CastSphere(const FSphereCastSettings& Settings)
+    TVector<SRayResult> CWorld::CastSphere(const SSphereCastSettings& Settings)
     {
         LUMINA_PROFILE_SCOPE();
 

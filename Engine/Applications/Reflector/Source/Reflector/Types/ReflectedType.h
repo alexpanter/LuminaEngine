@@ -79,6 +79,7 @@ namespace Lumina::Reflection
         virtual void DeclareImplementation(eastl::string& Stream) = 0;
         virtual void DeclareStaticRegistration(eastl::string& Stream) = 0;
         virtual void SetupLuaRegistration(eastl::string& Stream) = 0;
+        virtual void DefineLuaAPI(eastl::string& Stream) = 0;
         
         bool HasMetadata(const eastl::string& Meta);
 
@@ -123,6 +124,7 @@ namespace Lumina::Reflection
         void DeclareImplementation(eastl::string& Stream) override;
         void DeclareStaticRegistration(eastl::string& Stream) override;
         void SetupLuaRegistration(eastl::string& Stream) override;
+        void DefineLuaAPI(eastl::string& Stream) override;
 
         void AddConstant(const FConstant& Constant) { Constants.push_back(Constant); }
 
@@ -154,6 +156,7 @@ namespace Lumina::Reflection
         void DeclareImplementation(eastl::string& Stream) override;
         void DeclareStaticRegistration(eastl::string& Stream) override;
         void SetupLuaRegistration(eastl::string& Stream) override;
+        void DefineLuaAPI(eastl::string& Stream) override;
         
         eastl::string Parent;
     };

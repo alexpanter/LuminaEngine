@@ -186,6 +186,11 @@ namespace Lumina::Reflection
         Stream += "}\n";
     }
 
+    void FReflectedEnum::DefineLuaAPI(eastl::string& Stream)
+    {
+        Stream += "declare " + DisplayName + ": number\n";
+    }
+
     //---------------------------------------------------------------------------------------------------------------------
     
     FReflectedStruct::~FReflectedStruct()
@@ -606,8 +611,12 @@ namespace Lumina::Reflection
             Stream += "\t\tRegistry->remove<" + QualifiedName + ">(Entity);\n";
             Stream += "\t\treturn 0;\n";
             Stream += "\t}, \"Remove\");\n";
-            Stream += "\tlua_setfield(L, -2, \"Remove\");\n\n";
+            Stream += "\tlua_setfield(L, -2, \"Remove\");\n\n"; 
         }
+        
+        Stream += "\tlua_pushunsigned(L, entt::hashed_string(\"" + DisplayName + "\"));\n";
+        Stream += "\tlua_setfield(L, MetaTableIdx, \"__type_id\");\n";
+        Stream += "\n";
         
         Stream += "\tlua_pushcfunction(L, +[](lua_State* State)\n";
         Stream += "\t{\n";
@@ -621,6 +630,145 @@ namespace Lumina::Reflection
         Stream += "\tDEBUG_ASSERT(BindingTop == lua_gettop(L));\n";
         
         Stream += "}\n";
+    }
+
+    void FReflectedStruct::DefineLuaAPI(eastl::string& Stream)
+    {
+        
+        Stream += "declare " + DisplayName + ": { }\n";
+        
+        Stream += "declare class " + DisplayName + "\n";
+
+        for (const auto& Prop : Props)
+        {
+            if (Prop->bInner || Prop->GetLuaType().empty())
+            {
+                continue;
+            }
+            
+            
+            Stream += "\t" + Prop->Name + ": " + Prop->GetLuaType().data() + "\n";
+        }
+
+        for (const auto& Function : Functions)
+        {
+            if (Function->Arguments.empty())
+            {
+                Stream += "\tfunction " + Function->Name + "(self): any\n"; 
+            }
+            else
+            {
+                Stream += "\tfunction " + Function->Name + "(self, ";
+                
+                uint32_t Count = 0;
+                for (const FFieldInfo& Info : Function->Arguments)
+                {
+                    Stream += Info.Name + ": ";
+                    switch (Info.Flags)
+                    {
+                    case EPropertyTypeFlags::None:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Int8:
+                    case EPropertyTypeFlags::Int16:
+                    case EPropertyTypeFlags::Int32:
+                    case EPropertyTypeFlags::Int64:
+                    case EPropertyTypeFlags::UInt8:
+                    case EPropertyTypeFlags::UInt16:
+                    case EPropertyTypeFlags::UInt32:
+                    case EPropertyTypeFlags::UInt64:
+                    case EPropertyTypeFlags::Float:
+                    case EPropertyTypeFlags::Double:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Bool:
+                        Stream += "boolean";
+                        break;
+                    case EPropertyTypeFlags::Object:
+                        Stream += ClangUtils::StripNamespace(Info.TypeName);
+                        break;
+                    case EPropertyTypeFlags::Class:
+                        Stream += ClangUtils::StripNamespace(Info.TypeName);
+                        break;
+                    case EPropertyTypeFlags::Name:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::String:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::Enum:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Vector:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Struct:
+                        Stream += ClangUtils::StripNamespace(Info.TypeName);
+                        break;
+                    }
+                    
+                    if (Count != Function->Arguments.size() - 1)
+                    {
+                        Stream += ", ";
+                    }
+                    
+                    Count++;
+                }
+                
+                Stream += ")";
+                
+                if (Function->Return.has_value())
+                {
+                    Stream += ": ";
+                    switch (Function->Return->Flags)
+                    {
+                    case EPropertyTypeFlags::None:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Int8:
+                    case EPropertyTypeFlags::Int16:
+                    case EPropertyTypeFlags::Int32:
+                    case EPropertyTypeFlags::Int64:
+                    case EPropertyTypeFlags::UInt8:
+                    case EPropertyTypeFlags::UInt16:
+                    case EPropertyTypeFlags::UInt32:
+                    case EPropertyTypeFlags::UInt64:
+                    case EPropertyTypeFlags::Float:
+                    case EPropertyTypeFlags::Double:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Bool:
+                        Stream += "boolean";
+                        break;
+                    case EPropertyTypeFlags::Object:
+                        Stream += ClangUtils::StripNamespace(Function->Return->TypeName);
+                        break;
+                    case EPropertyTypeFlags::Class:
+                        Stream += ClangUtils::StripNamespace(Function->Return->TypeName);
+                        break;
+                    case EPropertyTypeFlags::Name:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::String:
+                        Stream += "string";
+                        break;
+                    case EPropertyTypeFlags::Enum:
+                        Stream += "number";
+                        break;
+                    case EPropertyTypeFlags::Vector:
+                        Stream += "any";
+                        break;
+                    case EPropertyTypeFlags::Struct:
+                        Stream += ClangUtils::StripNamespace(Function->Return->TypeName);
+                        break;
+                    }
+                }
+                
+                Stream += "\n";
+            }
+        }
+        
+        Stream += "end\n";
     }
 
 

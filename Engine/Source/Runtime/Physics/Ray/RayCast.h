@@ -7,7 +7,7 @@
 namespace Lumina
 {
     REFLECT()
-    struct FRayResult
+    struct SRayResult
     {
         GENERATED_BODY()
         
@@ -34,7 +34,7 @@ namespace Lumina
     };
     
     REFLECT()
-    struct FRayCastSettings
+    struct SRayCastSettings
     {
         GENERATED_BODY()
         
@@ -64,7 +64,7 @@ namespace Lumina
     };
 
     REFLECT()
-    struct FSphereCastSettings
+    struct SSphereCastSettings
     {
         GENERATED_BODY()
         

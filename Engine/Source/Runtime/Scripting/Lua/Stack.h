@@ -11,6 +11,9 @@
 
 namespace Lumina::Lua
 {
+    class FRef;
+    class FVariadicArgs;
+
     template<typename T>
     struct TLuaNativeType : eastl::false_type {};
     
@@ -25,6 +28,8 @@ namespace Lumina::Lua
     template<> struct TLuaNativeType<uint8>             : eastl::true_type {};
     template<> struct TLuaNativeType<uint32>            : eastl::true_type {};
     template<> struct TLuaNativeType<int64>             : eastl::true_type {};
+    template<> struct TLuaNativeType<FVariadicArgs>     : eastl::true_type {};
+    template<> struct TLuaNativeType<FRef>              : eastl::true_type {};
     template<> struct TLuaNativeType<uint64>            : eastl::true_type {};
     template<> struct TLuaNativeType<bool>              : eastl::true_type {};
     template<> struct TLuaNativeType<FString>           : eastl::true_type {};
@@ -98,7 +103,7 @@ namespace Lumina::Lua
         static FStringView TypeName(lua_State* State)         { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const char* Value) { lua_pushstring(State, Value); }
         static const char* Get(lua_State* State, int Index)   { return luaL_checkstring(State, Index); }
-        static bool Check(lua_State* State, int Index)        { return lua_isstring(State, Index); }
+        static bool Check(lua_State* State, int Index)        { return lua_type(State, Index) == LUA_TSTRING; }
     };
     
     template<>
@@ -107,7 +112,7 @@ namespace Lumina::Lua
         static FStringView TypeName(lua_State* State)         { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, FStringView Value) { lua_pushstring(State, Value.data()); }
         static FStringView Get(lua_State* State, int Index)   { return luaL_checkstring(State, Index); }
-        static bool Check(lua_State* State, int Index)        { return lua_isstring(State, Index); }
+        static bool Check(lua_State* State, int Index)        { return lua_type(State, Index) == LUA_TSTRING; }
     };
     
     template<>
@@ -116,7 +121,7 @@ namespace Lumina::Lua
         static FStringView TypeName(lua_State* State)               { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const FString& Value)    { lua_pushstring(State, Value.c_str()); }
         static FString Get(lua_State* State, int Index)             { return luaL_checkstring(State, Index); }
-        static bool Check(lua_State* State, int Index)              { return lua_isstring(State, Index); }
+        static bool Check(lua_State* State, int Index)              { return lua_type(State, Index) == LUA_TSTRING; }
     };
     
     template<>
@@ -125,7 +130,7 @@ namespace Lumina::Lua
         static FStringView TypeName(lua_State* State)                   { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const FFixedString& Value)   { lua_pushstring(State, Value.c_str()); }
         static FFixedString Get(lua_State* State, int Index)            { return luaL_checkstring(State, Index); }
-        static bool Check(lua_State* State, int Index)                  { return lua_isstring(State, Index); }
+        static bool Check(lua_State* State, int Index)                  { return lua_type(State, Index) == LUA_TSTRING; }
     };
     
     template<>
@@ -134,7 +139,7 @@ namespace Lumina::Lua
         static FStringView TypeName(lua_State* State)               { return lua_typename(State, LUA_TSTRING); }
         static void Push(lua_State* State, const FName& Value)      { lua_pushstring(State, Value.c_str()); }
         static FName Get(lua_State* State, int Index)               { return luaL_checkstring(State, Index); }
-        static bool Check(lua_State* State, int Index)              { return lua_isstring(State, Index); }
+        static bool Check(lua_State* State, int Index)              { return lua_type(State, Index) == LUA_TSTRING; }
     };
     
     template<>

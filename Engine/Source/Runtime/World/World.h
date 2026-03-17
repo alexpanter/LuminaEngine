@@ -27,7 +27,7 @@ namespace Lumina
 
 namespace Lumina
 {
-    REFLECT(NoLua)
+    REFLECT()
     class RUNTIME_API CWorld : public CObject, public IPrimitiveDrawInterface
     {
         GENERATED_BODY()
@@ -66,14 +66,33 @@ namespace Lumina
         void Update(const FUpdateContext& Context);
         void Render(FRenderGraph& RenderGraph);
         
+        FUNCTION(Script)
         entt::entity ConstructEntity(const FName& Name, const FTransform& Transform = FTransform());
+        
+        FUNCTION(Script)
+        FEntityRegistry& GetEntityRegistry() { return EntityRegistry; }
+        
+        FUNCTION(Script)
+        uint32 GetNumEntities() const;
+        
+        FUNCTION(Script)
+        SDefaultWorldSettings& GetDefaultWorldSettings();
+        
+        FUNCTION(Script)
+        entt::entity GetEntityByTag(const FName& Tag);
+        
+        FUNCTION(Script)
+        entt::entity GetEntityByName(const FName& Name);
+
+        FUNCTION(Script)
+        void MarkTransformDirty(entt::entity Entity);
+
+        
+        entt::entity GetFirstEntityWith(entt::id_type Type);
         
         void CopyEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback);
         void DestroyEntity(entt::entity Entity);
-
-        FEntityRegistry& GetEntityRegistry() { return EntityRegistry; }
         
-        uint32 GetNumEntities() const;
         void SetActiveCamera(entt::entity InEntity);
         SCameraComponent* GetActiveCamera();
         entt::entity GetActiveCameraEntity() const;
@@ -83,8 +102,6 @@ namespace Lumina
         double GetTimeSinceWorldCreation() const { return TimeSinceCreation; }
         
         NODISCARD EWorldType GetWorldType() const { return WorldType; }
-        
-        NODISCARD SDefaultWorldSettings& GetDefaultWorldSettings();
         
         void CreateRenderer();
         void DestroyRenderer();
@@ -116,17 +133,12 @@ namespace Lumina
         void DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness = 1.0f, bool bDepthTest = true, float Duration = -1.0f) override;
         //~ End Debug Drawing
         
-        TOptional<FRayResult> CastRay(const FRayCastSettings& Settings);
-        TOptional<FRayResult> CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug = false, float DebugDuration = 0.0f, uint32 LayerMask = 0xFFFFFFFF, int64 IgnoreBody = -1);
-        TVector<FRayResult> CastSphere(const FSphereCastSettings& Settings);
+        TOptional<SRayResult> CastRay(const SRayCastSettings& Settings);
+        TOptional<SRayResult> CastRay(const glm::vec3& Start, const glm::vec3& End, bool bDrawDebug = false, float DebugDuration = 0.0f, uint32 LayerMask = 0xFFFFFFFF, int64 IgnoreBody = -1);
+        TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings);
 
         FORCEINLINE bool IsGameWorld() const { return WorldType == EWorldType::Game; }
-
-        entt::entity GetEntityByTag(const FName& Tag);
-        entt::entity GetEntityByName(const FName& Name);
-        entt::entity GetFirstEntityWith(entt::id_type Type);
         
-        void MarkTransformDirty(entt::entity Entity);
         void SetEntityTransform(entt::entity Entity, const FTransform& NewTransform);
         TVector<entt::entity> GetSelectedEntities() const;
         bool IsSelected(entt::entity Entity) const;
