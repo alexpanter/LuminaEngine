@@ -1044,12 +1044,12 @@ namespace Lumina
                 {
                     LUMINA_PROFILE_SECTION("Draw Tool Window");
 
-                    ImGuiWindowFlags ToolWindowFlags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNavFocus;
+                    ImGuiWindowFlags ToolWindowFlags = ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse;
 
                     ImGui::SetNextWindowClass(&Tool->ToolWindowsClass);
 
                     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImGui::GetStyle().WindowPadding);
-                    bool const DrawToolWindow = ImGui::Begin(ToolWindowName.c_str(), &Window->bOpen, ToolWindowFlags);
+                    bool const DrawToolWindow = ImGui::Begin(ToolWindowName.c_str(), nullptr, ToolWindowFlags);
                     ImGui::PopStyleVar();
 
                     if (DrawToolWindow)
