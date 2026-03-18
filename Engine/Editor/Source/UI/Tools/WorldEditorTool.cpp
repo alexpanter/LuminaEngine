@@ -100,6 +100,15 @@ namespace Lumina
             {
                 PushAddComponentModal(Data.Entity);
             }
+            ImGuiX::TextTooltip("{}", "Add a new component to the entity");
+
+            
+            if (ImGui::MenuItem("Copy Entity ID"))
+            {
+                ImGui::SetClipboardText(eastl::to_string(entt::to_integral(Data.Entity)).c_str());
+            }
+            
+            ImGuiX::TextTooltip("{}", "Copy entity identifier to platform clipboard");
             
             if (ECS::Utils::IsChild(Registry, Data.Entity))
             {

@@ -32,7 +32,7 @@ namespace Lumina::Lua
         
         void InvokeDtor()
         {
-            Storage = {};
+            //Storage = {};
         }
 
         TVariant<eastl::monostate, RawT, RawT*> Storage;

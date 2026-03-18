@@ -138,8 +138,11 @@ namespace Lumina::Lua
         template<auto TFunc>
         auto AddFunction(FStringView FnName);
         
+        template<auto TFunc>
+        auto AddFunction(EMetaMethod Method);
         
-        template<auto TGetter, auto TSetter = TGetter>
+        
+        template<auto TMemberPtr>
         auto AddProperty(FStringView PropName);
     
     private:
@@ -186,21 +189,35 @@ namespace Lumina::Lua
     }
 
     template <typename T, typename TMethods, typename TProperties>
-    template <auto TGetter, auto TSetter>
+    template <auto TFunc>
+    auto TClass<T, TMethods, TProperties>::AddFunction(EMetaMethod Method)
+    {
+        return AddFunction<TFunc>(MetaMethodName(Method));
+    }
+
+    template <typename T, typename TMethods, typename TProperties>
+    template <auto TMemberPtr>
     auto TClass<T, TMethods, TProperties>::AddProperty(FStringView PropName)
     {
+        using MemberType = eastl::remove_reference_t<decltype(eastl::declval<T>().*TMemberPtr)>;
+        
         struct FPropertyEntry
         {
             uint16 Atom;
 
             int Get(lua_State* State) const
             {
-                return Invoker<TGetter>(State);
+                T& Self = TStack<T&>::Get(State, 1);
+                TStack<MemberType>::Push(State, Self.*TMemberPtr);
+                return 1;
             }
                 
             int Set(lua_State* State) const
             {
-                return Invoker<TSetter>(State);
+                T& Self = TStack<T&>::Get(State, 1);
+                MemberType Member = TStack<MemberType>::Get(State, 2);
+                Self.*TMemberPtr = Member;
+                return 0;
             }
         };
 

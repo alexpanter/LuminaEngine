@@ -451,9 +451,9 @@ namespace Lumina
                 Light.Direction         = glm::normalize(DirectionalLightComponent.Direction);
                 LightData.SunDirection  = Light.Direction;
                 
-                LightData.CascadeSplits[0] = 15.0f;
-                LightData.CascadeSplits[1] = 50.0f;
-                LightData.CascadeSplits[2] = 200.0f;
+                LightData.CascadeSplits[0] = 35.0f;
+                LightData.CascadeSplits[1] = 100.0f;
+                LightData.CascadeSplits[2] = 400.0f;
 
                 for (int i = 0; i < NumCascades; ++i)
                 {

@@ -1,5 +1,8 @@
 #include "pch.h"
 #include "Scripting.h"
+
+#include <glm/gtx/string_cast.hpp>
+
 #include "lstate.h"
 #include "luacode.h"
 #include "lualib.h"
@@ -110,6 +113,22 @@ namespace Lumina::Lua
         InputTable.SetFunction<&FInputProcessor::GetMouseX>("GetMouseX", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::GetMouseY>("GetMouseY", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::GetMouseZ>("GetMouseZ", &FInputProcessor::Get());
+        
+        GlobalsRef.NewClass<glm::quat>("Quat")
+            .AddProperty<&glm::quat::x>("X")
+            .AddProperty<&glm::quat::y>("Y")
+            .AddProperty<&glm::quat::z>("Z")
+            .AddProperty<&glm::quat::w>("W")
+            .AddFunction<[](glm::quat& Self) { return glm::to_string(Self); }>(EMetaMethod::ToString)
+            .AddFunction<[](glm::quat& Self) { return glm::eulerAngles(Self); }>("EulerAngles")
+            .AddFunction<[](glm::quat& Self) { return glm::eulerAngles(Self); }>("EulerAngles")
+            .AddFunction<[](glm::quat& Self) { return glm::normalize(Self); }>("Normalize")
+            .AddFunction<[](glm::quat& Self) { return glm::inverse(Self); }>("Inverse")
+            .AddFunction<[](glm::quat& Self, glm::quat& Other, float Alpha) { return glm::slerp(Self, Other, Alpha); }>("SLerp")
+            .AddFunction<[](glm::quat& Self, glm::quat& Other, float Alpha) { return glm::lerp(Self, Other, Alpha); }>("Lerp")
+            .AddFunction<[](glm::quat& Self, glm::quat& Other) { return glm::dot(Self, Other); }>("Dot")
+            .AddFunction<[](glm::quat& Self) { return glm::length(Self); }>("Length")
+            .Register();
 
     }
 

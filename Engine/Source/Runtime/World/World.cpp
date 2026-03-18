@@ -647,10 +647,13 @@ namespace Lumina
             ScriptComponent.UpdateFunc      = ScriptComponent.Script->Reference["Update"];
             ScriptComponent.DetachFunc      = ScriptComponent.Script->Reference["OnDetach"];
             
-            Lua::FRef RunInEditor = ScriptComponent.ScriptMetaTable.GetField("bRunInEditor");
-            if (RunInEditor.IsValid())
+            if (ScriptComponent.ScriptMetaTable.IsValid())
             {
-                ScriptComponent.bRunInEditor = RunInEditor.GetOr<bool>(false);
+                Lua::FRef RunInEditor = ScriptComponent.ScriptMetaTable.GetField("bRunInEditor");
+                if (RunInEditor.IsValid())
+                {
+                    ScriptComponent.bRunInEditor = RunInEditor.GetOr<bool>(false);
+                }
             }
             
             if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
