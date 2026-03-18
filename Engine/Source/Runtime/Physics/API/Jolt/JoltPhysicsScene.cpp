@@ -10,12 +10,12 @@
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #if JPH_DEBUG_RENDERER
 #include <Jolt/Renderer/DebugRendererSimple.h>
+#include "Core/Utils/Defer.h"
 #endif
 #include "JoltPhysics.h"
 #include "JoltUtils.h"
 #include "Core/Console/ConsoleVariable.h"
 #include "Core/Profiler/Profile.h"
-#include "Core/Utils/Defer.h"
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
@@ -471,6 +471,26 @@ namespace Lumina::Physics
         Ray.mOrigin = JPHStart;
         Ray.mDirection = Direction;
         
+        class LayerMaskFilter : public JPH::ObjectLayerFilter
+        {
+        public:
+            LayerMaskFilter(uint32 InLayerMask) 
+                : LayerMask(InLayerMask) {}
+
+            bool ShouldCollide(JPH::ObjectLayer InLayer) const override
+            {
+                ECollisionProfiles LayerA = (ECollisionProfiles)(uint16)(LayerMask & 0xFFFF);
+                ECollisionProfiles MaskA  = (ECollisionProfiles)(uint16)(LayerMask >> 16);
+    
+                ECollisionProfiles LayerB = (ECollisionProfiles)(uint16)(InLayer & 0xFFFF);
+                ECollisionProfiles MaskB  = (ECollisionProfiles)(uint16)(InLayer >> 16);
+
+                return (MaskA & LayerB) != (ECollisionProfiles)0 || (MaskB & LayerA) != (ECollisionProfiles)0;
+            }
+
+            uint32 LayerMask;
+        };
+        
         class IgnoreFilter : public JPH::BodyFilter
         {
         public:
@@ -496,7 +516,10 @@ namespace Lumina::Physics
         
         
         JPH::RayCastResult Hit;
-        bool bHit = JoltSystem->GetNarrowPhaseQuery().CastRay(Ray, Hit, {}, {}, IgnoreFilter);
+        
+        LayerMaskFilter LayerFilter{(uint32)Settings.LayerMask};
+
+        bool bHit = JoltSystem->GetNarrowPhaseQuery().CastRay(Ray, Hit, {}, LayerFilter, IgnoreFilter);
         if (!bHit)
         {
             return eastl::nullopt;

@@ -61,8 +61,13 @@ namespace Lumina
         template<typename TComponent>
         Lua::FRef GetComponent_Lua(entt::registry& Registry, entt::entity Entity, const Lua::FRef& Ref)
         {
-            TComponent& Component = Registry.get<TComponent>(Entity);
-            Lua::TStack<TComponent&>::Push(Ref.GetState(), Component);
+            TComponent* Component = Registry.try_get<TComponent>(Entity);
+            if (Component == nullptr)
+            {
+                lua_pushnil(Ref.GetState());
+                return Lua::FRef(Ref.GetState(), -1);
+            }
+            Lua::TStack<TComponent*>::Push(Ref.GetState(), Component);
             return Lua::FRef(Ref.GetState(), -1);
         }
         
@@ -76,8 +81,17 @@ namespace Lumina
             }
             else
             {
-                TComponent& New = Registry.emplace_or_replace<TComponent>(Entity);
-                Lua::TStack<TComponent&>::Push(Ref.GetState(), New);
+                TComponent* New = nullptr;
+                if (Ref.Is<TComponent>())
+                {
+                    New = &Registry.emplace_or_replace<TComponent>(Entity, Ref.Get<TComponent>());
+                }
+                else
+                {
+                    New = &Registry.emplace_or_replace<TComponent>(Entity);
+                }
+                
+                Lua::TStack<TComponent*>::Push(Ref.GetState(), New);
                 return Lua::FRef(Ref.GetState(), -1);
             }
         }

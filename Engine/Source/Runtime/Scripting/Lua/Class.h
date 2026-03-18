@@ -1,230 +1,256 @@
 ﻿#pragma once
 
 #include "Invoker.h"
-#include "lualib.h"
 #include "Traits.h"
 #include "Log/Log.h"
 #include "Containers/String.h"
 
 namespace Lumina::Lua
 {
-    template<typename T, typename TMethods = TTuple<>, typename TProperties = TTuple<>>
+    struct FMethodEntry
+    {
+        int16           Atom   = -1;
+        FStringView     Name   = {};
+        lua_CFunction   Invoke = nullptr;
+    };
+
+    struct FPropertyEntry
+    {
+        int16           Atom    = -1;
+        FStringView     Name    = {};
+        lua_CFunction   Getter = nullptr;
+        lua_CFunction   Setter = nullptr;
+    };
+    
+    template <typename T, size_t NMethods = 0, size_t NMetaMethods = 0, size_t NProperties = 0>
     class TClass
     {
-        using ClassTraitsT = TClassTraits<T>;
-        using ClassT = T;
     public:
+    
+        using ClassT = T;
         
         TClass(lua_State* VM, FStringView InName)
-            : Name(InName)
-            , L(VM)
+            : L(VM)
+            , Name(InName)
         {
             luaL_newmetatable(L, InName.data());
             MetaTableIdx = lua_gettop(L);
         }
+    
+        TClass(lua_State* InL, FStringView InName, int InMetaTableIdx,
+               const TArray<FMethodEntry,   NMethods>&    InMethods,
+               const TArray<FMethodEntry,   NMetaMethods>& InMetaMethods,
+               const TArray<FPropertyEntry, NProperties>& InProperties)
+            : L(InL)
+            , Name(InName)
+            , MetaTableIdx(InMetaTableIdx)
+        {
+            for (size_t i = 0; i < NMethods; ++i)
+            {
+                Methods[i]    = InMethods[i];
+            }
+            for (size_t i = 0; i < NMetaMethods; ++i)
+            {
+                MetaMethods[i] = InMetaMethods[i];
+            }
+            for (size_t i = 0; i < NProperties; ++i)
+            {
+                Properties[i] = InProperties[i];
+            }
+        }
+        
+        template <auto TFunc>
+        auto AddFunction(FStringView FuncName)
+        {
+            FMethodEntry Entry;
+            Entry.Name   = FuncName;
+            Entry.Invoke = [](lua_State* State) -> int
+            {
+                return Invoker<TFunc>(State);
+            };
+    
+            TArray<FMethodEntry, NMethods + 1> NewMethods;
+            for (size_t i = 0; i < NMethods; ++i)
+            {
+                NewMethods[i] = Methods[i];
+            }
+            NewMethods[NMethods] = Entry;
+    
+            return TClass<T, NMethods + 1, NMetaMethods, NProperties>(L, Name, MetaTableIdx, NewMethods, MetaMethods, Properties);
+        }
+        
+        template <auto TFunc>
+        auto AddFunction(EMetaMethod Method)
+        {
+            FMethodEntry Entry;
+            Entry.Name   = MetaMethodName(Method);
+            Entry.Invoke = [](lua_State* State) -> int
+            {
+                return Invoker<TFunc>(State);
+            };
+    
+            TArray<FMethodEntry, NMetaMethods + 1> NewMetaMethods;
+            for (size_t i = 0; i < NMetaMethods; ++i)
+            {
+                NewMetaMethods[i] = MetaMethods[i];
+            }
+            NewMetaMethods[NMetaMethods] = Entry;
+    
+            return TClass<T, NMethods, NMetaMethods + 1, NProperties>(L, Name, MetaTableIdx, Methods, NewMetaMethods, Properties);
+        }
+        
+        template <auto TMemberPtr>
+        requires(eastl::is_member_object_pointer_v<decltype(TMemberPtr)>)
+        auto AddProperty(FStringView PropName)
+        {
+            using MemberT = eastl::remove_reference_t<decltype(eastl::declval<T>().*TMemberPtr)>;
+
+            FPropertyEntry Entry;
+            Entry.Name   = PropName;
+            Entry.Getter = [](lua_State* State) -> int
+            {
+                T& Self = TStack<T&>::Get(State, 1);
+                TStack<MemberT>::Push(State, Self.*TMemberPtr);
+                return 1;
+            };
+            Entry.Setter = [](lua_State* State) -> int
+            {
+                T& Self = TStack<T&>::Get(State, 1);
+                MemberT Member = TStack<MemberT>::Get(State, 2);
+                Self.*TMemberPtr = Member;
+                return 0;
+            };
+    
+            TArray<FPropertyEntry, NProperties + 1> NewProperties;
+            for (size_t i = 0; i < NProperties; ++i)
+            {
+                NewProperties[i] = Properties[i];
+            }
+            NewProperties[NProperties] = Entry;
+    
+            return TClass<T, NMethods, NMetaMethods, NProperties + 1>(L, Name, MetaTableIdx, Methods, MetaMethods, NewProperties);
+        }
+        
         
         void Register()
         {
-            using TMethodStorage   = TMethods;
-            using TPropStorage     = TProperties;
-
+            for (auto& Entry : Methods)
             {
+                Entry.Atom = Hash::FNV1a::GetHash16(Entry.Name.data());
+            }
+    
+            for (auto& Entry : Properties)
+            {
+                Entry.Atom = Hash::FNV1a::GetHash16(Entry.Name.data());
+            }
+            
+            eastl::sort(Methods.begin(), Methods.end(), [](const FMethodEntry& A, const FMethodEntry& B)
+            {
+                return A.Atom < B.Atom;
+            });
+    
+            if constexpr (NMethods > 0)
+            {
+                using TMethodStorage  = eastl::array<FMethodEntry, NMethods>;
+    
                 auto* Stored = static_cast<TMethodStorage*>(lua_newuserdata(L, sizeof(TMethodStorage)));
                 new (Stored) TMethodStorage(Methods);
-            
-                lua_pushcclosure(L, [](lua_State* State)
+    
+                lua_pushcclosure(L, [](lua_State* State) -> int
                 {
-                    int RawAtom = 0;
+                    int32 RawAtom = 0;
                     const char* AtomName = lua_namecallatom(State, &RawAtom);
                     int16 Atom = static_cast<int16>(RawAtom);
+    
                     auto* BoundMethods = static_cast<TMethodStorage*>(lua_touserdata(State, lua_upvalueindex(1)));
-                
-                    int Result = 0;
-                    bool bFound = false;
                     
-                    eastl::apply([&](auto&&... Entry)
+                    auto It = eastl::lower_bound(BoundMethods->begin(), BoundMethods->end(), Atom, [](const FMethodEntry& Entry, int16 Value)
                     {
-                        bFound = ((Entry.Atom == Atom ? (Result = Entry.Invoke(State), true) : false) || ...);
-                    }, *BoundMethods);
-                    
-                    if (!bFound)
+                        return Entry.Atom < Value;
+                    });
+
+                    if (It != BoundMethods->end() && It->Atom == Atom)
                     {
-                        LOG_ERROR("Failed to find function: {} ({})", AtomName, Atom);
+                        return It->Invoke(State);
                     }
-                
-                    return Result;
+                    
+    
+                    LOG_ERROR("Failed to find method: {} ({})", AtomName, Atom);
+                    return 0;
                 }, "__namecall", 1);
-            
+    
                 lua_setfield(L, MetaTableIdx, "__namecall");
             }
-            
+    
+            if constexpr (NProperties > 0)
             {
-                auto* Stored = static_cast<TPropStorage*>(lua_newuserdata(L, sizeof(TPropStorage)));
-                new (Stored) TPropStorage(Props);
-
-                lua_pushvalue(L, MetaTableIdx);
+                using TPropertyStorage = TArray<FPropertyEntry, NProperties>;
+    
+                auto* Stored = static_cast<TPropertyStorage*>(lua_newuserdata(L, sizeof(TPropertyStorage)));
+                new (Stored) TPropertyStorage(Properties);
+    
                 lua_pushcclosure(L, [](lua_State* State) -> int
                 {
-                    const char* Key = lua_tostring(State, 2);
-                    uint16 Hash = Hash::FNV1a::GetHash16(Key);
-
-                    auto* BoundProps = static_cast<TPropStorage*>(lua_touserdata(State, lua_upvalueindex(1)));
-
-                    int Result = 0;
-                    bool bFound = false;
-
-                    eastl::apply([&](const auto&... Entry)
+                    int32 RawAtom = 0;
+                    lua_tostringatom(State, 2, &RawAtom);
+                    int16 Atom = static_cast<int16>(RawAtom);
+    
+                    auto* BoundProperties = static_cast<TPropertyStorage*>(lua_touserdata(State, lua_upvalueindex(1)));
+    
+                    for (auto& Entry : *BoundProperties)
                     {
-                        bFound = ((Entry.Atom == Hash ? (Result = Entry.Get(State), true) : false) || ...);
-                    }, *BoundProps);
-
-                    if (bFound)
-                    {
-                        return Result;
+                        if (Entry.Atom == Atom)
+                        {
+                            return Entry.Getter(State);
+                        }
                     }
-
-                    lua_pushvalue(State, 2);
-                    lua_rawget(State, lua_upvalueindex(2));
-                    return 1;
-
-                }, "__index", 2);
-
+    
+                    return 0;
+                }, "__index", 1);
+    
                 lua_setfield(L, MetaTableIdx, "__index");
-            }
-            
-            {
-                auto* Stored = static_cast<TPropStorage*>(lua_newuserdata(L, sizeof(TPropStorage)));
-                new (Stored) TPropStorage(Props);
-
+    
+                Stored = static_cast<TPropertyStorage*>(lua_newuserdata(L, sizeof(TPropertyStorage)));
+                new (Stored) TPropertyStorage(Properties);
+    
                 lua_pushcclosure(L, [](lua_State* State) -> int
                 {
-                    const char* Key = lua_tostring(State, 2);
-                    uint16 Hash = Hash::FNV1a::GetHash16(Key);
-
-                    auto* BoundProps = static_cast<TPropStorage*>(lua_touserdata(State, lua_upvalueindex(1)));
-
-                    bool bFound = false;
-
-                    eastl::apply([&](const auto&... Entry)
+                    int32 RawAtom = 0;
+                    lua_tostringatom(State, 2, &RawAtom);
+                    int16 Atom = static_cast<int16>(RawAtom);
+    
+                    auto* BoundProperties = static_cast<TPropertyStorage*>(lua_touserdata(State, lua_upvalueindex(1)));
+    
+                    for (auto& Entry : *BoundProperties)
                     {
-                        bFound = ((Entry.Atom == Hash ? (Entry.Set(State), true) : false) || ...);
-                    }, *BoundProps);
-
-                    if (!bFound)
-                    {
-                        Key = lua_tostring(State, 2);
-                        luaL_error(State, "Unknown property '%s'", Key ? Key : "?");
+                        if (Entry.Atom == Atom)
+                        {
+                            return Entry.Setter(State);
+                        }
                     }
-
+    
                     return 0;
                 }, "__newindex", 1);
-                
-
+    
                 lua_setfield(L, MetaTableIdx, "__newindex");
             }
-            
-            if constexpr (eastl::is_destructible_v<ClassT>)
+    
+            for (auto& Entry : MetaMethods)
             {
-                lua_setuserdatadtor(L, MetaTableIdx, +[](lua_State* L, void* Userdata)
-                {
-                    auto* Header = static_cast<TUserdataHeader<ClassT>*>(Userdata);
-                    Header->InvokeDtor();
-                });
+                lua_pushcfunction(L, Entry.Invoke, Entry.Name.data());
+                lua_setfield(L, MetaTableIdx, Entry.Name.data());
             }
             
-            lua_setuserdatametatable(L, TClassTraits<T>::Tag());
+            lua_setuserdatametatable(L, TClassTraits<ClassT>::Tag());
         }
-        
-        template<auto TFunc>
-        auto AddFunction(FStringView FnName);
-        
-        template<auto TFunc>
-        auto AddFunction(EMetaMethod Method);
-        
-        
-        template<auto TMemberPtr>
-        auto AddProperty(FStringView PropName);
     
     private:
-        
-        template<typename U, typename UMethods, typename UProperties>
-        friend class TClass;
-        
-        TClass(lua_State* VM, FStringView InName, int InMTIdx, TMethods InMethods, TProperties InProperties)
-            : MetaTableIdx(InMTIdx)
-            , Methods(InMethods)
-            , Props(InProperties)
-            , Name(InName)
-            , L(VM)
-        {}
-        
-    private:
-        
-        int32           MetaTableIdx;
-        TMethods        Methods;
-        TProperties     Props;
-        FStringView     Name;
-        lua_State*      L = nullptr;
+    
+        lua_State*                                  L             = nullptr;
+        FStringView                                 Name          = {};
+        int                                         MetaTableIdx  = -1;
+        TArray<FMethodEntry,   NMethods>            Methods       = {};
+        TArray<FMethodEntry,   NMetaMethods>        MetaMethods   = {};
+        TArray<FPropertyEntry, NProperties>         Properties    = {};
     };
-
-    template <typename T, typename TMethods, typename TProperties>
-    template <auto TFunc>
-    auto TClass<T, TMethods, TProperties>::AddFunction(FStringView FnName)
-    {
-        struct FMethodEntry
-        {
-            int Atom;
-
-            int Invoke(lua_State* State)
-            {
-                return Invoker<TFunc>(State);
-            }
-        };
-            
-        int16 Atom = static_cast<int16>(Hash::FNV1a::GetHash16(FnName.data()));
-        auto MethodTuple = eastl::tuple_cat(Methods, eastl::make_tuple(FMethodEntry{Atom}));
-        using NewMethodsT = decltype(MethodTuple);
-            
-        return TClass<ClassT, NewMethodsT, TProperties>(L, Name, MetaTableIdx, MethodTuple, Props);
-    }
-
-    template <typename T, typename TMethods, typename TProperties>
-    template <auto TFunc>
-    auto TClass<T, TMethods, TProperties>::AddFunction(EMetaMethod Method)
-    {
-        return AddFunction<TFunc>(MetaMethodName(Method));
-    }
-
-    template <typename T, typename TMethods, typename TProperties>
-    template <auto TMemberPtr>
-    auto TClass<T, TMethods, TProperties>::AddProperty(FStringView PropName)
-    {
-        using MemberType = eastl::remove_reference_t<decltype(eastl::declval<T>().*TMemberPtr)>;
-        
-        struct FPropertyEntry
-        {
-            uint16 Atom;
-
-            int Get(lua_State* State) const
-            {
-                T& Self = TStack<T&>::Get(State, 1);
-                TStack<MemberType>::Push(State, Self.*TMemberPtr);
-                return 1;
-            }
-                
-            int Set(lua_State* State) const
-            {
-                T& Self = TStack<T&>::Get(State, 1);
-                MemberType Member = TStack<MemberType>::Get(State, 2);
-                Self.*TMemberPtr = Member;
-                return 0;
-            }
-        };
-
-        uint16 Atom = Hash::FNV1a::GetHash16(PropName.data());
-        auto NewProps = eastl::tuple_cat(Props, eastl::make_tuple(FPropertyEntry{ Atom }));
-        using NewPropsT = decltype(NewProps);
-
-        return TClass<ClassT, TMethods, NewPropsT>(L, Name, MetaTableIdx, Methods, NewProps);
-    }
 }

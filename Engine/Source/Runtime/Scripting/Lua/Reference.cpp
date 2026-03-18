@@ -82,8 +82,22 @@ namespace Lumina::Lua
         if (State && Ref != LUA_NOREF)
         {
             lua_unref(State, Ref);
-            Ref = LUA_NOREF;
+            Ref     = LUA_NOREF;
+            State   = nullptr;
         }
+    }
+
+    EType FRef::GetType() const
+    {
+        if (!Push())
+        {
+            return {};
+        }
+        
+        int Type = lua_type(State, -1);
+        
+        lua_pop(State, 1);
+        return (EType)Type;
     }
 
     bool FRef::Push() const
@@ -127,10 +141,6 @@ namespace Lumina::Lua
             return FNil{};
         }
         
-        if (!lua_istable(State, -1))
-        {
-            return FNil{};
-        }
         int Type = lua_getfield(State, -1, Key.data());
         if (Type <= LUA_TNIL)
         {
@@ -165,5 +175,17 @@ namespace Lumina::Lua
         bool Result = lua_istable(State, -1);
         lua_pop(State, 1);
         return Result;
+    }
+
+    bool FRef::IsUserdata(int Tag) const
+    {
+        if (!Push())
+        {
+            return false;
+        }
+        
+        bool bResult = lua_userdatatag(State, -1) == Tag;
+        lua_pop(State, 1);
+        return bResult;
     }
 }

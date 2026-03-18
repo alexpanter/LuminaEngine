@@ -26,6 +26,7 @@
 #include "world/entity/components/entitytags.h"
 #include "World/Entity/Components/NameComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
+#include "World/Entity/Components/ScriptComponent.h"
 #include "World/Entity/Components/StaticMeshComponent.h"
 #include "World/Entity/Components/TagComponent.h"
 #include "World/Entity/Components/VelocityComponent.h"
@@ -409,6 +410,25 @@ namespace Lumina
             ImGuiX::Text("Batches:   {:L}", Stats.NumBatches);
             ImGuiX::Text("Draws:     {:L}", Stats.NumDraws);
             ImGuiX::Text("Materials: {:L}", Stats.NumMaterials);
+            
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu(LE_ICON_LANGUAGE_LUA " Lua"))
+        {
+            auto View = World->GetEntityRegistry().view<SScriptComponent>();
+            
+            ImGui::Text("Number Of Scripts: %i", View.size_hint<>());
+            
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Reload All"))
+            {
+                View.each([&](entt::entity Entity, SScriptComponent& ScriptComponent)
+                {
+                   World->OnScriptComponentCreated(Entity, ScriptComponent, true); 
+                });
+            }
             
             ImGui::EndMenu();
         }

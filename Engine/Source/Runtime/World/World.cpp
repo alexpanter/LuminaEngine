@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "World.h"
-
 #include <utility>
+#include "lua.h"
 #include "WorldManager.h"
+#include "Audio/AudioGlobals.h"
 #include "Core/Delegates/CoreDelegates.h"
 #include "Core/Engine/Engine.h"
 #include "Core/Object/Class.h"
@@ -19,9 +20,8 @@
 #include "Entity/Components/ScriptComponent.h"
 #include "Entity/Components/SingletonEntityComponent.h"
 #include "entity/components/tagcomponent.h"
-#include "Physics/Physics.h"
-#include "lua.h"
 #include "Entity/Events/WorldEvents.h"
+#include "Physics/Physics.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
 #include "Scripting/Lua/VariadicArgs.h"
@@ -68,6 +68,20 @@ namespace Lumina
             return Meta.cast<Lua::FRef>();
         }
         
+        static void ForEachEntity_Lua(FEntityRegistry& Registry, Lua::FRef Ref)
+        {
+            auto View = Registry.view<entt::entity>();
+            View.each([&](entt::entity Entity)
+            {
+               Ref(Entity); 
+            });
+        }
+        
+        static bool IsEntityNull_Lua(entt::entity Entity)
+        {
+            return Entity == entt::null;
+        }
+        
         static entt::runtime_view RuntimeView_Lua(FEntityRegistry& Registry, Lua::FVariadicArgs Args)
         {
             LUMINA_PROFILE_SCOPE();
@@ -110,6 +124,11 @@ namespace Lumina
             return Registry.destroy(Entity);
         }
         
+        static uint32 DispatchEvent_Lua(FEntityRegistry& Registry, entt::entity Entity)
+        {
+            return 0;
+        }
+        
         static entt::entity DuplicateEntity_Lua(FEntityRegistry& Registry, entt::entity Entity)
         {
             entt::entity To = Registry.create();
@@ -135,6 +154,13 @@ namespace Lumina
                 Func(Entity);
             });
         }
+        
+        static size_t RuntimeViewSizeHint_Lua(entt::runtime_view& View)
+        {
+            LUMINA_PROFILE_SCOPE();
+
+            return View.size_hint();
+        }
     }
     
     
@@ -147,9 +173,15 @@ namespace Lumina
 
     void CWorld::RegisterLuaModule(Lua::FRef& GlobalRef)
     {
+        GlobalRef.NewClass<Physics::IPhysicsScene>("PhysicsScene")
+            .AddFunction<&Physics::IPhysicsScene::ActivateBody>("ActivateBody")
+            .AddFunction<&Physics::IPhysicsScene::DeactivateBody>("DeactivateBody")
+            .Register();
+        
         GlobalRef.NewClass<entt::runtime_view>("RuntimeView")
             .AddFunction<&entt::runtime_view::contains>("Contains")
             .AddFunction<&LuaBinds::ForEachInRuntimeView_Lua>("Each")
+            .AddFunction<&LuaBinds::RuntimeViewSizeHint_Lua>("SizeHint")
             .Register();
         
         GlobalRef.NewClass<FEntityRegistry>("FEntityRegistry")
@@ -163,8 +195,11 @@ namespace Lumina
             .AddFunction<&LuaBinds::DestroyEntity_Lua>("Destroy")
             .AddFunction<&LuaBinds::HasComponent_Lua>("Has")
             .AddFunction<&LuaBinds::EmplaceComponent_Lua>("Emplace")
+            .AddFunction<&LuaBinds::ForEachEntity_Lua>("ForEachEntity")
             .AddFunction<&LuaBinds::GetComponent_Lua>("Get")
+            .AddFunction<&LuaBinds::IsEntityNull_Lua>("IsNull")
             .AddFunction<&LuaBinds::RuntimeView_Lua>("RuntimeView")
+            .AddFunction<&LuaBinds::DispatchEvent_Lua>("DispatchEvent")
             .Register();
     }
 
@@ -274,6 +309,8 @@ namespace Lumina
     
     void CWorld::TeardownWorld()
     {
+        GAudioContext->StopSounds();
+        
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);
         EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentConstruct>(this);
         
@@ -629,44 +666,56 @@ namespace Lumina
         ScriptComponent.Entity = Entity;
         ScriptComponent.World  = this;
         
-        if (!ScriptComponent.ScriptPath.Path.empty())
+        if (ScriptComponent.ScriptPath.Path.empty())
         {
-            ScriptComponent.Script = Lua::FScriptingContext::Get().LoadUniqueScriptPath(ScriptComponent.ScriptPath.Path);
-            if (ScriptComponent.Script == nullptr)
+            return;
+        }
+        
+        ScriptComponent.Script = Lua::FScriptingContext::Get().LoadUniqueScriptPath(ScriptComponent.ScriptPath.Path);
+        if (ScriptComponent.Script == nullptr)
+        {
+            return;
+        }
+        
+        ScriptComponent.Script->Environment.Set("World", this);
+        ScriptComponent.Script->Environment.Set("Registry", &EntityRegistry);
+        ScriptComponent.Script->Environment.Set("Physics", PhysicsScene.get());
+        
+        ScriptComponent.Script->Reference.Set("Entity", Entity);
+        ScriptComponent.Script->Reference.Set("Transform", &EntityRegistry.get<STransformComponent>(Entity));
+        ScriptComponent.Script->Reference.Set("Name", EntityRegistry.get<SNameComponent>(Entity).Name);
+        
+        ScriptComponent.ScriptMetaTable = ScriptComponent.Script->Reference["__meta"];
+        ScriptComponent.AttachFunc      = ScriptComponent.Script->Reference["OnAttach"];
+        ScriptComponent.ReadyFunc       = ScriptComponent.Script->Reference["OnReady"];
+        ScriptComponent.UpdateFunc      = ScriptComponent.Script->Reference["Update"];
+        ScriptComponent.DetachFunc      = ScriptComponent.Script->Reference["OnDetach"];
+        
+        if (ScriptComponent.ScriptMetaTable.IsValid())
+        {
+            Lua::FRef RunInEditor = ScriptComponent.ScriptMetaTable.GetField("bRunInEditor");
+            if (RunInEditor.IsValid())
             {
-                return;
+                ScriptComponent.bRunInEditor = RunInEditor.GetOr(false);
             }
             
-            ScriptComponent.Script->Reference.Set("Entity", Entity);
-            ScriptComponent.Script->Reference.Set("Transform", EntityRegistry.try_get<STransformComponent>(Entity));
-            ScriptComponent.Script->Environment.Set("World", this);
-            
-            ScriptComponent.ScriptMetaTable = ScriptComponent.Script->Reference["__meta"];
-            ScriptComponent.AttachFunc      = ScriptComponent.Script->Reference["OnAttach"];
-            ScriptComponent.ReadyFunc       = ScriptComponent.Script->Reference["OnReady"];
-            ScriptComponent.UpdateFunc      = ScriptComponent.Script->Reference["Update"];
-            ScriptComponent.DetachFunc      = ScriptComponent.Script->Reference["OnDetach"];
-            
-            if (ScriptComponent.ScriptMetaTable.IsValid())
+            Lua::FRef TickRate = ScriptComponent.ScriptMetaTable.GetField("TickRate");
+            if (TickRate.IsValid())
             {
-                Lua::FRef RunInEditor = ScriptComponent.ScriptMetaTable.GetField("bRunInEditor");
-                if (RunInEditor.IsValid())
-                {
-                    ScriptComponent.bRunInEditor = RunInEditor.GetOr<bool>(false);
-                }
+                ScriptComponent.TickRate = TickRate.GetOr(0.0f);
+            }
+        }
+        
+        if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
+        {
+            if (ScriptComponent.AttachFunc.IsValid())
+            {
+                ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
             }
             
-            if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
+            if (bRunReady)
             {
-                if (ScriptComponent.AttachFunc.IsValid())
-                {
-                    ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
-                }
-                
-                if (bRunReady)
-                {
-                    SingletonDispatcher.enqueue<FScriptComponentPendingReady>(Entity);
-                }
+                SingletonDispatcher.enqueue<FScriptComponentPendingReady>(Entity);
             }
         }
     }
@@ -763,6 +812,7 @@ namespace Lumina
         }
         
         return PhysicsScene->CastSphere(Settings);
+        
         
     }
 

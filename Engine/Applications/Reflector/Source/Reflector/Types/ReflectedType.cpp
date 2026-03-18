@@ -519,6 +519,13 @@ namespace Lumina::Reflection
 
             Stream += "\t\tswitch(Hash)\n";
             Stream += "\t\t{\n";
+            
+            Stream += "\t\tcase(Lumina::Hash::FNV1a::GetHash32(\"__type_id\")):\n";
+            Stream += "\t\t{\n";
+            Stream += "\t\t\tLumina::Lua::TStack<uint32>::Push(VM, entt::hashed_string(\"" + DisplayName + "\"));\n";
+            Stream += "\t\t\tbreak;\n";
+            Stream += "\t\t}\n";
+            
             for (auto& Prop : Props)
             {
                 if (Prop->bInner)
@@ -544,9 +551,9 @@ namespace Lumina::Reflection
             Stream += "\t\t" + QualifiedName + "* ThisType = Lumina::Lua::TStack<" + QualifiedName + "*>::Get(VM, 1);\n";
             Stream += "\t\tconst char* Key = lua_tostring(VM, 2);\n";
             Stream += "\t\tuint32 Hash = Lumina::Hash::FNV1a::GetHash32(Key);\n";
+            
             Stream += "\t\tswitch(Hash)\n";
             Stream += "\t\t{\n";
-
             for (auto& Prop : Props)
             {
                 if (Prop->bInner)

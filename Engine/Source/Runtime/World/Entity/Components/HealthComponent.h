@@ -11,7 +11,7 @@ namespace Lumina
         GENERATED_BODY()
         
         FUNCTION(Script)
-        void ApplyDamage(float Damage) { Health -= Damage; }
+        float ApplyDamage(float Damage) { Health -= Damage; return Health; }
         
         FUNCTION(Script)
         void GiveHealth(float NewHealth) { Health = glm::clamp(Health + NewHealth, 0.0f, MaxHealth); }

@@ -13,5 +13,7 @@ namespace Lumina::Lua
         FRef                Reference;
         FRef                Environment;
         FRef                Thread;
+        
+        bool                bDirty = false;
     };
 }

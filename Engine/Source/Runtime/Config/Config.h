@@ -72,17 +72,6 @@ namespace Lumina
         return Defaults;
     }
 
-    template <typename T>
-    T FConfig::GetNested(FStringView Path, const T& Defaults)
-    {
-        const nlohmann::json* Node = NavigateToNode(Path);
-        if (Node && !Node->is_null())
-        {
-            return Node->get<T>();
-        }
-        return Defaults;
-    }
-
     template <typename TFunc>
     void FConfig::ForEach(TFunc&& Func)
     {

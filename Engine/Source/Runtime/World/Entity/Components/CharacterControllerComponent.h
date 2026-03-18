@@ -37,6 +37,19 @@ namespace Lumina
         }
         
         FUNCTION(Script)
+        glm::vec3 GetLookForward() const
+        {
+            float Pitch = glm::radians(-LookInput.y);
+            float Yaw   = glm::radians(LookInput.x);
+
+            return glm::normalize(glm::vec3(
+                glm::cos(Pitch) * glm::sin(Yaw),
+                glm::sin(Pitch),
+                glm::cos(Pitch) * glm::cos(Yaw)
+            ));
+        }
+        
+        FUNCTION(Script)
         void Jump() { bJumpPressed = true; }
         
         PROPERTY(Script, ReadOnly)

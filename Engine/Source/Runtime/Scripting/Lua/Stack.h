@@ -38,6 +38,7 @@ namespace Lumina::Lua
     template<> struct TLuaNativeType<FRef>              : eastl::true_type {};
     template<> struct TLuaNativeType<bool>              : eastl::true_type {};
     template<> struct TLuaNativeType<FString>           : eastl::true_type {};
+    template<> struct TLuaNativeType<std::string>       : eastl::true_type {};
     template<> struct TLuaNativeType<FStringView>       : eastl::true_type {};
     template<> struct TLuaNativeType<FName>             : eastl::true_type {};
     template<> struct TLuaNativeType<const char*>       : eastl::true_type {};
@@ -219,6 +220,16 @@ namespace Lumina::Lua
         static FString Get(lua_State* State, int Index)             { return luaL_checkstring(State, Index); }
         static bool Check(lua_State* State, int Index)              { return lua_type(State, Index) == LUA_TSTRING; }
     };
+    
+    template<>
+    struct TStack<std::string>
+    {
+        static FStringView TypeName(lua_State* State)                   { return lua_typename(State, LUA_TSTRING); }
+        static void Push(lua_State* State, const std::string& Value)    { lua_pushstring(State, Value.c_str()); }
+        static std::string Get(lua_State* State, int Index)             { return luaL_checkstring(State, Index); }
+        static bool Check(lua_State* State, int Index)                  { return lua_type(State, Index) == LUA_TSTRING; }
+    };
+    
     
     template<>
     struct TStack<FFixedString>
@@ -441,6 +452,27 @@ namespace Lumina::Lua
         {
             BaseT* Ptr = const_cast<BaseT*>(&Ref);
             TStack<BaseT*>::Push(State, Ptr);
+        }
+
+        static T& Get(lua_State* State, int Index)
+        {
+            return *TStack<BaseT*>::Get(State, Index);
+        }
+
+        static bool Check(lua_State* State, int Index)
+        {
+            return TStack<BaseT*>::Check(State, Index);
+        }
+    };
+    
+    template<typename T>
+    struct TStack<eastl::reference_wrapper<T>>
+    {
+        using BaseT = eastl::remove_const_t<T>;
+
+        static void Push(lua_State* State, eastl::reference_wrapper<T> Ref)
+        {
+            TStack<BaseT*>::Push(State, &Ref.get());
         }
 
         static T& Get(lua_State* State, int Index)
