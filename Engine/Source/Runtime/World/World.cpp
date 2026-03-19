@@ -309,10 +309,18 @@ namespace Lumina
         });
         
         EntityRegistry.on_destroy   <FRelationshipComponent>()      .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
+        EntityRegistry.on_construct <STransformComponent>()         .connect<&ThisClass::OnTransformComponentConstruct>(this);
         EntityRegistry.on_construct <SScriptComponent>()            .connect<&ThisClass::OnScriptComponentConstruct>(this);
         EntityRegistry.on_destroy   <SScriptComponent>()            .connect<&ThisClass::OnScriptComponentDestroyed>(this);
         SystemContext.EventSink     <FSwitchActiveCameraEvent>()    .connect<&ThisClass::OnChangeCameraEvent>(this);
         SystemContext.EventSink     <FScriptComponentPendingReady>().connect<&ThisClass::OnScriptComponentPendingReady>(this);
+        
+        auto TransformView = EntityRegistry.view<STransformComponent>();
+        TransformView.each([&](entt::entity Entity, STransformComponent& TransformComponent)
+        {
+            TransformComponent.Registry = &EntityRegistry;
+            TransformComponent.Entity = Entity;
+        });
         
         auto CameraView = EntityRegistry.view<SCameraComponent>(entt::exclude<SDisabledTag>);
         CameraView.each([&](entt::entity Entity, const SCameraComponent& Camera)
@@ -539,7 +547,7 @@ namespace Lumina
         }
         
         EntityRegistry.emplace<SNameComponent>(NewEntity).Name = Name;
-        EntityRegistry.emplace<STransformComponent>(NewEntity).Transform = Transform;
+        EntityRegistry.emplace<STransformComponent>(NewEntity, Transform);
         EntityRegistry.emplace_or_replace<FNeedsTransformUpdate>(NewEntity);
         
         return NewEntity;
@@ -730,6 +738,15 @@ namespace Lumina
         }
         
         Registry.on_destroy<FRelationshipComponent>().connect<&CWorld::OnRelationshipComponentDestroyed>(this);
+    }
+
+    void CWorld::OnTransformComponentConstruct(entt::registry& Registry, entt::entity Entity)
+    {
+        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
+        TransformComponent.Registry = &EntityRegistry;
+        TransformComponent.Entity = Entity;
+        
+        Registry.emplace_or_replace<FNeedsTransformUpdate>(Entity);
     }
 
     void CWorld::OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity)

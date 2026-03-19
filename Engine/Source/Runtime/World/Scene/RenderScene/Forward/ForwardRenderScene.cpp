@@ -200,7 +200,7 @@ namespace Lumina
                     RenderStats.NumVertices += Resource.GetNumVertices();
                     RenderStats.NumTriangles += Resource.GetNumTriangles();
                     
-                    glm::mat4 TransformMatrix = TransformComponent.GetMatrix();
+                    glm::mat4 TransformMatrix = TransformComponent.GetWorldMatrix();
                     
                     FAABB BoundingBox       = Mesh->GetAABB().ToWorld(TransformMatrix);
                     glm::vec3 Center        = (BoundingBox.Min + BoundingBox.Max) * 0.5f;
@@ -293,7 +293,7 @@ namespace Lumina
                     RenderStats.NumVertices += Resource.GetNumVertices();
                     RenderStats.NumTriangles += Resource.GetNumTriangles();
 
-                    glm::mat4 TransformMatrix = TransformComponent.GetMatrix();
+                    glm::mat4 TransformMatrix = TransformComponent.GetWorldMatrix();
                     
                     FAABB BoundingBox       = Mesh->GetAABB().ToWorld(TransformMatrix);
                     glm::vec3 Center        = (BoundingBox.Min + BoundingBox.Max) * 0.5f;

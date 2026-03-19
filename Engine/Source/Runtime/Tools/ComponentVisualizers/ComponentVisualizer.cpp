@@ -59,7 +59,7 @@ namespace Lumina
         const SPointLightComponent& PointLight = Registry.get<SPointLightComponent>(Entity);
         const STransformComponent& Transform = Registry.get<STransformComponent>(Entity);
         
-        PDI->DrawSphere(Transform.GetLocation(), PointLight.Attenuation, 
+        PDI->DrawSphere(Transform.GetWorldLocation(), PointLight.Attenuation, 
             glm::vec4(PointLight.LightColor, 1.0f), 32, 1.0f, true, 0.0f);
     }
 
@@ -74,8 +74,8 @@ namespace Lumina
         const STransformComponent& Transform    = Registry.get<STransformComponent>(Entity);
         glm::vec3 Forward                       = Transform.GetRotation() * FViewVolume::ForwardAxis;
         
-        PDI->DrawCone(Transform.GetPosition(), -Forward, glm::radians(SpotLight.OuterConeAngle), SpotLight.Attenuation, glm::vec4(SpotLight.LightColor, 1.0f));
-        PDI->DrawCone(Transform.GetPosition(), -Forward, glm::radians(SpotLight.InnerConeAngle), SpotLight.Attenuation, glm::vec4(SpotLight.LightColor, 1.0f));
+        PDI->DrawCone(Transform.GetWorldLocation(), -Forward, glm::radians(SpotLight.OuterConeAngle), SpotLight.Attenuation, glm::vec4(SpotLight.LightColor, 1.0f));
+        PDI->DrawCone(Transform.GetWorldLocation(), -Forward, glm::radians(SpotLight.InnerConeAngle), SpotLight.Attenuation, glm::vec4(SpotLight.LightColor, 1.0f));
     }
 
     CStruct* CComponentVisualizer_SphereCollider::GetSupportedComponentType() const
@@ -88,7 +88,7 @@ namespace Lumina
         const SSphereColliderComponent& Sphere = Registry.get<SSphereColliderComponent>(Entity);
         const STransformComponent& Transform = Registry.get<STransformComponent>(Entity);
         
-        PDI->DrawSphere(Transform.GetLocation() + Sphere.TranslationOffset, Sphere.Radius * Transform.MaxScale(), FColor::Green, 12, 1.5f, true, 0.0f);
+        PDI->DrawSphere(Transform.GetWorldLocation() + Sphere.TranslationOffset, Sphere.Radius * Transform.MaxScale(), FColor::Green, 12, 1.5f, true, 0.0f);
     }
 
     CStruct* CComponentVisualizer_BoxCollider::GetSupportedComponentType() const
@@ -102,7 +102,7 @@ namespace Lumina
         const STransformComponent& Transform = Registry.get<STransformComponent>(Entity);
         
         glm::quat OffsetQuat(Box.RotationOffset);
-        PDI->DrawBox(Transform.GetLocation() + Box.TranslationOffset, Box.HalfExtent * Transform.GetScale(), Transform.GetRotation() * OffsetQuat, FColor::Green, 1.5f, true, 0.0f);
+        PDI->DrawBox(Transform.GetWorldLocation() + Box.TranslationOffset, Box.HalfExtent * Transform.GetWorldScale(), Transform.GetWorldRotation() * OffsetQuat, FColor::Green, 1.5f, true, 0.0f);
     }
 
     CStruct* CComponentVisualizer_CharacterPhysics::GetSupportedComponentType() const
@@ -115,7 +115,7 @@ namespace Lumina
         const SCharacterPhysicsComponent& Character = Registry.get<SCharacterPhysicsComponent>(Entity);
         const STransformComponent& Transform = Registry.get<STransformComponent>(Entity);
     
-        glm::vec3 Location = Transform.GetLocation();
+        glm::vec3 Location = Transform.GetWorldLocation();
         glm::vec3 Start = Location - glm::vec3(0, Character.HalfHeight, 0);
         glm::vec3 End = Location + glm::vec3(0, Character.HalfHeight, 0);
     
@@ -131,6 +131,6 @@ namespace Lumina
     {
         const STransformComponent& Transform    = Registry.get<STransformComponent>(Entity);
         
-        PDI->DrawArrow(Transform.GetLocation(), Transform.GetForward(), 1.5f, FColor::Green, 4.0f);
+        PDI->DrawArrow(Transform.GetWorldLocation(), Transform.GetForward(), 1.5f, FColor::Green, 4.0f);
     }
 }

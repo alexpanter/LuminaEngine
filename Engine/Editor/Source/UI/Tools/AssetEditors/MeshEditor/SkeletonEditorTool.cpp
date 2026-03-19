@@ -194,11 +194,11 @@ namespace Lumina
                 return;
             }
     
-            FTransform Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity).GetTransform();
+            STransformComponent& Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
             FSkeletonResource* SkeletonResource = Skeleton->GetSkeletonResource();
             TVector<glm::mat4> WorldTransforms;
             WorldTransforms.resize(SkeletonResource->GetNumBones());
-            glm::mat4 EntityMatrix = Transform.GetMatrix();
+            glm::mat4 EntityMatrix = Transform.GetWorldMatrix();
 
             for (int i = 0; i < SkeletonResource->GetNumBones(); ++i)
             {

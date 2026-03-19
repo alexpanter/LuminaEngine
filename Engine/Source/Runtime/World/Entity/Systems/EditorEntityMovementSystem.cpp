@@ -89,7 +89,7 @@ namespace Lumina
 
 			double MouseDeltaZ = FInputProcessor::Get().GetMouseZ();
 
-			Transform.Transform.Location += Velocity.Velocity * static_cast<float>(DeltaTime) * Velocity.Scale;
+			Transform.Translate(Velocity.Velocity * static_cast<float>(DeltaTime) * Velocity.Scale);
 
 			if (FInputProcessor::Get().IsMouseButtonDown(EMouseKey::ButtonRight))
 			{

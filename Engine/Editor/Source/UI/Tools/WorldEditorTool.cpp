@@ -337,7 +337,7 @@ namespace Lumina
             if (SStaticMeshComponent* MeshComponent = World->GetEntityRegistry().try_get<SStaticMeshComponent>(Entity))
             {
                 const STransformComponent& Transform = World->GetEntityRegistry().get<STransformComponent>(Entity);
-                World->DrawBox(Transform.GetLocation(), MeshComponent->GetAABB().GetSize() * 0.5f * Transform.GetScale(), Transform.GetRotation(), FColor::Red, 5.0f);
+                World->DrawBox(Transform.GetWorldLocation(), MeshComponent->GetAABB().GetSize() * 0.5f * Transform.GetWorldScale(), Transform.GetWorldRotation(), FColor::Red, 5.0f);
             }
         });
         
@@ -514,9 +514,9 @@ namespace Lumina
             if (World->GetEntityRegistry().valid(PivotEntity))
             {
                 STransformComponent& PivotTransformComponent = World->GetEntityRegistry().get<STransformComponent>(PivotEntity);
-                if (CameraComponent.GetViewVolume().GetFrustum().IsInside(PivotTransformComponent.WorldTransform.Location))
+                if (CameraComponent.GetViewVolume().GetFrustum().IsInside(PivotTransformComponent.GetWorldLocation()))
                 {
-                    glm::mat4 EntityMatrix = PivotTransformComponent.GetMatrix();
+                    glm::mat4 EntityMatrix = PivotTransformComponent.GetWorldMatrix();
 
                     float* SnapValues = nullptr;
                     float SnapArray[3] = {};
@@ -604,9 +604,9 @@ namespace Lumina
                                 if (RelationshipComponent->Parent != entt::null)
                                 {
                                     STransformComponent& ParentTransform = World->GetEntityRegistry().get<STransformComponent>(RelationshipComponent->Parent);
-                                    glm::mat4 ParentWorldMatrix = ParentTransform.WorldTransform.GetMatrix();
+                                    glm::mat4 ParentWorldMatrix = ParentTransform.GetWorldMatrix();
                                     glm::mat4 ParentWorldInverse = glm::inverse(ParentWorldMatrix);
-                                    glm::mat4 WorldMatrix = Transform.WorldTransform.GetMatrix();
+                                    glm::mat4 WorldMatrix = Transform.GetWorldMatrix();
                                     glm::mat4 LocalMatrix = ParentWorldInverse * WorldMatrix;
                                     
                                     glm::vec3 LocalTranslation, LocalScale, LocalSkew;

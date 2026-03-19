@@ -481,9 +481,9 @@ namespace Lumina
         if (bShowAABB && World.IsValid())
         {
             SStaticMeshComponent& StaticMeshComponent = World->GetEntityRegistry().get<SStaticMeshComponent>(MeshEntity);
-            FTransform Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity).GetTransform();
+            STransformComponent& Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
 
-            FAABB AABB = StaticMeshComponent.StaticMesh->GetAABB().ToWorld(Transform.GetMatrix());
+            FAABB AABB = StaticMeshComponent.StaticMesh->GetAABB().ToWorld(Transform.GetWorldMatrix());
             
             World->DrawBox(AABB.GetCenter(), AABB.GetSize() * 0.5f, glm::quat(1, 0, 0, 0), FColor::Green);
         }

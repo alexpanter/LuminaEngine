@@ -28,6 +28,8 @@ namespace Lumina::ECS::Utils
 	RUNTIME_API void CollectDescendants(FEntityRegistry& Registry, entt::entity Entity, TVector<entt::entity>& OutDescendants);
 	RUNTIME_API void CollectChildren(FEntityRegistry& Registry, entt::entity Entity, TVector<entt::entity>& OutChildren);
 	RUNTIME_API bool HasComponent(FEntityRegistry& Registry, entt::entity Entity, entt::meta_type Type);
+	RUNTIME_API void ResolveTransformChain(FEntityRegistry& Registry, entt::entity Entity);
+
 
 	NODISCARD RUNTIME_API entt::id_type GetTypeID(FStringView Name);
 	NODISCARD RUNTIME_API entt::id_type GetTypeID(const CStruct* Type);
