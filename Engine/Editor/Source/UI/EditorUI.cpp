@@ -586,16 +586,6 @@ namespace Lumina
         {
             FInputProcessor::Get().SetMouseMode(EMouseMode::Normal);
         }
-        
-        if (ImGui::IsKeyPressed(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_LeftShift) && ImGui::IsKeyPressed(ImGuiKey_Z))
-        {
-            TransactionManager.Redo();
-        }
-        
-        if (ImGui::IsKeyPressed(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Z))
-        {
-            TransactionManager.Undo();
-        }
 
         if (ImGui::IsKeyPressed(ImGuiKey_Escape) && GamePreviewTool != nullptr)
         {

@@ -3,6 +3,7 @@
 #include "glm/gtx/string_cast.hpp"
 #include "TaskSystem/TaskSystem.h"
 #include "World/Entity/EntityUtils.h"
+#include "World/Entity/Components/CameraComponent.h"
 #include "World/Entity/Components/DirtyComponent.h"
 #include "World/Entity/Components/RelationshipComponent.h"
 #include "World/Entity/Components/Transformcomponent.h"
@@ -106,6 +107,12 @@ namespace Lumina
                 }
             });
         }
+        
+        auto View = SystemContext.CreateView<SCameraComponent, STransformComponent>();
+        View.each([](SCameraComponent& CameraComponent, const STransformComponent& TransformComponent)
+        {
+            CameraComponent.SetView(TransformComponent.WorldTransform.Location, TransformComponent.GetForward(), TransformComponent.GetUp());
+        });
         
         SystemContext.Clear<FNeedsTransformUpdate>();
     }

@@ -9,6 +9,7 @@
 #include "Core/Object/ObjectIterator.h"
 #include "Core/Object/Package/Package.h"
 #include "Core/Serialization/JsonArchiver.h"
+#include "Core/Serialization/ObjectArchiver.h"
 #include "EASTL/sort.h"
 #include "glm/gtc/type_ptr.hpp"
 #include "glm/gtx/matrix_decompose.hpp"
@@ -354,6 +355,28 @@ namespace Lumina
         {
             FocusViewportToEntity(GetLastSelectedEntity());
         }
+        
+        
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Z))
+        {
+            if (World->GetWorldType() == EWorldType::Editor)
+            {
+                Undo();
+            }
+        }
+        
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Y))
+        {
+            if (World->GetWorldType() == EWorldType::Editor)
+            {
+                Redo();
+            }
+        }
+        
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
+        {
+            OnSave();
+        }
     }
 
     void FWorldEditorTool::EndFrame()
@@ -532,7 +555,11 @@ namespace Lumina
                 
                     if (ImGuizmo::IsUsing())
                     {
-                        bImGuizmoUsedOnce = true;
+                        if (!bImGuizmoUsedOnce)
+                        {
+                            BeginTransaction();
+                            bImGuizmoUsedOnce = true;
+                        }
                         
                         glm::mat4 DeltaMatrix = EntityMatrix * glm::inverse(PreManipulateMatrix);
                 
@@ -593,6 +620,11 @@ namespace Lumina
                                 }
                             }
                         });
+                    }
+                    else if (bImGuizmoUsedOnce)
+                    {
+                        EndTransaction("Transform");
+                        bImGuizmoUsedOnce = false;
                     }
                 }
             }
@@ -1137,8 +1169,12 @@ namespace Lumina
                     if (ImGui::Selectable(CompInfo.Name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick))
                     {
                         using namespace entt::literals;
+                        BeginTransaction();
 
                         ECS::Utils::InvokeMetaFunc(CompInfo.MetaType, "emplace"_hs, entt::forward_as_meta(World->GetEntityRegistry()), Entity, entt::forward_as_meta(entt::meta_any{}));
+                        
+                        EndTransaction("Emplace Component");
+                        
                         bComponentAdded = true;
                     }
                     
@@ -1855,6 +1891,98 @@ namespace Lumina
         SetWorldPlayInEditor(false);
     }
 
+    void FWorldEditorTool::BeginTransaction()
+    {
+        PendingBeforeState.clear();
+
+        FMemoryWriter Writer(PendingBeforeState);
+        FObjectProxyArchiver Ar(Writer, false);
+        ECS::Utils::SerializeRegistry(Ar, World->GetEntityRegistry());
+        
+        RedoStack.clear();
+    }
+
+    void FWorldEditorTool::EndTransaction(FName Name)
+    {
+        static constexpr int32 MaxUndoHistory = 12;
+
+        TVector<uint8> AfterState;
+        FMemoryWriter Writer(AfterState);
+        FObjectProxyArchiver Ar(Writer, false);
+        ECS::Utils::SerializeRegistry(Ar, World->GetEntityRegistry());
+
+        if (UndoStack.size() >= MaxUndoHistory)
+        {
+            UndoStack.erase(UndoStack.begin());
+        }
+
+        UndoStack.push_back({ Name, PendingBeforeState, eastl::move(AfterState) });
+        PendingBeforeState.clear();
+
+        RedoStack.clear();
+
+        if (World->GetPackage())
+        {
+            World->GetPackage()->MarkDirty();
+        }
+    }
+    
+    void FWorldEditorTool::Undo()
+    {
+        if (UndoStack.empty())
+        {
+            return;
+        }
+
+        FTransaction& Transaction = UndoStack.back();
+
+        ImGuiX::Notifications::NotifyInfo("Undid {}", Transaction.Name);
+
+        RedoStack.push_back(Transaction);
+        
+        FMemoryReader Reader(Transaction.BeforeState);
+        FObjectProxyArchiver Ar(Reader, true);
+        
+        FEntityRegistry& Registry = World->GetEntityRegistry();
+        ECS::Utils::SerializeRegistry(Ar, Registry);
+        RebuildPropertyTables(GetLastSelectedEntity());
+        
+        UndoStack.pop_back();
+
+        if (World->GetPackage())
+        {
+            World->GetPackage()->MarkDirty();
+        }
+    }
+
+    void FWorldEditorTool::Redo()
+    {
+        if (RedoStack.empty())
+        {
+            return;
+        }
+
+        FTransaction& Transaction = RedoStack.back();
+
+        ImGuiX::Notifications::NotifyInfo("Redid {}", Transaction.Name);
+        
+        UndoStack.push_back(Transaction);
+
+        FMemoryReader Reader(Transaction.AfterState);
+        FObjectProxyArchiver Ar(Reader, true);
+        
+        FEntityRegistry& Registry = World->GetEntityRegistry();
+        ECS::Utils::SerializeRegistry(Ar, Registry);
+        RebuildPropertyTables(GetLastSelectedEntity());
+
+        RedoStack.pop_back();
+
+        if (World->GetPackage())
+        {
+            World->GetPackage()->MarkDirty();
+        }
+    }
+
     void FWorldEditorTool::AddSelectedEntity(entt::entity Entity, bool bRebuild)
     {
         if (!World->GetEntityRegistry().valid(Entity))
@@ -2172,7 +2300,11 @@ namespace Lumina
                         }
                         else
                         {
+                            BeginTransaction();
+
                             CreateEntityWithComponent(Struct);
+                            
+                            EndTransaction("New Component");
                             ClearSelectedEntities();
                         }
                         
@@ -2209,8 +2341,13 @@ namespace Lumina
                     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.25f, 0.25f, 0.28f, 1.0f));
                     if (ImGui::Button(LE_ICON_CUBE " Empty Entity", ImVec2(-1, 0.0f)))
                     {
+                        BeginTransaction();
+
                         CreateEntity();
                         ClearSelectedEntities();
+                        
+                        EndTransaction("New Entity");
+                        
                         ImGui::CloseCurrentPopup();
                         AddEntityComponentFilter.Clear();
                     }
@@ -2373,7 +2510,10 @@ namespace Lumina
         if (Payload && Payload->IsDelivery())
         {
             entt::entity SourceEntity = *static_cast<entt::entity*>(Payload->Data);
+            
+            BeginTransaction();
             ECS::Utils::ReparentEntity(World->GetEntityRegistry(), SourceEntity, DropItem);
+            EndTransaction("Reparent");
             
             OutlinerListView.MarkTreeDirty();
         }
@@ -3055,6 +3195,7 @@ namespace Lumina
 
     void FWorldEditorTool::OnPrePropertyChangeEvent(const FPropertyChangedEvent& Event)
     {
+
     }
 
     void FWorldEditorTool::OnPostPropertyChangeEvent(const FPropertyChangedEvent& Event)
@@ -3073,11 +3214,6 @@ namespace Lumina
                 ECS::Utils::InvokeMetaFunc(TypeID, "patch"_hs, entt::forward_as_meta(World->GetEntityRegistry()), Entity, entt::forward_as_meta(Component));
             }
         });
-        
-        if (World->GetPackage())
-        {
-            World->GetPackage()->MarkDirty();
-        }
     }
 
     bool FWorldEditorTool::IsUnsavedDocument()
@@ -3181,6 +3317,16 @@ namespace Lumina
                     OnPostPropertyChangeEvent(Event);
                 });
                 
+                NewTable->SetStartEditCallback([&](const FPropertyChangedEvent& Event)
+                {
+                    BeginTransaction();
+                });
+                
+                NewTable->SetFinishEditCallback([&](const FPropertyChangedEvent& Event)
+                {
+                    EndTransaction(Event.PropertyName);
+                });
+                
                 PropertyTables.emplace_back(Move(NewTable))->MarkDirty();
             }
         }
@@ -3224,7 +3370,7 @@ namespace Lumina
 
     void FWorldEditorTool::CopyEntity(entt::entity& To, entt::entity From)
     {
-        World->CopyEntity(To, From, [&](const entt::type_info& Type)
+        World->DuplicateEntity(To, From, [&](const entt::type_info& Type)
         {
             if    (Type == entt::type_id<FRelationshipComponent>() 
                 || Type == entt::type_id<FSelectedInEditorComponent>()

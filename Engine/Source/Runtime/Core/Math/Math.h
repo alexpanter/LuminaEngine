@@ -1,15 +1,14 @@
 #pragma once
 
-#include <eastl/type_traits.h>
 #include <random>
-#include "eastl/utility.h"
+#include <eastl/type_traits.h>
 #include <glm/glm.hpp>
-
+#include "eastl/utility.h"
 #include "Platform/GenericPlatform.h"
 
 namespace Lumina::Math
 {
-    constexpr int NextPowerOfTwo(int v)
+    [[nodiscard]] constexpr int NextPowerOfTwo(int v)
     {
         v--;
         v |= v >> 1;
@@ -63,6 +62,11 @@ namespace Lumina::Math
         return A + (B - A) * Alpha;
     }
     
+    [[nodiscard]] constexpr bool IsNearlyEqual(float LHS, float RHS, float Epsilon)
+    {
+        return Abs(LHS - RHS) <= Epsilon;
+    }
+    
     [[nodiscard]] constexpr uint64 CountTrailingZeros64(uint64 Value)
     {
         if (Value == 0)
@@ -87,8 +91,14 @@ namespace Lumina::Math
             eastl::swap(First, Second);
         }
         
-        thread_local std::mt19937 Random(std::random_device{}());
-        std::uniform_int_distribution<T> Distribution(First, Second);
+        thread_local std::mt19937 Random([]()
+        {
+            std::random_device RD;
+            std::seed_seq Seed{ RD(), RD(), RD(), RD(), RD(), RD(), RD(), RD() };
+            return std::mt19937(Seed);
+        }());
+        
+        std::uniform_int_distribution<uint32> Distribution(First, Second);
     
         return Distribution(Random);
     }

@@ -131,18 +131,43 @@ namespace Lumina
         
         static entt::entity DuplicateEntity_Lua(FEntityRegistry& Registry, entt::entity Entity)
         {
-            entt::entity To = Registry.create();
-        
-            for (auto&& [ID, Storage]: Registry.storage())
+            auto DuplicateRecursive = [&](auto& Self, entt::entity Source, entt::entity NewParent) -> entt::entity
             {
-                // We also need to check the entity we're creating, in-case another component adds it.
-                if(Storage.contains(Entity) && !Storage.contains(To))
+                entt::entity To = Registry.create();
+
+                for (auto&& [ID, Storage] : Registry.storage())
                 {
-                    Storage.push(To, Storage.value(Entity));
+                    if (Storage.contains(Source) && !Storage.contains(To))
+                    {
+                        if (ID != entt::type_hash<FRelationshipComponent>::value())
+                        {
+                            Storage.push(To, Storage.value(Source));
+                        }
+                    }
                 }
-            }
-            
-            return To;
+
+                if (NewParent != entt::null)
+                {
+                    ECS::Utils::ReparentEntity(Registry, To, NewParent);
+                }
+                else if (FRelationshipComponent* Rel = Registry.try_get<FRelationshipComponent>(Source))
+                {
+                    if (Rel->Parent != entt::null)
+                    {
+                        ECS::Utils::ReparentEntity(Registry, To, Rel->Parent);
+                    }
+                }
+
+                // Recursively duplicate children parented to new duplicate
+                ECS::Utils::ForEachChild(Registry, Source, [&](entt::entity Child)
+                {
+                    Self(Self, Child, To);
+                });
+
+                return To;
+            };
+
+            return DuplicateRecursive(DuplicateRecursive, Entity, entt::null);
         }
         
         static void ForEachInRuntimeView_Lua(entt::runtime_view& View, Lua::FRef Func)
@@ -268,7 +293,8 @@ namespace Lumina
         EntityRegistry.ctx().emplace<Physics::IPhysicsScene*>(PhysicsScene.get());
         EntityRegistry.ctx().emplace<FCameraManager*>(CameraManager.get());
         EntityRegistry.ctx().emplace<FSystemContext&>(SystemContext);
-        
+        EntityRegistry.ctx().emplace<CWorld*>(this);
+
         CreateRenderer();
         RegisterSystems();
         
@@ -519,25 +545,53 @@ namespace Lumina
         return NewEntity;
     }
     
-    void CWorld::CopyEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback)
+    void CWorld::DuplicateEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback)
     {
         ASSERT(To != From);
-        
-        To = EntityRegistry.create();
-        
-        for (auto&& [ID, Storage]: EntityRegistry.storage())
+
+        auto DuplicateRecursive = [&](auto& Self, entt::entity Source, entt::entity NewParent) -> entt::entity
         {
-            if (!Callback(Storage.info()))
+            entt::entity NewEntity = EntityRegistry.create();
+
+            for (auto&& [ID, Storage] : EntityRegistry.storage())
             {
-                continue;
+                if (!Callback(Storage.info()))
+                {
+                    continue;
+                }
+
+                if (ID == entt::type_hash<FRelationshipComponent>::value())
+                {
+                    continue;
+                }
+
+                if (Storage.contains(Source) && !Storage.contains(NewEntity))
+                {
+                    Storage.push(NewEntity, Storage.value(Source));
+                }
             }
-            
-            // We also need to check the entity we're creating, in-case another component adds it.
-            if(Storage.contains(From) && !Storage.contains(To))
+
+            if (NewParent != entt::null)
             {
-                Storage.push(To, Storage.value(From));
+                ECS::Utils::ReparentEntity(EntityRegistry, NewEntity, NewParent);
             }
-        }
+            else if (FRelationshipComponent* Rel = EntityRegistry.try_get<FRelationshipComponent>(Source))
+            {
+                if (Rel->Parent != entt::null)
+                {
+                    ECS::Utils::ReparentEntity(EntityRegistry, NewEntity, Rel->Parent);
+                }
+            }
+
+            ECS::Utils::ForEachChild(EntityRegistry, Source, [&](entt::entity Child)
+            {
+                Self(Self, Child, NewEntity);
+            });
+
+            return NewEntity;
+        };
+
+        To = DuplicateRecursive(DuplicateRecursive, From, entt::null);
     }
 
     void CWorld::DestroyEntity(entt::entity Entity)
@@ -651,8 +705,31 @@ namespace Lumina
 
     void CWorld::OnRelationshipComponentDestroyed(entt::registry& Registry, entt::entity Entity)
     {
+        Registry.on_destroy<FRelationshipComponent>().disconnect<&CWorld::OnRelationshipComponentDestroyed>(this);
         ECS::Utils::RemoveFromParent(Registry, Entity);
-        ECS::Utils::DestroyEntityHierarchy(Registry, Entity);
+
+        TVector<entt::entity> SubTree;
+    
+        auto CollectRecursive = [&](auto& Self, entt::entity Current) -> void
+        {
+            ECS::Utils::ForEachChild(Registry, Current, [&](entt::entity Child)
+            {
+                Self(Self, Child);
+                SubTree.push_back(Child);
+            });
+        };
+    
+        CollectRecursive(CollectRecursive, Entity);
+
+        for (int32 i = (int32)SubTree.size() - 1; i >= 0; i--)
+        {
+            if (Registry.valid(SubTree[i]))
+            {
+                Registry.destroy(SubTree[i]);
+            }
+        }
+        
+        Registry.on_destroy<FRelationshipComponent>().connect<&CWorld::OnRelationshipComponentDestroyed>(this);
     }
 
     void CWorld::OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity)

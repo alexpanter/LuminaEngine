@@ -89,14 +89,19 @@ namespace Lumina::ECS::Utils
             Ar << EntityID;
             Entity = (entt::entity)EntityID;
 
-            Entity = Registry.create(Entity);
-
+            if (!Registry.valid(Entity))
+            {
+                entt::entity New = Registry.create(Entity);
+                ALERT_IF_NOT(New == Entity);
+                Entity = New;
+            }
+            
             bool bHasRelationship = false;
             Ar << bHasRelationship;
 
             if (bHasRelationship)
             {
-                FRelationshipComponent& RelationshipComponent = Registry.emplace<FRelationshipComponent>(Entity);
+                FRelationshipComponent& RelationshipComponent = Registry.emplace_or_replace<FRelationshipComponent>(Entity);
                 Ar << RelationshipComponent;
             }
 
@@ -119,7 +124,12 @@ namespace Lumina::ECS::Utils
                     {
                         STagComponent NewTagComponent;
                         Struct->SerializeTaggedProperties(Ar, &NewTagComponent);
-                        Registry.storage<STagComponent>(entt::hashed_string(NewTagComponent.Tag.c_str())).emplace(Entity, NewTagComponent);
+                        auto HashedString = entt::hashed_string(NewTagComponent.Tag.c_str());
+                        
+                        if (!Registry.storage<STagComponent>(HashedString).contains(Entity))
+                        {
+                            Registry.storage<STagComponent>(HashedString).emplace(Entity, NewTagComponent);
+                        }
                     }
                     else
                     {

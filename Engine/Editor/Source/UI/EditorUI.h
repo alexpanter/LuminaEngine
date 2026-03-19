@@ -5,8 +5,6 @@
 #include "nlohmann/json.hpp"
 #include "Tools/EditorToolContext.h"
 #include "Tools/EditorToolModal.h"
-#include "Tools/Transactions/CoreTransactionTypes.h"
-#include "Tools/Transactions/Transaction.h"
 #include "Tools/UI/DevelopmentToolUI.h"
 #include "Tools/UI/ImGui/ImGuiX.h"
 
@@ -30,8 +28,6 @@ namespace Lumina
     class FEditorUI : public IDevelopmentToolUI, public IEditorToolContext
     {
     public:
-
-        using FUITransactionManager = TTransactionManager<FDeleteAssetTransaction>;
         
         FEditorUI() = default;
         ~FEditorUI() override = default;
@@ -96,7 +92,6 @@ namespace Lumina
     
     private:
 
-        FUITransactionManager                           TransactionManager;
         FEditorModalManager                             ModalManager;
             
         ImGuiX::ApplicationTitleBar                     TitleBar;

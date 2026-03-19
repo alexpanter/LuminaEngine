@@ -3,6 +3,7 @@
 #include "Core/Math/Color.h"
 #include "Renderer/PrimitiveDrawInterface.h"
 #include "Tools/Import/ImportHelpers.h"
+#include "World/Entity/Components/CameraComponent.h"
 #include "World/Entity/Components/CharacterComponent.h"
 #include "world/entity/components/lightcomponent.h"
 #include "world/entity/components/physicscomponent.h"
@@ -119,5 +120,17 @@ namespace Lumina
         glm::vec3 End = Location + glm::vec3(0, Character.HalfHeight, 0);
     
         PDI->DrawCapsule(Start, End, Character.Radius, glm::vec4(0.0f, 1.0f, 0.0f, 1.0f), 12, 2.0f, true, 0.0f);
+    }
+
+    CStruct* CComponentVisualizer_Camera::GetSupportedComponentType() const
+    {
+        return SCameraComponent::StaticStruct();
+    }
+
+    void CComponentVisualizer_Camera::Draw(IPrimitiveDrawInterface* PDI, entt::registry& Registry, entt::entity Entity)
+    {
+        const STransformComponent& Transform    = Registry.get<STransformComponent>(Entity);
+        
+        PDI->DrawArrow(Transform.GetLocation(), Transform.GetForward(), 1.5f, FColor::Green, 4.0f);
     }
 }

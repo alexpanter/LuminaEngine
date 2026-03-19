@@ -48,6 +48,8 @@ namespace Lumina
             PointLightIcon,
             DirectionalLightIcon,
             SpotLightIcon,
+            CameraIcon,
+            CharacterIcon,
             #endif
             
             Num,

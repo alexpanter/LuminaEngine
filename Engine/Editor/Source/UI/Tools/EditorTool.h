@@ -18,12 +18,6 @@ namespace Lumina
     class FUpdateContext;
 }
 
-namespace Lumina::Concept
-{
-    template<typename TCallable>
-    concept TDrawToolCallable = eastl::is_invocable_v<TCallable, bool>;   
-}
-
 namespace Lumina
 {
     class FEditorTool : public IEventHandler
@@ -58,6 +52,15 @@ namespace Lumina
             bool                  bViewport = false;
             bool                  bOpen = true;
             
+        };
+        
+        //--------------------------------------------------------------------------
+        
+        struct FTransaction
+        {
+            FName           Name;
+            TVector<uint8>  BeforeState;
+            TVector<uint8>  AfterState;
         };
 
         //--------------------------------------------------------------------------
@@ -162,9 +165,18 @@ namespace Lumina
 
         /** Called when the new icon is pressed */
         virtual void OnNew() { }
+        
+        /** Called when the user begins manipulating something to be transacted. Captures the before-state for the transaction. */
+        virtual void BeginTransaction() { }
 
-        /** Called when the undo button is pressed */
-        virtual void OnUndo() { }
+        /** Called when the user finishes manipulating something that was transacted. Captures the after-state and pushes the transaction onto the undo stack. */
+        virtual void EndTransaction(FName Name) { }
+
+        /** Restores the registry to the state before the last transaction. Pushes the current state onto the redo stack. */
+        virtual void Undo() { }
+
+        /** Restores the registry to the state after the last undone transaction. Pushes the current state onto the undo stack. */
+        virtual void Redo() { }
         
         NODISCARD virtual bool IsUnsavedDocument() { return false; }
 
@@ -198,30 +210,33 @@ namespace Lumina
         void DrawHelpTextRow(const char* Label, const char* Text) const;
     
     protected:
+
+        TVector<FTransaction>               UndoStack;
+        TVector<FTransaction>               RedoStack;
+        TVector<uint8>                      PendingBeforeState;
         
-        ImGuiID                         CurrDockID = 0;
-        ImGuiID                         DesiredDockID = 0;      // The dock we wish to be in
-        ImGuiID                         CurrLocationID = 0;     // Current Dock node we are docked into _OR_ window ID if floating window
-        ImGuiID                         PrevLocationID = 0;     // Previous dock node we are docked into _OR_ window ID if floating window
-        ImGuiID                         CurrDockspaceID = 0;    // Dockspace ID ~~ Hash of LocationID + DocType (with MYEDITOR_CONFIG_SAME_LOCATION_SHARE_LAYOUT=1)
-        ImGuiID                         PrevDockspaceID = 0;
-        ImGuiWindowClass                ToolWindowsClass;       // All our tools windows will share the same WindowClass (based on ID) to avoid mixing tools from different top-level editor
+        ImGuiID                             CurrDockID = 0;
+        ImGuiID                             DesiredDockID = 0;      // The dock we wish to be in
+        ImGuiID                             CurrLocationID = 0;     // Current Dock node we are docked into _OR_ window ID if floating window
+        ImGuiID                             PrevLocationID = 0;     // Previous dock node we are docked into _OR_ window ID if floating window
+        ImGuiID                             CurrDockspaceID = 0;    // Dockspace ID ~~ Hash of LocationID + DocType (with MYEDITOR_CONFIG_SAME_LOCATION_SHARE_LAYOUT=1)
+        ImGuiID                             PrevDockspaceID = 0;
+        ImGuiWindowClass                    ToolWindowsClass;       // All our tools windows will share the same WindowClass (based on ID) to avoid mixing tools from different top-level editor
 
-        IEditorToolContext*             ToolContext = nullptr;
-        FName                           ToolName;
+        IEditorToolContext*                 ToolContext = nullptr;
+        FName                               ToolName;
         
-        TFixedVector<TUniquePtr<FToolWindow>, 4>   ToolWindows;
+        TVector<TUniquePtr<FToolWindow>>    ToolWindows;
         
-        TObjectPtr<CWorld>              World;
-        entt::entity                    EditorEntity;
-        ImTextureID                     SceneViewportTexture = 0;
+        TObjectPtr<CWorld>                  World;
+        entt::entity                        EditorEntity;
+        ImTextureID                         SceneViewportTexture = 0;
 
-        EEditorToolFlags                ToolFlags = EEditorToolFlags::Tool_WantsToolbar;
+        EEditorToolFlags                    ToolFlags = EEditorToolFlags::Tool_WantsToolbar;
 
-        bool                            bViewportFocused = false;
-        bool                            bViewportHovered = false;
-
-		bool							bWorldGridEnabled = true;
+        bool                                bViewportFocused = false;
+        bool                                bViewportHovered = false;
+		bool							    bWorldGridEnabled = true;
     };
     
 }

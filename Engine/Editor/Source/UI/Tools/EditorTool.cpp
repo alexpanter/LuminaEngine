@@ -15,6 +15,7 @@
 
 namespace Lumina
 {
+    
     FEditorTool::FEditorTool(IEditorToolContext* Context, const FString& DisplayName, CWorld* InWorld)
         : ToolContext(Context)
         , ToolName(DisplayName)
@@ -219,21 +220,26 @@ namespace Lumina
             }
         }
 
-        ImGui::BeginDisabled();
+        ImGui::BeginDisabled(UndoStack.empty());
+        
         if (ImGui::MenuItem(LE_ICON_UNDO_VARIANT"##Undo"))
         {
-            OnUndo();
+            Undo();
         }
-        ImGuiX::TextTooltip("Undo");
+        ImGui::EndDisabled();
+        
+        ImGuiX::TextTooltip("Undo last transaction");
 
-        //-------------------------------------------------------------------------
+        ImGui::BeginDisabled(RedoStack.empty());
         
         if (ImGui::MenuItem(LE_ICON_REDO_VARIANT"##Redo"))
         {
-            
+            Redo();
         }
-        ImGuiX::TextTooltip("Redo");
         ImGui::EndDisabled();
+        
+        ImGuiX::TextTooltip("Redo last undo");
+        
 
         if (ImGui::BeginMenu(LE_ICON_HELP_CIRCLE_OUTLINE" Help"))
         {

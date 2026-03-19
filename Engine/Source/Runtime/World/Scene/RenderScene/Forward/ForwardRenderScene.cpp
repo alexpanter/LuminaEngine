@@ -17,6 +17,7 @@
 #include "Tools/Import/ImportHelpers.h"
 #include "World/World.h"
 #include "World/Entity/Components/BillboardComponent.h"
+#include "world/entity/components/charactercontrollercomponent.h"
 #include "world/entity/components/entitytags.h"
 #include "world/entity/components/environmentcomponent.h"
 #include "world/entity/components/lightcomponent.h"
@@ -57,10 +58,14 @@ namespace Lumina
         NamedImages[(int)ENamedImage::PointLightIcon]       = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/PointLight.png", true);  
         NamedImages[(int)ENamedImage::DirectionalLightIcon] = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/SkyLight.png", true);  
         NamedImages[(int)ENamedImage::SpotLightIcon]        = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/SpotLight.png", true);  
-        
+        NamedImages[(int)ENamedImage::CameraIcon]           = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/CameraIcon.png", true);  
+        NamedImages[(int)ENamedImage::CharacterIcon]        = Import::Textures::CreateTextureFromImport(Paths::GetEngineResourceDirectory() + "/Textures/PersonIcon.png", true);  
+
         GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::PointLightIcon]);
         GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::DirectionalLightIcon]);
         GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::SpotLightIcon]);
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::CameraIcon]);
+        GRenderManager->GetTextureManager().AddTexture(NamedImages[(int)ENamedImage::CharacterIcon]);
         #endif
     }
 
@@ -73,6 +78,8 @@ namespace Lumina
         GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::PointLightIcon]);
         GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::DirectionalLightIcon]);
         GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::SpotLightIcon]);
+        GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::CameraIcon]);
+        GRenderManager->GetTextureManager().RemoveTexture(NamedImages[(int)ENamedImage::CharacterIcon]);
         #endif
         
         FRenderManager::OnSwapchainResized.Remove(SwapchainResizedHandle);
@@ -789,6 +796,40 @@ namespace Lumina
         
         //========================================================================================================================
         
+        #if USING(WITH_EDITOR)
+        {
+            auto View = World->GetEntityRegistry().view<SCameraComponent, STransformComponent>(entt::exclude<SDisabledTag>);
+            View.each([this](entt::entity Entity, SCameraComponent& Camera, STransformComponent& Transform)
+            {
+                if (!World->IsGameWorld())
+                {
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::CameraIcon)->GetTextureCacheIndex();
+                    Billboard.ColorPack             = PackColor(FColor::White);
+                    Billboard.Position              = Transform.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
+                }
+            });
+        }
+        
+        {
+            auto View = World->GetEntityRegistry().view<SCharacterControllerComponent, STransformComponent>(entt::exclude<SDisabledTag>);
+            View.each([this](entt::entity Entity, SCharacterControllerComponent&, STransformComponent& Transform)
+            {
+                if (!World->IsGameWorld())
+                {
+                    FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
+                    Billboard.TextureIndex          = GetNamedImage(ENamedImage::CharacterIcon)->GetTextureCacheIndex();
+                    Billboard.ColorPack             = PackColor(FColor::White);
+                    Billboard.Position              = Transform.GetLocation();
+                    Billboard.Size                  = 0.35f;
+                    Billboard.EntityID              = entt::to_integral(Entity);
+                }
+            });
+        }
+        
+        #endif 
         
         {
             LUMINA_PROFILE_SECTION("Environment Processing");
