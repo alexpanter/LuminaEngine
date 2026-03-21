@@ -5,7 +5,7 @@
 # Lumina Game Engine
 **A modern, high-performance game engine built with Vulkan**
 
-*"Everything around you that you call life, was made up by people that were no smarter then you"* - Steve Jobs
+*"Everything around you that you call life, was made up by people that were no smarter than you"* - Steve Jobs
 
 [![License](https://img.shields.io/github/license/mrdrelliot/lumina)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue)](https://github.com/mrdrelliot/lumina)
