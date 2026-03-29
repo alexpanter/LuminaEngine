@@ -215,6 +215,7 @@ namespace Lumina
             if (Registry)
             {
                 Registry->emplace_or_replace<FNeedsTransformUpdate>(Entity);
+                Registry->emplace_or_replace<FNeedsPhysicsBodyUpdate>(Entity);
             }
         }
     
@@ -226,8 +227,9 @@ namespace Lumina
             }
         }
     
-        FEntityRegistry* Registry = nullptr;
-        entt::entity     Entity   = entt::null;
+        FEntityRegistry*    Registry = nullptr;
+        entt::entity        Entity   = entt::null;
+        bool                bDirty = false;
     };
     
 }

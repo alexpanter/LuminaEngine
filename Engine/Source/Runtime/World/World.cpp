@@ -952,11 +952,6 @@ namespace Lumina
         return *storage->data();
     }
 
-    void CWorld::MarkTransformDirty(entt::entity Entity)
-    {
-        GetEntityRegistry().emplace_or_replace<FNeedsTransformUpdate>(Entity);
-    }
-
     void CWorld::SetEntityTransform(entt::entity Entity, const FTransform& NewTransform)
     {
         EntityRegistry.emplace_or_replace<STransformComponent>(Entity, NewTransform);

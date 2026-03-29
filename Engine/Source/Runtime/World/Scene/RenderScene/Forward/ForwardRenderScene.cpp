@@ -18,6 +18,7 @@
 #include "World/World.h"
 #include "World/Entity/Components/BillboardComponent.h"
 #include "world/entity/components/charactercontrollercomponent.h"
+#include "World/Entity/Components/EditorComponent.h"
 #include "world/entity/components/entitytags.h"
 #include "world/entity/components/environmentcomponent.h"
 #include "world/entity/components/lightcomponent.h"
@@ -798,19 +799,24 @@ namespace Lumina
         
         #if USING(WITH_EDITOR)
         {
-            auto View = World->GetEntityRegistry().view<SCameraComponent, STransformComponent>(entt::exclude<SDisabledTag>);
-            View.each([this](entt::entity Entity, SCameraComponent& Camera, STransformComponent& Transform)
+            if (!World->IsGameWorld())
             {
-                if (!World->IsGameWorld())
+                auto View = World->GetEntityRegistry().view<SCameraComponent, STransformComponent>(entt::exclude<SDisabledTag>);
+                View.each([this](entt::entity Entity, SCameraComponent& Camera, STransformComponent& Transform)
                 {
+                    if (World->GetEntityRegistry().all_of<FEditorComponent>(Entity))
+                    {
+                        return;
+                    }
+                    
                     FBillboardInstance& Billboard   = BillboardInstances.emplace_back();
                     Billboard.TextureIndex          = GetNamedImage(ENamedImage::CameraIcon)->GetTextureCacheIndex();
                     Billboard.ColorPack             = PackColor(FColor::White);
                     Billboard.Position              = Transform.GetLocation();
                     Billboard.Size                  = 0.35f;
                     Billboard.EntityID              = entt::to_integral(Entity);
-                }
-            });
+                });
+            }
         }
         
         {

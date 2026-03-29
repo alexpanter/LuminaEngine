@@ -86,9 +86,6 @@ namespace Lumina
         entt::entity GetEntityByName(const FName& Name);
 
         FUNCTION(Script)
-        void MarkTransformDirty(entt::entity Entity);
-
-        FUNCTION(Script)
         TOptional<SRayResult> CastRay(const SRayCastSettings& Settings);
 
         FUNCTION(Script)

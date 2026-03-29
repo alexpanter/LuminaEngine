@@ -409,8 +409,6 @@ namespace Lumina
 
         glm::quat Rotation = Math::FindLookAtRotation(MeshTransform.GetLocation() + glm::vec3(0.0f, 0.85f, 0.0f), EditorTransform.GetLocation());
         EditorTransform.SetRotation(Rotation);
-        
-        World->MarkTransformDirty(EditorEntity);
     }
 
     void FSkeletalMeshEditorTool::Update(const FUpdateContext& UpdateContext)

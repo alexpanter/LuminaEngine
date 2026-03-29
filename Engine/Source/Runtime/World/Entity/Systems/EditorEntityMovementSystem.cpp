@@ -37,9 +37,7 @@ namespace Lumina
 			{
 				return;
 			}
-
-			(void)SystemContext.EmplaceOrReplace<FNeedsTransformUpdate>(EditorEntity);
-
+			
 			glm::vec3 Forward = Transform.GetForward();
 			glm::vec3 Right = Transform.GetRight();
 			glm::vec3 Up = Transform.GetUp();

@@ -8,12 +8,12 @@ namespace Lumina
 
     struct RUNTIME_API FNeedsTransformUpdate
     {
-        EMoveMode MoveMode = EMoveMode::Teleport;
-        bool bActivate = true;
+        
     };
     
     struct RUNTIME_API FNeedsPhysicsBodyUpdate
     {
-        bool bFoobar;
+        EMoveMode MoveMode = EMoveMode::Teleport;
+        bool bActivate = true;
     };
 }

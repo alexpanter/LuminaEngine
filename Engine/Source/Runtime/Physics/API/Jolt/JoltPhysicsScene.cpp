@@ -185,8 +185,8 @@ namespace Lumina::Physics
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         JPH::BodyInterface& BodyInterface = JoltSystem->GetBodyInterface();
         
-        auto BodySyncView = Registry.view<SRigidBodyComponent, STransformComponent, FNeedsTransformUpdate>();
-        BodySyncView.each([&](const SRigidBodyComponent& BodyComponent, const STransformComponent& TransformComponent, const FNeedsTransformUpdate& Update)
+        auto BodySyncView = Registry.view<SRigidBodyComponent, STransformComponent, FNeedsPhysicsBodyUpdate>();
+        BodySyncView.each([&](const SRigidBodyComponent& BodyComponent, const STransformComponent& TransformComponent, const FNeedsPhysicsBodyUpdate& Update)
         {
             JPH::BodyID BodyID = JPH::BodyID(BodyComponent.BodyID);
 

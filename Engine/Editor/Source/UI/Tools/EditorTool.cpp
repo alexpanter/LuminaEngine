@@ -349,8 +349,6 @@ namespace Lumina
         
         glm::quat Rotation = Math::FindLookAtRotation(EntityTransform.GetLocation(), NewPosition);
         EditorTransform.SetRotation(Rotation);
-    
-        World->MarkTransformDirty(EditorEntity);
     }
 
     void FEditorTool::DrawWorldGrid(int Scale, int Spacing)

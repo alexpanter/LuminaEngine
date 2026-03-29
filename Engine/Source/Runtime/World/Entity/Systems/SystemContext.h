@@ -145,8 +145,6 @@ namespace Lumina
         RUNTIME_API void SetEntityRotation(entt::entity Entity, const glm::quat& Rotation);
         RUNTIME_API void SetEntityScale(entt::entity Entity, const glm::vec3& Scale);
         
-        RUNTIME_API void MarkEntityTransformDirty(entt::entity Entity, EMoveMode MoveMode = EMoveMode::Teleport, bool bActivate = true);
-        
         //~ Begin Debug Drawing
         RUNTIME_API void DrawDebugLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness = 1.0f, float Duration = 1.0f);
         RUNTIME_API void DrawDebugBox(const glm::vec3& Center, const glm::vec3& Extents, const glm::quat& Rotation, const glm::vec4& Color, float Thickness = 1.0f, float Duration = 1.0f);

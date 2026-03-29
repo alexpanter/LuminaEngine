@@ -39,7 +39,8 @@
 namespace Lumina
 {
     static constexpr const char* SystemOutlinerName = "Systems";
-    static constexpr const char* WorldSettingsName = "WorldSettings";
+    static constexpr const char* WorldSettingsName = "World Settings";
+    static constexpr const char* SceneGraphName = "Scene Graph";
     static constexpr const char* DragDropID = "EntityDropID";
 
 
@@ -52,7 +53,7 @@ namespace Lumina
 
     void FWorldEditorTool::OnInitialize()
     {
-        CreateToolWindow("Outliner", [&] (bool bFocused)
+        CreateToolWindow(SceneGraphName, [&] (bool bFocused)
         {
             DrawOutliner(bFocused);
         });
@@ -475,7 +476,7 @@ namespace Lumina
         ImGui::DockBuilderSplitNode(dockRightBottom, ImGuiDir_Right, 0.5f, &dockRightBottomRight, &dockRightBottomLeft);
 
         ImGui::DockBuilderDockWindow(GetToolWindowName(ViewportWindowName).c_str(), dockLeft);
-        ImGui::DockBuilderDockWindow(GetToolWindowName("Outliner").c_str(), dockRightTop);
+        ImGui::DockBuilderDockWindow(GetToolWindowName(SceneGraphName).c_str(), dockRightTop);
         ImGui::DockBuilderDockWindow(GetToolWindowName("Details").c_str(), dockRightBottomLeft);
         ImGui::DockBuilderDockWindow(GetToolWindowName(SystemOutlinerName).c_str(), dockRightBottomRight);
         ImGui::DockBuilderDockWindow(GetToolWindowName(WorldSettingsName).c_str(), dockRightBottom);
@@ -1485,13 +1486,11 @@ namespace Lumina
             if (ImGui::Button("Reset Position", ImVec2(-1, 0)))
             {
                 World->GetEntityRegistry().get<STransformComponent>(EditorEntity).SetLocation(glm::vec3(0.0f));
-                World->MarkTransformDirty(EditorEntity);
             }
             
             if (ImGui::Button("Reset Rotation", ImVec2(-1, 0)))
             {
                 World->GetEntityRegistry().get<STransformComponent>(EditorEntity).SetRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-                World->MarkTransformDirty(EditorEntity);
             }
             
             ImGui::Spacing();
