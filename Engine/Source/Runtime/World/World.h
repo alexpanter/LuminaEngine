@@ -91,23 +91,25 @@ namespace Lumina
         FUNCTION(Script)
         TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings) const;
         
+        NODISCARD EWorldType GetWorldType() const { return WorldType; }
+        
         entt::entity GetFirstEntityWith(entt::id_type Type);
         
         void DuplicateEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback);
+        
         void DestroyEntity(entt::entity Entity);
         
         void SetActiveCamera(entt::entity InEntity);
+        
         SCameraComponent* GetActiveCamera();
+        
         entt::entity GetActiveCameraEntity() const;
         
         void OnChangeCameraEvent(const FSwitchActiveCameraEvent& Event);
+        
         double GetWorldDeltaTime() const { return DeltaTime; }
         double GetTimeSinceWorldCreation() const { return TimeSinceCreation; }
         
-        NODISCARD EWorldType GetWorldType() const { return WorldType; }
-        
-        void CreateRenderer();
-        void DestroyRenderer();
 
         void SetPaused(bool bNewPause) { bPaused = bNewPause; }
         bool IsPaused() const { return bPaused; }
@@ -149,6 +151,9 @@ namespace Lumina
         const FSystemContext& GetSystemContext() const { return SystemContext; }
         
     private:
+        
+        void CreateRenderer();
+        void DestroyRenderer();
         
         void OnScriptComponentPendingReady(const FScriptComponentPendingReady& Event);
         

@@ -88,40 +88,10 @@ namespace Lumina
         LOG_TRACE("Shutting down Forward Render Scene");
     }
 
-    void FForwardRenderScene::RenderScene(FRenderGraph& RenderGraph, const FViewVolume& ViewVolume)
+    void FForwardRenderScene::RenderView(FRenderGraph& RenderGraph, const FViewVolume& ViewVolume)
     {
         LUMINA_PROFILE_SCOPE();
         
-        SetViewVolume(ViewVolume);
-
-        // Wait for shader tasks.
-        if(GRenderContext->GetShaderCompiler()->HasPendingRequests())
-        {
-            return;
-        }
-
-        ResetPass(RenderGraph);
-        CompileDrawCommands(RenderGraph);
-        CullPass(RenderGraph);
-        DepthPrePass(RenderGraph);
-        DepthPyramidPass(RenderGraph);
-        ClusterBuildPass(RenderGraph);
-        LightCullPass(RenderGraph);
-        PointShadowPass(RenderGraph);
-        SpotShadowPass(RenderGraph);
-        CascadedShowPass(RenderGraph);
-        EnvironmentPass(RenderGraph);
-        BasePass(RenderGraph);
-        TransparentPass(RenderGraph);
-        BatchedLineDraw(RenderGraph);
-        BillboardPass(RenderGraph);
-        //SelectionPass(RenderGraph);
-        ToneMappingPass(RenderGraph);
-        DebugDrawPass(RenderGraph);
-    }
-
-    void FForwardRenderScene::SetViewVolume(const FViewVolume& ViewVolume)
-    {
         SceneViewport->SetViewVolume(ViewVolume);
         
         SceneGlobalData.CameraData.Location             = glm::vec4(SceneViewport->GetViewVolume().GetViewPosition(), 1.0f);
@@ -149,8 +119,33 @@ namespace Lumina
         SceneGlobalData.CullData.bOcclusionCull         = RenderSettings.bOcclusionCull;
         SceneGlobalData.CullData.PyramidWidth           = (float)GetNamedImage(ENamedImage::DepthPyramid)->GetSizeX();
         SceneGlobalData.CullData.PyramidHeight          = (float)GetNamedImage(ENamedImage::DepthPyramid)->GetSizeY();
-    }
+        
+        
+        // Wait for shader tasks.
+        if(GRenderContext->GetShaderCompiler()->HasPendingRequests())
+        {
+            return;
+        }
 
+        ResetPass(RenderGraph);
+        CompileDrawCommands(RenderGraph);
+        CullPass(RenderGraph);
+        DepthPrePass(RenderGraph);
+        DepthPyramidPass(RenderGraph);
+        ClusterBuildPass(RenderGraph);
+        LightCullPass(RenderGraph);
+        PointShadowPass(RenderGraph);
+        SpotShadowPass(RenderGraph);
+        CascadedShowPass(RenderGraph);
+        EnvironmentPass(RenderGraph);
+        BasePass(RenderGraph);
+        TransparentPass(RenderGraph);
+        BatchedLineDraw(RenderGraph);
+        BillboardPass(RenderGraph);
+        ToneMappingPass(RenderGraph);
+        DebugDrawPass(RenderGraph);
+    }
+    
     void FForwardRenderScene::SwapchainResized(glm::vec2 NewSize)
     {
         GRenderContext->ClearCommandListCache();
@@ -2254,93 +2249,5 @@ namespace Lumina
         }
 
         return static_cast<entt::entity>(PixelValue);
-    }
-
-    THashSet<entt::entity> FForwardRenderScene::GetEntitiesInPixelRange(uint32 MinX, uint32 MinY, uint32 MaxX, uint32 MaxY) const
-    {
-        THashSet<entt::entity> entities;
-        
-        FRHIImage* PickerImage = GetNamedImage(ENamedImage::Picker);
-        if (!PickerImage)
-        {
-            return entities;
-        }
-    
-        FRHICommandListRef CommandList = GRenderContext->CreateCommandList(FCommandListInfo::Graphics());
-        CommandList->Open();
-    
-        FRHIStagingImageRef StagingImage = GRenderContext->CreateStagingImage(PickerImage->GetDescription(), ERHIAccess::HostRead);
-        CommandList->CopyImage(PickerImage, FTextureSlice(), StagingImage, FTextureSlice());
-    
-        CommandList->Close();
-        GRenderContext->ExecuteCommandList(CommandList);
-    
-        size_t RowPitch = 0;
-        void* MappedMemory = GRenderContext->MapStagingTexture(StagingImage, FTextureSlice(), ERHIAccess::HostRead, &RowPitch);
-        if (!MappedMemory)
-        {
-            return entities;
-        }
-    
-        const uint32 Width  = PickerImage->GetDescription().Extent.x;
-        const uint32 Height = PickerImage->GetDescription().Extent.y;
-    
-        MinX = glm::clamp(MinX, 0u, Width - 1);
-        MinY = glm::clamp(MinY, 0u, Height - 1);
-        MaxX = glm::clamp(MaxX, 0u, Width - 1);
-        MaxY = glm::clamp(MaxY, 0u, Height - 1);
-    
-        if (MinX > MaxX)
-        {
-            std::swap(MinX, MaxX);
-        }
-        if (MinY > MaxY)
-        {
-            std::swap(MinY, MaxY);
-        }
-    
-        struct EntityBounds
-        {
-            uint32 MinX = UINT32_MAX;
-            uint32 MinY = UINT32_MAX;
-            uint32 MaxX = 0;
-            uint32 MaxY = 0;
-        };
-        
-        THashMap<entt::entity, EntityBounds> entityBoundsMap;
-    
-        for (uint32 y = 0; y < Height; ++y)
-        {
-            uint8* RowStart = static_cast<uint8*>(MappedMemory) + y * RowPitch;
-            
-            for (uint32 x = 0; x < Width; ++x)
-            {
-                uint32* PixelPtr = reinterpret_cast<uint32*>(RowStart) + x;
-                uint32 PixelValue = *PixelPtr;
-    
-                if (PixelValue != 0)
-                {
-                    entt::entity entity = static_cast<entt::entity>(PixelValue);
-                    
-                    EntityBounds& bounds = entityBoundsMap[entity];
-                    bounds.MinX = glm::min(bounds.MinX, x);
-                    bounds.MinY = glm::min(bounds.MinY, y);
-                    bounds.MaxX = glm::max(bounds.MaxX, x);
-                    bounds.MaxY = glm::max(bounds.MaxY, y);
-                }
-            }
-        }
-    
-        GRenderContext->UnMapStagingTexture(StagingImage);
-    
-        for (const auto& [entity, bounds] : entityBoundsMap)
-        {
-            if (bounds.MinX >= MinX && bounds.MaxX <= MaxX &&bounds.MinY >= MinY && bounds.MaxY <= MaxY)
-            {
-                entities.insert(entity);
-            }
-        }
-    
-        return entities;
     }
 }

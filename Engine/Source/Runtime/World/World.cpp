@@ -408,7 +408,7 @@ namespace Lumina
         SCameraComponent* CameraComponent = GetActiveCamera();
         FViewVolume ViewVolume = CameraComponent ? CameraComponent->GetViewVolume() : FViewVolume();
         
-        RenderScene->RenderScene(RenderGraph, ViewVolume);
+        RenderScene->RenderView(RenderGraph, ViewVolume);
     }
 
     void CWorld::OnScriptComponentPendingReady(const FScriptComponentPendingReady& Event)

@@ -14,18 +14,23 @@ namespace Lumina
     class IRenderScene : public ISceneInterface, public IPrimitiveDrawInterface
     {
     public:
+        virtual ~IRenderScene() = default;
 
-        ~IRenderScene() override = default;
-        
-        RUNTIME_API virtual void RenderScene(FRenderGraph& RenderGraph, const FViewVolume& ViewVolume) = 0;
-        RUNTIME_API virtual void SetViewVolume(const FViewVolume& ViewVolume) = 0;
-        RUNTIME_API virtual void CompileDrawCommands(FRenderGraph& RenderGraph) = 0;
-        RUNTIME_API virtual FRHIImage* GetRenderTarget() const = 0;
-        RUNTIME_API virtual const FSceneRenderStats& GetRenderStats() const = 0;
-        RUNTIME_API virtual FSceneRenderSettings& GetSceneRenderSettings() = 0;
+        virtual void Init() = 0;
+        virtual void Shutdown() = 0;
 
-        RUNTIME_API virtual entt::entity GetEntityAtPixel(uint32 X, uint32 Y) const = 0;
-        RUNTIME_API virtual THashSet<entt::entity> GetEntitiesInPixelRange(uint32 MinX, uint32 MinY, uint32 MaxX, uint32 MaxY) const = 0;
+        // Frame boundary, scene prepares/clears per-frame state
+        virtual void BeginFrame() = 0;
+        virtual void EndFrame() = 0;
+
+        // Submit a view to be rendered into the graph
+        virtual void RenderView(FRenderGraph&, const FViewVolume&) = 0;
         
+        virtual entt::entity GetEntityAtPixel(uint32 X, uint32 Y) const = 0;
+        
+        virtual FRHIImage* GetRenderTarget() const = 0;
+
+        virtual const FSceneRenderStats&  GetRenderStats() const = 0;
+        virtual FSceneRenderSettings&     GetSceneRenderSettings() = 0;
     };
 }
