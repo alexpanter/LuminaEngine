@@ -1,143 +1,235 @@
 #pragma once
 
 #include <glm/glm.hpp>
+
+#include "DirtyComponent.h"
 #include "Core/Math/Transform.h"
+#include "World/Entity/EntityUtils.h"
+#include "World/Entity/Registry/EntityRegistry.h"
 #include "TransformComponent.generated.h"
 
 namespace Lumina
 {
+
     REFLECT(Component, HideInComponentList)
     struct RUNTIME_API STransformComponent
     {
         GENERATED_BODY()
-        
+    
+        friend class CWorld;
+    
         STransformComponent() = default;
-        STransformComponent(const FTransform& InTransform)
-            : Transform(InTransform)
+        explicit STransformComponent(const FTransform& InTransform)
+            : LocalTransform(InTransform)
+            , WorldTransform(InTransform)
+            , CachedMatrix(InTransform.GetMatrix())
         {}
+    
+        FUNCTION(Script)
+        glm::vec3 GetLocalLocation() const { return LocalTransform.Location; }
+    
+        FUNCTION(Script)
+        glm::quat GetLocalRotation() const { return LocalTransform.Rotation; }
+    
+        FUNCTION(Script)
+        glm::vec3 GetLocalScale()    const { return LocalTransform.Scale; }
+    
+        FUNCTION(Script)
+        glm::vec3 GetLocalRotationAsEuler() const
+        {
+            return glm::degrees(glm::eulerAngles(LocalTransform.Rotation));
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 SetLocalLocation(const glm::vec3& InLocation)
+        {
+            LocalTransform.Location = InLocation;
+            MarkDirty();
+            return LocalTransform.Location;
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 Translate(const glm::vec3& Delta)
+        {
+            LocalTransform.Location += Delta;
+            MarkDirty();
+            return LocalTransform.Location;
+        }
+    
+        FUNCTION(Script)
+        glm::quat SetLocalRotation(const glm::quat& InRotation)
+        {
+            LocalTransform.Rotation = InRotation;
+            MarkDirty();
+            return LocalTransform.Rotation;
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 SetLocalRotationFromEuler(const glm::vec3& EulerDegrees)
+        {
+            LocalTransform.Rotation = glm::quat(glm::radians(EulerDegrees));
+            MarkDirty();
+            return GetLocalRotationAsEuler();
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 AddLocalRotationFromEuler(const glm::vec3& EulerDegrees)
+        {
+            LocalTransform.Rotation = glm::quat(glm::radians(EulerDegrees)) * LocalTransform.Rotation;
+            MarkDirty();
+            return GetLocalRotationAsEuler();
+        }
+    
+        FUNCTION(Script)
+        void AddYaw(float Degrees)
+        {
+            glm::quat YawQuat = glm::angleAxis(glm::radians(Degrees), glm::vec3(0.f, 1.f, 0.f));
+            LocalTransform.Rotation = glm::normalize(YawQuat * LocalTransform.Rotation);
+            MarkDirty();
+        }
+    
+        FUNCTION(Script)
+        void AddPitch(float Degrees, float ClampMin = -89.9f, float ClampMax = 89.9f)
+        {
+            float Clamped = glm::clamp(Degrees, ClampMin, ClampMax);
+            glm::quat PitchQuat = glm::angleAxis(glm::radians(Clamped), LocalTransform.GetRight());
+            LocalTransform.Rotation = glm::normalize(PitchQuat * LocalTransform.Rotation);
+            MarkDirty();
+        }
+    
+        FUNCTION(Script)
+        void AddRoll(float Degrees)
+        {
+            glm::quat RollQuat = glm::angleAxis(glm::radians(Degrees), LocalTransform.GetForward());
+            LocalTransform.Rotation = glm::normalize(RollQuat * LocalTransform.Rotation);
+            MarkDirty();
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 SetLocalScale(const glm::vec3& InScale)
+        {
+            LocalTransform.Scale = InScale;
+            MarkDirty();
+            return LocalTransform.Scale;
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 GetWorldLocation() const
+        {
+            ResolveIfDirty();
+            return WorldTransform.Location;
+        }
+    
+        FUNCTION(Script)
+        glm::quat GetWorldRotation() const
+        {
+            ResolveIfDirty();
+            return WorldTransform.Rotation;
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 GetWorldScale() const
+        {
+            ResolveIfDirty();
+            return WorldTransform.Scale;
+        }
+    
+        FUNCTION(Script)
+        glm::vec3 GetWorldRotationAsEuler() const
+        {
+            ResolveIfDirty();
+            return glm::degrees(glm::eulerAngles(WorldTransform.Rotation));
+        }
+    
+        FUNCTION(Script)
+        glm::mat4 GetWorldMatrix() const
+        {
+            ResolveIfDirty();
+            return CachedMatrix;
+        }
         
-        STransformComponent(const glm::vec3& InPosition)
-            :Transform(InPosition)
-        {}
-
-        STransformComponent(const glm::mat4& InMatrix)
-            : Transform(InMatrix)
-        {}
-
         FUNCTION(Script)
-        FORCEINLINE FTransform& GetTransform() { return Transform; }
-
-        FUNCTION(Script)
-        FORCEINLINE void SetTransform(const FTransform& InTransform) { Transform = InTransform; }
-
-        FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetLocation() const    { return Transform.Location; }
-        
-        FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetPosition() const    { return Transform.Location; }
-
-        FUNCTION(Script)
-        FORCEINLINE glm::quat GetRotation() const    { return Transform.Rotation; }
-
-        FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetScale()    const    { return Transform.Scale; }
-        
-        FUNCTION(Script)
-        FORCEINLINE float MaxScale()        const    { return glm::max(Transform.Scale.x, glm::max(Transform.Scale.y, Transform.Scale.z)); }
-        
-        FORCEINLINE glm::mat4 GetMatrix()   const    { return CachedMatrix; }
-
-        FUNCTION(Script)
-        FORCEINLINE glm::vec3& Translate(const glm::vec3& Translation)
+        void SetWorldTransform(const FTransform& InTransform)
         {
-            Transform.Translate(Translation);
-            return Transform.Location;
+            WorldTransform = InTransform;
+            MarkDirty();
         }
-
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 SetLocation(const glm::vec3& InLocation) 
-        { 
-            Transform.Location = InLocation;
-            return Transform.Location;
-        }
-
+        glm::vec3 GetForward() const { return LocalTransform.GetForward(); }
+    
         FUNCTION(Script)
-        FORCEINLINE glm::quat SetRotation(const glm::quat& InRotation)
-        { 
-            Transform.Rotation = InRotation;
-            return Transform.Rotation;
-        }
-
+        glm::vec3 GetRight()   const { return LocalTransform.GetRight(); }
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 SetRotationFromEuler(const glm::vec3& EulerRotation)
+        glm::vec3 GetUp()      const { return LocalTransform.GetUp(); }
+    
+        FUNCTION(Script)
+        float MaxScale() const
         {
-            Transform.Rotation = glm::quat(glm::radians(EulerRotation));
-            return GetRotationAsEuler();
+            return glm::max(LocalTransform.Scale.x, glm::max(LocalTransform.Scale.y, LocalTransform.Scale.z));
         }
-
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 SetScale(const glm::vec3& InScale) 
-        { 
-            Transform.Scale = InScale;
-            return Transform.Scale;
-        }
-
+        glm::vec3 GetLocation() const { return GetLocalLocation(); }
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetRotationAsEuler() const 
-        {
-            return glm::degrees(glm::eulerAngles(Transform.Rotation));
-        }
-
+        glm::vec3 GetPosition() const { return GetLocalLocation(); }
+    
         FUNCTION(Script)
-        FORCEINLINE void AddYaw(float Degrees)
-        {
-            glm::quat YawQuat = glm::angleAxis(glm::radians(Degrees), glm::vec3(0.0f, 1.0f, 0.0f));
-            Transform.Rotation = glm::normalize(YawQuat * Transform.Rotation);
-        }
-
+        glm::quat GetRotation() const { return GetLocalRotation(); }
+    
         FUNCTION(Script)
-        FORCEINLINE void AddPitch(float Degrees)
-        {
-            glm::quat PitchQuat = glm::angleAxis(glm::radians(Degrees), Transform.GetRight());
-            Transform.Rotation = glm::normalize(PitchQuat * Transform.Rotation);
-        }
-
+        glm::vec3 GetScale()    const { return GetLocalScale(); }
+    
         FUNCTION(Script)
-        FORCEINLINE void AddRoll(float Degrees)
-        {
-            glm::quat RollQuat = glm::angleAxis(glm::radians(Degrees), Transform.GetForward());
-            Transform.Rotation = glm::normalize(RollQuat * Transform.Rotation);
-        }
-        
+        glm::vec3 SetLocation(const glm::vec3& L)   { return SetLocalLocation(L); }
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetForward() const
-        {
-            return Transform.GetForward();
-        }
-
+        glm::quat SetRotation(const glm::quat& R)    { return SetLocalRotation(R); }
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetRight() const
-        {
-            return Transform.GetRight();
-        }
-
+        glm::vec3 SetScale(const glm::vec3& S)       { return SetLocalScale(S); }
+    
         FUNCTION(Script)
-        FORCEINLINE glm::vec3 GetUp() const
-        {
-            return Transform.GetUp();
-        }
-        
+        glm::vec3 SetRotationFromEuler(const glm::vec3& E)  { return SetLocalRotationFromEuler(E); }
+    
+        FUNCTION(Script)
+        glm::vec3 AddRotationFromEuler(const glm::vec3& E)  { return AddLocalRotationFromEuler(E); }
+    
+        FUNCTION(Script)
+        glm::vec3 GetRotationAsEuler() const { return GetLocalRotationAsEuler(); }
+    
     public:
-
-        /** The local transform of an entity */
+        
         PROPERTY(Editable, Category = "Transform")
-        FTransform Transform;
-
-        /** World transform of an entity */
-        FTransform WorldTransform = Transform;
-
-        /** The cached matrix always refers to the matrix in world space.*/
-        glm::mat4 CachedMatrix = WorldTransform.GetMatrix();
+        FTransform LocalTransform;
+    
+        FTransform WorldTransform;
+        glm::mat4  CachedMatrix = glm::mat4(1.f);
+    
+    private:
+        
+        void MarkDirty() const
+        {
+            if (Registry)
+            {
+                Registry->emplace_or_replace<FNeedsTransformUpdate>(Entity);
+                Registry->emplace_or_replace<FNeedsPhysicsBodyUpdate>(Entity);
+            }
+        }
+    
+        void ResolveIfDirty() const
+        {
+            if (Registry && Registry->all_of<FNeedsTransformUpdate>(Entity))
+            {
+                ECS::Utils::ResolveTransformChain(*Registry, Entity);
+            }
+        }
+    
+        FEntityRegistry*    Registry = nullptr;
+        entt::entity        Entity   = entt::null;
+        bool                bDirty = false;
     };
     
 }

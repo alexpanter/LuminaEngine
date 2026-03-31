@@ -27,6 +27,11 @@ namespace Lumina
             OnAssetLoadFinished();
             bAssetLoadBroadcasted = true;
         }
+        
+        if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S))
+        {
+            OnSave();
+        }
     }
 
     void FAssetEditorTool::OnSave()

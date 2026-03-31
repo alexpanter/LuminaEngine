@@ -49,7 +49,21 @@ namespace Lumina
             ImGui::DragScalar("##Value", DT, &DisplayValue, Speed, Min, Max);
             ImGui::PopItemWidth();
 
-            return ImGui::IsItemEdited() ? EPropertyChangeOp::Updated : EPropertyChangeOp::None;
+            EPropertyChangeOp Result = EPropertyChangeOp::None;
+            if (ImGui::IsItemEdited())
+            {
+                Result = EPropertyChangeOp::Updated;
+            }
+            if (ImGui::IsItemActivated())
+            {
+                Result = EPropertyChangeOp::Started;
+            }
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                Result = EPropertyChangeOp::Finished;
+            }
+        
+            return Result;
         }
         
         void UpdatePropertyValue(TSharedPtr<FPropertyHandle> Property) override
@@ -63,7 +77,7 @@ namespace Lumina
             ValueType ActualValue;
             Property->Property->GetValue(Property->ContainerPtr, &ActualValue, Property->Index);
         
-            if (CachedValue != ActualValue)
+            if (!Math::IsNearlyEqual(CachedValue, ActualValue, LE_SMALL_NUMBER))
             {
                 CachedValue = DisplayValue = ActualValue;
             }
@@ -88,8 +102,22 @@ namespace Lumina
             ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x);
             ImGui::Checkbox("##", &bValue);
             ImGui::PopItemWidth();
-            
-            return ImGui::IsItemEdited() ? EPropertyChangeOp::Updated : EPropertyChangeOp::None;
+
+            EPropertyChangeOp Result = EPropertyChangeOp::None;
+            if (ImGui::IsItemEdited())
+            {
+                Result = EPropertyChangeOp::Updated;
+            }
+            if (ImGui::IsItemActivated())
+            {
+                Result = EPropertyChangeOp::Started;
+            }
+            if (ImGui::IsItemDeactivatedAfterEdit())
+            {
+                Result = EPropertyChangeOp::Finished;
+            }
+        
+            return Result;
         }
         
         void UpdatePropertyValue(TSharedPtr<FPropertyHandle> Property) override

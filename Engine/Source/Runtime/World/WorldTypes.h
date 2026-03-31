@@ -5,7 +5,6 @@
 
 namespace Lumina
 {
-
     REFLECT()
     enum class EWorldType : uint8
     {

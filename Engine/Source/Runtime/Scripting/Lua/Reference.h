@@ -10,6 +10,7 @@
 
 namespace Lumina::Lua
 {
+    enum class EType : uint8;
     /**
      * A reference to a lua object.
      *
@@ -93,7 +94,7 @@ namespace Lumina::Lua
         
         template<typename T>
         requires(!eastl::is_function_v<T> && !eastl::is_member_function_pointer_v<T>)
-        void Set(FStringView Key, const T& Value);
+        void Set(FStringView Key, T Value);
         
         template<auto TFunc, typename TClass = void>
         void SetFunction(FStringView Key, TClass* Instance = nullptr);
@@ -121,12 +122,15 @@ namespace Lumina::Lua
         
         
         void Reset();
+        
+        NODISCARD EType GetType() const;
         NODISCARD bool Push() const;
         NODISCARD FRef NewTable(FStringView Key) const;
         NODISCARD bool IsValid() const;
         NODISCARD FRef GetField(FStringView Key) const;
         NODISCARD bool IsInvokable() const;
         NODISCARD bool IsTable() const;
+        NODISCARD bool IsUserdata(int Tag) const;
         NODISCARD lua_State* GetState() const { return State; }
     
         NODISCARD FIterator begin() const
@@ -171,20 +175,21 @@ namespace Lumina::Lua
         
     private:
         
-        lua_State* State = nullptr;
-        int Ref = LUA_NOREF;
+        lua_State*      State   = nullptr;
+        int             Ref     = LUA_NOREF;
     };
 
     template <typename T>
     requires(!eastl::is_function_v<T> && !eastl::is_member_function_pointer_v<T>)
-    void FRef::Set(FStringView Key, const T& Value)
+    void FRef::Set(FStringView Key, T Value)
     {
         if (!Push())
         {
             return;
         }
         
-        TStack<T>::Push(State, Value);
+
+        TStack<T>::Push(State, eastl::forward<T>(Value));
         lua_setfield(State, -2, Key.data());
         lua_pop(State, 1);
     }
@@ -230,7 +235,7 @@ namespace Lumina::Lua
             return false;
         }
         
-        bool Result = TStack<T>::Check(State, Ref);
+        bool Result = TStack<T>::Check(State, -1);
         lua_pop(State, 1);
         return Result;
     }

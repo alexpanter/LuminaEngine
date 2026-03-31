@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "JoltPhysicsScene.h"
-#include <algorithm>
 #include <Jolt/Physics/Character/CharacterVirtual.h>
 #include <Jolt/Physics/Collision/CastResult.h>
 #include <Jolt/Physics/Collision/CollisionCollectorImpl.h>
@@ -11,12 +10,12 @@
 #include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
 #if JPH_DEBUG_RENDERER
 #include <Jolt/Renderer/DebugRendererSimple.h>
+#include "Core/Utils/Defer.h"
 #endif
 #include "JoltPhysics.h"
 #include "JoltUtils.h"
 #include "Core/Console/ConsoleVariable.h"
 #include "Core/Profiler/Profile.h"
-#include "Core/Utils/Defer.h"
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Collision/Shape/BoxShape.h"
 #include "Jolt/Physics/Collision/Shape/SphereShape.h"
@@ -144,6 +143,7 @@ namespace Lumina::Physics
 
     void FJoltContactListener::GetFrictionAndRestitution(const JPH::Body& inBody, const JPH::SubShapeID& inSubShapeID, float& outFriction, float& outRestitution) const
     {
+        
     }
     
     FJoltPhysicsScene::FJoltPhysicsScene(CWorld* InWorld)
@@ -153,7 +153,7 @@ namespace Lumina::Physics
         JoltSystem = MakeUnique<JPH::PhysicsSystem>();
         
         JoltSystem->Init(65536, 0, 131072, 262144, GJoltLayerInterface, GObjectVsBroadPhaseLayerFilter, GObjectVsObjectLayerFilter);
-        JoltSystem->SetGravity(JPH::Vec3Arg(0.0f, GEarthGravity, 0.0f));
+        JoltSystem->SetGravity(JPH::Vec3Arg(0.0f, GEarthGravity * World->GetDefaultWorldSettings().GravityScale, 0.0f));
 
         JPH::PhysicsSettings JoltSettings;
         JoltSystem->SetPhysicsSettings(JoltSettings);
@@ -185,8 +185,8 @@ namespace Lumina::Physics
         const JPH::BodyLockInterfaceNoLock& LockInterface = JoltSystem->GetBodyLockInterfaceNoLock();
         JPH::BodyInterface& BodyInterface = JoltSystem->GetBodyInterface();
         
-        auto BodySyncView = Registry.view<SRigidBodyComponent, STransformComponent, FNeedsTransformUpdate>();
-        BodySyncView.each([&](const SRigidBodyComponent& BodyComponent, const STransformComponent& TransformComponent, const FNeedsTransformUpdate& Update)
+        auto BodySyncView = Registry.view<SRigidBodyComponent, STransformComponent, FNeedsPhysicsBodyUpdate>();
+        BodySyncView.each([&](const SRigidBodyComponent& BodyComponent, const STransformComponent& TransformComponent, const FNeedsPhysicsBodyUpdate& Update)
         {
             JPH::BodyID BodyID = JPH::BodyID(BodyComponent.BodyID);
 
@@ -266,11 +266,13 @@ namespace Lumina::Physics
         constexpr double MaxDeltaTime = 0.25;
         constexpr int MaxSteps = 5;
     
-        DeltaTime = std::min(DeltaTime, MaxDeltaTime);
+        DeltaTime = eastl::min(DeltaTime, MaxDeltaTime);
         Accumulator += DeltaTime;
+        
+        float FixedTimeStep = 1.0f / World->GetDefaultWorldSettings().FixedPhysicsTimestep;
 
         CollisionSteps = static_cast<int>(Accumulator / FixedTimeStep);
-        CollisionSteps = std::min(CollisionSteps, MaxSteps);
+        CollisionSteps = eastl::min(CollisionSteps, MaxSteps);
         
         #if JPH_DEBUG_RENDERER
         if (FConsoleRegistry::Get().GetAs<bool>("Jolt.Debug.Draw"))
@@ -295,7 +297,7 @@ namespace Lumina::Physics
         {
             PreUpdate();
 
-            JoltSystem->Update(static_cast<float>(FixedTimeStep), CollisionSteps, &Allocator, FJoltPhysicsContext::GetThreadPool());
+            JoltSystem->Update(FixedTimeStep, CollisionSteps, &Allocator, FJoltPhysicsContext::GetThreadPool());
         
             PostUpdate();
             
@@ -304,7 +306,7 @@ namespace Lumina::Physics
             // Clamp accumulator if we hit max steps
             if (CollisionSteps >= MaxSteps)
             {
-                Accumulator = std::min(Accumulator, FixedTimeStep);
+                Accumulator = eastl::min(Accumulator, (double)FixedTimeStep);
             }
         }
         
@@ -412,7 +414,6 @@ namespace Lumina::Physics
         auto View = Registry.view<SRigidBodyComponent, STransformComponent>();
         View.each([&](entt::entity EntityID, const SRigidBodyComponent& BodyComponent, STransformComponent& TransformComponent)
         {
-            LUMINA_PROFILE_SECTION("Sync Entity Transform");
             const JPH::Body* Body = LockInterface.TryGetBody(JPH::BodyID(BodyComponent.BodyID));
             if (Body == nullptr || !Body->IsActive() || Body->IsStatic())
             {
@@ -470,6 +471,26 @@ namespace Lumina::Physics
         Ray.mOrigin = JPHStart;
         Ray.mDirection = Direction;
         
+        class LayerMaskFilter : public JPH::ObjectLayerFilter
+        {
+        public:
+            LayerMaskFilter(uint32 InLayerMask) 
+                : LayerMask(InLayerMask) {}
+
+            bool ShouldCollide(JPH::ObjectLayer InLayer) const override
+            {
+                ECollisionProfiles LayerA = (ECollisionProfiles)(uint16)(LayerMask & 0xFFFF);
+                ECollisionProfiles MaskA  = (ECollisionProfiles)(uint16)(LayerMask >> 16);
+    
+                ECollisionProfiles LayerB = (ECollisionProfiles)(uint16)(InLayer & 0xFFFF);
+                ECollisionProfiles MaskB  = (ECollisionProfiles)(uint16)(InLayer >> 16);
+
+                return (MaskA & LayerB) != (ECollisionProfiles)0 || (MaskB & LayerA) != (ECollisionProfiles)0;
+            }
+
+            uint32 LayerMask;
+        };
+        
         class IgnoreFilter : public JPH::BodyFilter
         {
         public:
@@ -495,7 +516,10 @@ namespace Lumina::Physics
         
         
         JPH::RayCastResult Hit;
-        bool bHit = JoltSystem->GetNarrowPhaseQuery().CastRay(Ray, Hit, {}, {}, IgnoreFilter);
+        
+        LayerMaskFilter LayerFilter{(uint32)Settings.LayerMask};
+
+        bool bHit = JoltSystem->GetNarrowPhaseQuery().CastRay(Ray, Hit, {}, LayerFilter, IgnoreFilter);
         if (!bHit)
         {
             return eastl::nullopt;

@@ -1,18 +1,21 @@
 #include "pch.h"
 #include "Scripting.h"
+
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
+
 #include "lstate.h"
 #include "luacode.h"
 #include "lualib.h"
 #include "ScriptTypes.h"
+#include "Audio/AudioGlobals.h"
 #include "Core/Utils/TimedEvent.h"
 #include "Events/KeyCodes.h"
 #include "FileSystem/FileSystem.h"
 #include "Input/InputProcessor.h"
 #include "Luau/include/lua.h"
 #include "Memory/SmartPtr.h"
-#include "Paths/Paths.h"
 #include "World/World.h"
-#include "World/Entity/Registry/EntityRegistry.h"
 #include "World/Entity/Systems/SystemContext.h"
 
 namespace Lumina::Lua
@@ -100,16 +103,136 @@ namespace Lumina::Lua
         
         CWorld::RegisterLuaModule(GlobalsRef);
         
+        FRef EngineTable    = GlobalsRef.NewTable("Engine");
+        FRef MathTable      = EngineTable.NewTable("Math");
+        FRef AudioTable     = EngineTable.NewTable("Audio");
+        
+        MathTable.Set("Pi",        glm::pi<float>());
+        MathTable.Set("TwoPi",     glm::two_pi<float>());
+        MathTable.Set("HalfPi",    glm::half_pi<float>());
+        MathTable.Set("Epsilon",   glm::epsilon<float>());
+        MathTable.Set("Infinity",  eastl::numeric_limits<float>::infinity());
+        
+        MathTable.SetFunction<[](glm::vec3 Target, glm::vec3 From) { return Math::FindLookAtRotation(Target, From); }>("FindLookAtRotation");
+
+        MathTable.SetFunction<[](float X) { return glm::abs(X); }>("Abs");
+        MathTable.SetFunction<[](float X) { return glm::sign(X); }>("Sign");
+        MathTable.SetFunction<[](float X) { return glm::floor(X); }>("Floor");
+        MathTable.SetFunction<[](float X) { return glm::ceil(X); }>("Ceil");
+        MathTable.SetFunction<[](float X) { return glm::round(X); }>("Round");
+        MathTable.SetFunction<[](float X) { return glm::fract(X); }>("Fract");
+        MathTable.SetFunction<[](float X) { return glm::sqrt(X); }>("Sqrt");
+        MathTable.SetFunction<[](float X) { return glm::inversesqrt(X); }>("InverseSqrt");
+        MathTable.SetFunction<[](float X, float Y) { return glm::mod(X, Y); }>("Mod");
+        MathTable.SetFunction<[](float X, float Y) { return glm::pow(X, Y); }>("Pow");
+        MathTable.SetFunction<[](float X) { return glm::exp(X); }>("Exp");
+        MathTable.SetFunction<[](float X) { return glm::log(X); }>("Log");
+        MathTable.SetFunction<[](float X) { return glm::exp2(X); }>("Exp2");
+        MathTable.SetFunction<[](float X) { return glm::log2(X); }>("Log2");
+        
+        MathTable.SetFunction<[](float A, float B, float T) { return glm::mix(A, B, T); }>("Lerp");
+        MathTable.SetFunction<[](float X, float E0, float E1) { return glm::smoothstep(E0, E1, X); }>("SmoothStep");
+        MathTable.SetFunction<[](float X, float E) { return glm::step(E, X); }>("Step");
+        MathTable.SetFunction<[](float X, float Min, float Max) { return glm::clamp(X, Min, Max); }>("Clamp");
+        MathTable.SetFunction<[](float A, float B) { return glm::min(A, B); }>("Min");
+        MathTable.SetFunction<[](float A, float B) { return glm::max(A, B); }>("Max");
+        
+        MathTable.SetFunction<[](float X) { return glm::radians(X); }>("Radians");
+        MathTable.SetFunction<[](float X) { return glm::degrees(X); }>("Degrees");
+        MathTable.SetFunction<[](float X) { return glm::sin(X); }>("Sin");
+        MathTable.SetFunction<[](float X) { return glm::cos(X); }>("Cos");
+        MathTable.SetFunction<[](float X) { return glm::tan(X); }>("Tan");
+        MathTable.SetFunction<[](float X) { return glm::asin(X); }>("Asin");
+        MathTable.SetFunction<[](float X) { return glm::acos(X); }>("Acos");
+        MathTable.SetFunction<[](float Y, float X) { return glm::atan(Y, X); }>("Atan2");
+        
+        MathTable.SetFunction<[](glm::vec2 A, glm::vec2 B) { return glm::dot(A, B); }>("Dot2");
+        MathTable.SetFunction<[](glm::vec2 V) { return glm::length(V); }>("Length2");
+        MathTable.SetFunction<[](glm::vec2 V) { return glm::normalize(V); }>("Normalize2");
+        MathTable.SetFunction<[](glm::vec2 A, glm::vec2 B) { return glm::distance(A, B); }>("Distance2");
+        MathTable.SetFunction<[](glm::vec2 A, glm::vec2 B, float T) { return glm::mix(A, B, T); }>("Lerp2");
+        MathTable.SetFunction<[](glm::vec2 A, glm::vec2 B) { return glm::reflect(A, B); }>("Reflect2");
+        
+        MathTable.SetFunction<[](glm::vec3 A, glm::vec3 B) { return glm::dot(A, B); }>("Dot3");
+        MathTable.SetFunction<[](glm::vec3 A, glm::vec3 B) { return glm::cross(A, B); }>("Cross");
+        MathTable.SetFunction<[](glm::vec3 V) { return glm::length(V); }>("Length3");
+        MathTable.SetFunction<[](glm::vec3 V) { return glm::normalize(V); }>("Normalize3");
+        MathTable.SetFunction<[](glm::vec3 A, glm::vec3 B) { return glm::distance(A, B); }>("Distance3");
+        MathTable.SetFunction<[](glm::vec3 A, glm::vec3 B, float T) { return glm::mix(A, B, T); }>("Lerp3");
+        MathTable.SetFunction<[](glm::vec3 A, glm::vec3 B) { return glm::reflect(A, B); }>("Reflect3");
+        MathTable.SetFunction<[](glm::vec3 A, glm::vec3 B, float Eta) { return glm::refract(A, B, Eta); }>("Refract3");
+        
+        MathTable.SetFunction<[](glm::vec4 A, glm::vec4 B) { return glm::dot(A, B); }>("Dot4");
+        MathTable.SetFunction<[](glm::vec4 V) { return glm::length(V); }>("Length4");
+        MathTable.SetFunction<[](glm::vec4 V) { return glm::normalize(V); }>("Normalize4");
+        MathTable.SetFunction<[](glm::vec4 A, glm::vec4 B, float T) { return glm::mix(A, B, T); }>("Lerp4");
+        
+        MathTable.SetFunction<[](glm::quat A, glm::quat B) { return glm::dot(A, B); }>("QuatDot");
+        MathTable.SetFunction<[](glm::quat A, glm::quat B, float T) { return glm::slerp(A, B, T); }>("QuatSlerp");
+        MathTable.SetFunction<[](glm::quat Q) { return glm::normalize(Q); }>("QuatNormalize");
+        MathTable.SetFunction<[](glm::quat Q) { return glm::inverse(Q); }>("QuatInverse");
+        MathTable.SetFunction<[](glm::quat Q) { return glm::conjugate(Q); }>("QuatConjugate");
+        MathTable.SetFunction<[](glm::quat Q) { return glm::eulerAngles(Q); }>("QuatEuler");
+        MathTable.SetFunction<[](float Angle, glm::vec3 Axis) { return glm::angleAxis(Angle, Axis); }>("QuatAngleAxis");
+        MathTable.SetFunction<[](glm::vec3 Euler) { return glm::quat(Euler); }>("QuatFromEuler");
+        MathTable.SetFunction<[](glm::quat Q) { return glm::mat4_cast(Q); }>("QuatToMatrix");
+        MathTable.SetFunction<[](glm::vec3 From, glm::vec3 To) { return glm::rotation(From, To); }>("QuatFromTo");
+        MathTable.SetFunction<[](glm::quat Rot) { return glm::normalize(glm::rotate(Rot, glm::vec3(0.0f, 0.0f, 1.0f))); } >("QuatForward");
+        
         FRef InputTable = GlobalsRef.NewTable("Input");
         InputTable.SetFunction<&FInputProcessor::IsKeyDown>("IsKeyDown", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyUp>("IsKeyUp", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyPressed>("IsKeyPressed", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::IsKeyRepeated>("IsKeyRepeated", &FInputProcessor::Get());
-        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaX>("GetMouseDeltaX", &FInputProcessor::Get());
-        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaY>("GetMouseDeltaY", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsKeyReleased>("IsKeyReleased", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsMouseButtonPressed>("IsMouseButtonPressed", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsMouseButtonReleased>("IsMouseButtonReleased", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseButtonHeldTime>("GetMouseButtonHeldTime", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsMouseButtonDown>("IsMouseButtonDown", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::IsMouseButtonUp>("IsMouseButtonUp", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::GetMouseX>("GetMouseX", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::GetMouseY>("GetMouseY", &FInputProcessor::Get());
         InputTable.SetFunction<&FInputProcessor::GetMouseZ>("GetMouseZ", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaX>("GetMouseDeltaX", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::GetMouseDeltaY>("GetMouseDeltaY", &FInputProcessor::Get());
+        InputTable.SetFunction<&FInputProcessor::SetMouseMode>("SetMouseMode", &FInputProcessor::Get());
+        
+        
+        AudioTable.SetFunction<[](FStringView File, glm::vec3 Location) { GAudioContext->PlaySoundFromFileAtPosition(File, Location); }>("PlaySoundAtLocation");
+        
+        
+        GlobalsRef.NewClass<glm::mat4>("Mat4")
+            .Register();
+        
+        GlobalsRef.NewClass<glm::quat>("Quat")
+            .AddProperty<&glm::quat::x>("X")
+            .AddProperty<&glm::quat::y>("Y")
+            .AddProperty<&glm::quat::z>("Z")
+            .AddProperty<&glm::quat::w>("W")
+    
+            // Metamethods
+            .AddFunction<[](glm::quat& A, glm::quat B) { return A * B; }>(EMetaMethod::Mul)
+            .AddFunction<[](glm::quat& A, glm::quat B) { return A + B; }>(EMetaMethod::Add)
+            .AddFunction<[](glm::quat& A, glm::quat B) { return A - B; }>(EMetaMethod::Sub)
+            .AddFunction<[](glm::quat& A) { return -A; }>(EMetaMethod::UnaryMinus)
+            .AddFunction<[](glm::quat& A, glm::quat B) { return A == B; }>(EMetaMethod::Eq)
+            .AddFunction<[](glm::quat& Self) { return glm::to_string(Self); }>(EMetaMethod::ToString)
+            .AddFunction<[](glm::quat& Self) { return glm::length(Self); }>(EMetaMethod::Len)
+    
+            // Methods
+            .AddFunction<[](glm::quat& Self) { return glm::eulerAngles(Self); }>("EulerAngles")
+            .AddFunction<[](glm::quat& Self) { return glm::normalize(Self); }>("Normalize")
+            .AddFunction<[](glm::quat& Self) { return glm::inverse(Self); }>("Inverse")
+            .AddFunction<[](glm::quat& Self) { return glm::length(Self); }>("Length")
+            .AddFunction<[](glm::quat& Self) { return glm::conjugate(Self); }>("Conjugate")
+            .AddFunction<[](glm::quat& Self) { return glm::dot(Self, Self); }>("LengthSquared")
+            .AddFunction<[](glm::quat& A, glm::quat B) { return glm::dot(A, B); }>("Dot")
+            .AddFunction<[](glm::quat& A, glm::quat B, float T) { return glm::slerp(A, B, T); }>("SLerp")
+            .AddFunction<[](glm::quat& A, glm::quat B, float T) { return glm::lerp(A, B, T); }>("Lerp")
+            .AddFunction<[](glm::quat& Self) { return glm::mat4_cast(Self); }>("ToMatrix")
+            .AddFunction<[](float Angle, glm::vec3 Axis) { return glm::angleAxis(Angle, Axis); }>("FromAngleAxis")
+            .AddFunction<[](glm::quat& Self, glm::vec3 V) { return Self * V; }>("RotateVector")
+            .Register();
 
     }
 

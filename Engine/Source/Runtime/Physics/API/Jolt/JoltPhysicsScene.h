@@ -117,7 +117,6 @@ namespace Lumina::Physics
         TUniquePtr<JPH::PhysicsSystem>		JoltSystem;
         CWorld*								World = nullptr;
 
-        double FixedTimeStep = 1.0 / 60.0;
         double Accumulator = 0.0;
         int CollisionSteps = 1;
     

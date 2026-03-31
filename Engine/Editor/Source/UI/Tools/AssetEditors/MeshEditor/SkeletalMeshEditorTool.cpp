@@ -409,8 +409,6 @@ namespace Lumina
 
         glm::quat Rotation = Math::FindLookAtRotation(MeshTransform.GetLocation() + glm::vec3(0.0f, 0.85f, 0.0f), EditorTransform.GetLocation());
         EditorTransform.SetRotation(Rotation);
-        
-        World->MarkTransformDirty(EditorEntity);
     }
 
     void FSkeletalMeshEditorTool::Update(const FUpdateContext& UpdateContext)
@@ -425,9 +423,9 @@ namespace Lumina
         if (bShowAABB)
         {
             SSkeletalMeshComponent& MeshComponent = World->GetEntityRegistry().get<SSkeletalMeshComponent>(MeshEntity);
-            FTransform Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity).GetTransform();
+            STransformComponent& Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
 
-            FAABB AABB = MeshComponent.GetAABB().ToWorld(Transform.GetMatrix());
+            FAABB AABB = MeshComponent.GetAABB().ToWorld(Transform.GetWorldMatrix());
             
             World->DrawBox(AABB.GetCenter(), AABB.GetSize() * 0.5f, glm::quat(1, 0, 0, 0), FColor::Green);
         }
@@ -435,12 +433,12 @@ namespace Lumina
         CSkeleton* Skeleton = GetAsset<CSkeletalMesh>()->Skeleton;
         if (bShowBones && Skeleton)
         {
-            FTransform Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity).GetTransform();
+            STransformComponent& Transform = World->GetEntityRegistry().get<STransformComponent>(MeshEntity);
 
             FSkeletonResource* SkeletonResource = Skeleton->GetSkeletonResource();
             TVector<glm::mat4> WorldTransforms;
             WorldTransforms.resize(SkeletonResource->GetNumBones());
-            glm::mat4 EntityMatrix = Transform.GetMatrix();
+            glm::mat4 EntityMatrix = Transform.GetWorldMatrix();
 
             for (int i = 0; i < SkeletonResource->GetNumBones(); ++i)
             {

@@ -86,31 +86,30 @@ namespace Lumina
         entt::entity GetEntityByName(const FName& Name);
 
         FUNCTION(Script)
-        void MarkTransformDirty(entt::entity Entity);
-
-        FUNCTION(Script)
         TOptional<SRayResult> CastRay(const SRayCastSettings& Settings);
 
         FUNCTION(Script)
         TVector<SRayResult> CastSphere(const SSphereCastSettings& Settings) const;
         
+        NODISCARD EWorldType GetWorldType() const { return WorldType; }
+        
         entt::entity GetFirstEntityWith(entt::id_type Type);
         
-        void CopyEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback);
+        void DuplicateEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback);
+        
         void DestroyEntity(entt::entity Entity);
         
         void SetActiveCamera(entt::entity InEntity);
+        
         SCameraComponent* GetActiveCamera();
+        
         entt::entity GetActiveCameraEntity() const;
         
         void OnChangeCameraEvent(const FSwitchActiveCameraEvent& Event);
+        
         double GetWorldDeltaTime() const { return DeltaTime; }
         double GetTimeSinceWorldCreation() const { return TimeSinceCreation; }
         
-        NODISCARD EWorldType GetWorldType() const { return WorldType; }
-        
-        void CreateRenderer();
-        void DestroyRenderer();
 
         void SetPaused(bool bNewPause) { bPaused = bNewPause; }
         bool IsPaused() const { return bPaused; }
@@ -128,6 +127,7 @@ namespace Lumina
         const TVector<FSystemVariant>& GetSystemsForUpdateStage(EUpdateStage Stage);
 
         void OnRelationshipComponentDestroyed(entt::registry& Registry, entt::entity Entity);
+        void OnTransformComponentConstruct(entt::registry& Registry, entt::entity Entity);
         void OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity);
         void OnScriptComponentCreated(entt::entity Entity, SScriptComponent& ScriptComponent, bool bRunReady);
         void OnScriptComponentDestroyed(entt::registry& Registry, entt::entity Entity);
@@ -151,6 +151,9 @@ namespace Lumina
         const FSystemContext& GetSystemContext() const { return SystemContext; }
         
     private:
+        
+        void CreateRenderer();
+        void DestroyRenderer();
         
         void OnScriptComponentPendingReady(const FScriptComponentPendingReady& Event);
         

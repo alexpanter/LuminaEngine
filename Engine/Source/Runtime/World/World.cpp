@@ -1,8 +1,9 @@
 #include "pch.h"
 #include "World.h"
-
 #include <utility>
+#include "lua.h"
 #include "WorldManager.h"
+#include "Audio/AudioGlobals.h"
 #include "Core/Delegates/CoreDelegates.h"
 #include "Core/Engine/Engine.h"
 #include "Core/Object/Class.h"
@@ -19,9 +20,8 @@
 #include "Entity/Components/ScriptComponent.h"
 #include "Entity/Components/SingletonEntityComponent.h"
 #include "entity/components/tagcomponent.h"
-#include "Physics/Physics.h"
-#include "lua.h"
 #include "Entity/Events/WorldEvents.h"
+#include "Physics/Physics.h"
 #include "Scene/RenderScene/Forward/ForwardRenderScene.h"
 #include "Scripting/Lua/Scripting.h"
 #include "Scripting/Lua/VariadicArgs.h"
@@ -32,14 +32,6 @@
 
 namespace Lumina
 {
-    namespace Binds
-    {
-        static void OnScriptComponentReady(const FScriptComponentPendingReady& Event)
-        {
-            
-        }
-    }
-    
     namespace LuaBinds
     {
         using namespace entt::literals;
@@ -66,6 +58,28 @@ namespace Lumina
             entt::id_type Type = ECS::Utils::GetTypeID(Ref);
             auto Meta = ECS::Utils::InvokeMetaFunc(Type, "remove"_hs, entt::forward_as_meta(Registry), Entity);
             return Meta.cast<size_t>();
+        }
+        
+        static Lua::FRef EmplaceComponent_Lua(FEntityRegistry& Registry, entt::entity Entity, Lua::FRef Ref)
+        {
+            LUMINA_PROFILE_SECTION("Emplace Component [Lua]");
+            entt::id_type Type = ECS::Utils::GetTypeID(Ref);
+            auto Meta = ECS::Utils::InvokeMetaFunc(Type, "emplace_lua"_hs, entt::forward_as_meta(Registry), Entity, entt::forward_as_meta(Ref));
+            return Meta.cast<Lua::FRef>();
+        }
+        
+        static void ForEachEntity_Lua(FEntityRegistry& Registry, Lua::FRef Ref)
+        {
+            auto View = Registry.view<entt::entity>();
+            View.each([&](entt::entity Entity)
+            {
+               Ref(Entity); 
+            });
+        }
+        
+        static bool IsEntityNull_Lua(entt::entity Entity)
+        {
+            return Entity == entt::null;
         }
         
         static entt::runtime_view RuntimeView_Lua(FEntityRegistry& Registry, Lua::FVariadicArgs Args)
@@ -110,20 +124,50 @@ namespace Lumina
             return Registry.destroy(Entity);
         }
         
+        static uint32 DispatchEvent_Lua(FEntityRegistry& Registry, entt::entity Entity)
+        {
+            return 0;
+        }
+        
         static entt::entity DuplicateEntity_Lua(FEntityRegistry& Registry, entt::entity Entity)
         {
-            entt::entity To = Registry.create();
-        
-            for (auto&& [ID, Storage]: Registry.storage())
+            auto DuplicateRecursive = [&](auto& Self, entt::entity Source, entt::entity NewParent) -> entt::entity
             {
-                // We also need to check the entity we're creating, in-case another component adds it.
-                if(Storage.contains(Entity) && !Storage.contains(To))
+                entt::entity To = Registry.create();
+
+                for (auto&& [ID, Storage] : Registry.storage())
                 {
-                    Storage.push(To, Storage.value(Entity));
+                    if (Storage.contains(Source) && !Storage.contains(To))
+                    {
+                        if (ID != entt::type_hash<FRelationshipComponent>::value())
+                        {
+                            Storage.push(To, Storage.value(Source));
+                        }
+                    }
                 }
-            }
-            
-            return To;
+
+                if (NewParent != entt::null)
+                {
+                    ECS::Utils::ReparentEntity(Registry, To, NewParent);
+                }
+                else if (FRelationshipComponent* Rel = Registry.try_get<FRelationshipComponent>(Source))
+                {
+                    if (Rel->Parent != entt::null)
+                    {
+                        ECS::Utils::ReparentEntity(Registry, To, Rel->Parent);
+                    }
+                }
+
+                // Recursively duplicate children parented to new duplicate
+                ECS::Utils::ForEachChild(Registry, Source, [&](entt::entity Child)
+                {
+                    Self(Self, Child, To);
+                });
+
+                return To;
+            };
+
+            return DuplicateRecursive(DuplicateRecursive, Entity, entt::null);
         }
         
         static void ForEachInRuntimeView_Lua(entt::runtime_view& View, Lua::FRef Func)
@@ -134,6 +178,13 @@ namespace Lumina
             {
                 Func(Entity);
             });
+        }
+        
+        static size_t RuntimeViewSizeHint_Lua(entt::runtime_view& View)
+        {
+            LUMINA_PROFILE_SCOPE();
+
+            return View.size_hint();
         }
     }
     
@@ -147,22 +198,33 @@ namespace Lumina
 
     void CWorld::RegisterLuaModule(Lua::FRef& GlobalRef)
     {
+        GlobalRef.NewClass<Physics::IPhysicsScene>("PhysicsScene")
+            .AddFunction<&Physics::IPhysicsScene::ActivateBody>("ActivateBody")
+            .AddFunction<&Physics::IPhysicsScene::DeactivateBody>("DeactivateBody")
+            .Register();
+        
         GlobalRef.NewClass<entt::runtime_view>("RuntimeView")
             .AddFunction<&entt::runtime_view::contains>("Contains")
             .AddFunction<&LuaBinds::ForEachInRuntimeView_Lua>("Each")
+            .AddFunction<&LuaBinds::RuntimeViewSizeHint_Lua>("SizeHint")
             .Register();
         
         GlobalRef.NewClass<FEntityRegistry>("FEntityRegistry")
             .AddFunction<&FEntityRegistry::valid>("Valid")
             .AddFunction<&FEntityRegistry::orphan>("Orphan")
+            .AddFunction<&FEntityRegistry::compact<>>("Compact")
             .AddFunction<&LuaBinds::EntityCount_Lua>("EntityCount")
             .AddFunction<&LuaBinds::RemoveComponent_Lua>("Remove")
             .AddFunction<&LuaBinds::CreateEntity_Lua>("Create")
             .AddFunction<&LuaBinds::DuplicateEntity_Lua>("Duplicate")
             .AddFunction<&LuaBinds::DestroyEntity_Lua>("Destroy")
             .AddFunction<&LuaBinds::HasComponent_Lua>("Has")
+            .AddFunction<&LuaBinds::EmplaceComponent_Lua>("Emplace")
+            .AddFunction<&LuaBinds::ForEachEntity_Lua>("ForEachEntity")
             .AddFunction<&LuaBinds::GetComponent_Lua>("Get")
+            .AddFunction<&LuaBinds::IsEntityNull_Lua>("IsNull")
             .AddFunction<&LuaBinds::RuntimeView_Lua>("RuntimeView")
+            .AddFunction<&LuaBinds::DispatchEvent_Lua>("DispatchEvent")
             .Register();
     }
 
@@ -202,8 +264,15 @@ namespace Lumina
 
         EntityRegistry.ctx().emplace<entt::dispatcher&>(SingletonDispatcher);
         
-        for (auto Entity : EntityRegistry.view<SDefaultWorldSettings>())
+        auto WorldSettingsView = EntityRegistry.view<SDefaultWorldSettings>();
+        for (auto Entity : WorldSettingsView)
         {
+            if (!ALERT_IF_NOT(WorldSettingsView->size() == 1, "Multiple world settings were detected in the world! {}", WorldSettingsView->size()))
+            {
+                EntityRegistry.clear<SDefaultWorldSettings>();
+                break;
+            }
+            
             SingletonEntity = Entity;
             break;
         }
@@ -224,7 +293,8 @@ namespace Lumina
         EntityRegistry.ctx().emplace<Physics::IPhysicsScene*>(PhysicsScene.get());
         EntityRegistry.ctx().emplace<FCameraManager*>(CameraManager.get());
         EntityRegistry.ctx().emplace<FSystemContext&>(SystemContext);
-        
+        EntityRegistry.ctx().emplace<CWorld*>(this);
+
         CreateRenderer();
         RegisterSystems();
         
@@ -239,10 +309,18 @@ namespace Lumina
         });
         
         EntityRegistry.on_destroy   <FRelationshipComponent>()      .connect<&ThisClass::OnRelationshipComponentDestroyed>(this);
+        EntityRegistry.on_construct <STransformComponent>()         .connect<&ThisClass::OnTransformComponentConstruct>(this);
         EntityRegistry.on_construct <SScriptComponent>()            .connect<&ThisClass::OnScriptComponentConstruct>(this);
         EntityRegistry.on_destroy   <SScriptComponent>()            .connect<&ThisClass::OnScriptComponentDestroyed>(this);
         SystemContext.EventSink     <FSwitchActiveCameraEvent>()    .connect<&ThisClass::OnChangeCameraEvent>(this);
         SystemContext.EventSink     <FScriptComponentPendingReady>().connect<&ThisClass::OnScriptComponentPendingReady>(this);
+        
+        auto TransformView = EntityRegistry.view<STransformComponent>();
+        TransformView.each([&](entt::entity Entity, STransformComponent& TransformComponent)
+        {
+            TransformComponent.Registry = &EntityRegistry;
+            TransformComponent.Entity = Entity;
+        });
         
         auto CameraView = EntityRegistry.view<SCameraComponent>(entt::exclude<SDisabledTag>);
         CameraView.each([&](entt::entity Entity, const SCameraComponent& Camera)
@@ -265,6 +343,8 @@ namespace Lumina
     
     void CWorld::TeardownWorld()
     {
+        GAudioContext->StopSounds();
+        
         EntityRegistry.on_destroy<FRelationshipComponent>().disconnect<&ThisClass::OnRelationshipComponentDestroyed>(this);
         EntityRegistry.on_destroy<SScriptComponent>().disconnect<&ThisClass::OnScriptComponentConstruct>(this);
         
@@ -328,7 +408,7 @@ namespace Lumina
         SCameraComponent* CameraComponent = GetActiveCamera();
         FViewVolume ViewVolume = CameraComponent ? CameraComponent->GetViewVolume() : FViewVolume();
         
-        RenderScene->RenderScene(RenderGraph, ViewVolume);
+        RenderScene->RenderView(RenderGraph, ViewVolume);
     }
 
     void CWorld::OnScriptComponentPendingReady(const FScriptComponentPendingReady& Event)
@@ -467,31 +547,59 @@ namespace Lumina
         }
         
         EntityRegistry.emplace<SNameComponent>(NewEntity).Name = Name;
-        EntityRegistry.emplace<STransformComponent>(NewEntity).Transform = Transform;
+        EntityRegistry.emplace<STransformComponent>(NewEntity, Transform);
         EntityRegistry.emplace_or_replace<FNeedsTransformUpdate>(NewEntity);
         
         return NewEntity;
     }
     
-    void CWorld::CopyEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback)
+    void CWorld::DuplicateEntity(entt::entity& To, entt::entity From, TFunctionRef<bool(entt::type_info)> Callback)
     {
         ASSERT(To != From);
-        
-        To = EntityRegistry.create();
-        
-        for (auto&& [ID, Storage]: EntityRegistry.storage())
+
+        auto DuplicateRecursive = [&](auto& Self, entt::entity Source, entt::entity NewParent) -> entt::entity
         {
-            if (!Callback(Storage.info()))
+            entt::entity NewEntity = EntityRegistry.create();
+
+            for (auto&& [ID, Storage] : EntityRegistry.storage())
             {
-                continue;
+                if (!Callback(Storage.info()))
+                {
+                    continue;
+                }
+
+                if (ID == entt::type_hash<FRelationshipComponent>::value())
+                {
+                    continue;
+                }
+
+                if (Storage.contains(Source) && !Storage.contains(NewEntity))
+                {
+                    Storage.push(NewEntity, Storage.value(Source));
+                }
             }
-            
-            // We also need to check the entity we're creating, in-case another component adds it.
-            if(Storage.contains(From) && !Storage.contains(To))
+
+            if (NewParent != entt::null)
             {
-                Storage.push(To, Storage.value(From));
+                ECS::Utils::ReparentEntity(EntityRegistry, NewEntity, NewParent);
             }
-        }
+            else if (FRelationshipComponent* Rel = EntityRegistry.try_get<FRelationshipComponent>(Source))
+            {
+                if (Rel->Parent != entt::null)
+                {
+                    ECS::Utils::ReparentEntity(EntityRegistry, NewEntity, Rel->Parent);
+                }
+            }
+
+            ECS::Utils::ForEachChild(EntityRegistry, Source, [&](entt::entity Child)
+            {
+                Self(Self, Child, NewEntity);
+            });
+
+            return NewEntity;
+        };
+
+        To = DuplicateRecursive(DuplicateRecursive, From, entt::null);
     }
 
     void CWorld::DestroyEntity(entt::entity Entity)
@@ -605,8 +713,40 @@ namespace Lumina
 
     void CWorld::OnRelationshipComponentDestroyed(entt::registry& Registry, entt::entity Entity)
     {
+        Registry.on_destroy<FRelationshipComponent>().disconnect<&CWorld::OnRelationshipComponentDestroyed>(this);
         ECS::Utils::RemoveFromParent(Registry, Entity);
-        ECS::Utils::DestroyEntityHierarchy(Registry, Entity);
+
+        TVector<entt::entity> SubTree;
+    
+        auto CollectRecursive = [&](auto& Self, entt::entity Current) -> void
+        {
+            ECS::Utils::ForEachChild(Registry, Current, [&](entt::entity Child)
+            {
+                Self(Self, Child);
+                SubTree.push_back(Child);
+            });
+        };
+    
+        CollectRecursive(CollectRecursive, Entity);
+
+        for (int32 i = (int32)SubTree.size() - 1; i >= 0; i--)
+        {
+            if (Registry.valid(SubTree[i]))
+            {
+                Registry.destroy(SubTree[i]);
+            }
+        }
+        
+        Registry.on_destroy<FRelationshipComponent>().connect<&CWorld::OnRelationshipComponentDestroyed>(this);
+    }
+
+    void CWorld::OnTransformComponentConstruct(entt::registry& Registry, entt::entity Entity)
+    {
+        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Entity);
+        TransformComponent.Registry = &EntityRegistry;
+        TransformComponent.Entity = Entity;
+        
+        Registry.emplace_or_replace<FNeedsTransformUpdate>(Entity);
     }
 
     void CWorld::OnScriptComponentConstruct(entt::registry& Registry, entt::entity Entity)
@@ -620,41 +760,56 @@ namespace Lumina
         ScriptComponent.Entity = Entity;
         ScriptComponent.World  = this;
         
-        if (!ScriptComponent.ScriptPath.Path.empty())
+        if (ScriptComponent.ScriptPath.Path.empty())
         {
-            ScriptComponent.Script = Lua::FScriptingContext::Get().LoadUniqueScriptPath(ScriptComponent.ScriptPath.Path);
-            if (ScriptComponent.Script == nullptr)
-            {
-                return;
-            }
-            
-            ScriptComponent.Script->Reference.Set("Entity", Entity);
-            ScriptComponent.Script->Reference.Set("Transform", EntityRegistry.try_get<STransformComponent>(Entity));
-            ScriptComponent.Script->Environment.Set("World", this);
-            
-            ScriptComponent.ScriptMetaTable = ScriptComponent.Script->Reference["__meta"];
-            ScriptComponent.AttachFunc      = ScriptComponent.Script->Reference["OnAttach"];
-            ScriptComponent.ReadyFunc       = ScriptComponent.Script->Reference["OnReady"];
-            ScriptComponent.UpdateFunc      = ScriptComponent.Script->Reference["Update"];
-            ScriptComponent.DetachFunc      = ScriptComponent.Script->Reference["OnDetach"];
-            
+            return;
+        }
+        
+        ScriptComponent.Script = Lua::FScriptingContext::Get().LoadUniqueScriptPath(ScriptComponent.ScriptPath.Path);
+        if (ScriptComponent.Script == nullptr)
+        {
+            return;
+        }
+        
+        ScriptComponent.Script->Environment.Set("World", this);
+        ScriptComponent.Script->Environment.Set("Registry", &EntityRegistry);
+        ScriptComponent.Script->Environment.Set("Physics", PhysicsScene.get());
+        
+        ScriptComponent.Script->Reference.Set("Entity", Entity);
+        ScriptComponent.Script->Reference.Set("Transform", &EntityRegistry.get<STransformComponent>(Entity));
+        ScriptComponent.Script->Reference.Set("Name", EntityRegistry.get<SNameComponent>(Entity).Name);
+        
+        ScriptComponent.ScriptMetaTable = ScriptComponent.Script->Reference["__meta"];
+        ScriptComponent.AttachFunc      = ScriptComponent.Script->Reference["OnAttach"];
+        ScriptComponent.ReadyFunc       = ScriptComponent.Script->Reference["OnReady"];
+        ScriptComponent.UpdateFunc      = ScriptComponent.Script->Reference["Update"];
+        ScriptComponent.DetachFunc      = ScriptComponent.Script->Reference["OnDetach"];
+        
+        if (ScriptComponent.ScriptMetaTable.IsValid())
+        {
             Lua::FRef RunInEditor = ScriptComponent.ScriptMetaTable.GetField("bRunInEditor");
             if (RunInEditor.IsValid())
             {
-                ScriptComponent.bRunInEditor = RunInEditor.GetOr<bool>(false);
+                ScriptComponent.bRunInEditor = RunInEditor.GetOr(false);
             }
             
-            if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
+            Lua::FRef TickRate = ScriptComponent.ScriptMetaTable.GetField("TickRate");
+            if (TickRate.IsValid())
             {
-                if (ScriptComponent.AttachFunc.IsValid())
-                {
-                    ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
-                }
-                
-                if (bRunReady)
-                {
-                    SingletonDispatcher.enqueue<FScriptComponentPendingReady>(Entity);
-                }
+                ScriptComponent.TickRate = TickRate.GetOr(0.0f);
+            }
+        }
+        
+        if ((WorldType == EWorldType::Editor) == ScriptComponent.bRunInEditor)
+        {
+            if (ScriptComponent.AttachFunc.IsValid())
+            {
+                ScriptComponent.AttachFunc(ScriptComponent.Script->Reference);
+            }
+            
+            if (bRunReady)
+            {
+                SingletonDispatcher.enqueue<FScriptComponentPendingReady>(Entity);
             }
         }
     }
@@ -752,6 +907,7 @@ namespace Lumina
         
         return PhysicsScene->CastSphere(Settings);
         
+        
     }
 
     entt::entity CWorld::GetEntityByTag(const FName& Tag)
@@ -794,11 +950,6 @@ namespace Lumina
             return entt::null;
         }
         return *storage->data();
-    }
-
-    void CWorld::MarkTransformDirty(entt::entity Entity)
-    {
-        GetEntityRegistry().emplace_or_replace<FNeedsTransformUpdate>(Entity);
     }
 
     void CWorld::SetEntityTransform(entt::entity Entity, const FTransform& NewTransform)

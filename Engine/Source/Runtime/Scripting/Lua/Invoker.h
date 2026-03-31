@@ -10,22 +10,26 @@ namespace Lumina::Lua
     static decltype(auto) GetArg(lua_State* L, int Index)
     {
         using BaseT = eastl::remove_cvref_t<TParam>;
-    
+
         if constexpr (TLuaNativeType<BaseT>::value)
         {
             return TStack<BaseT>::Get(L, Index);
         }
         else if constexpr (eastl::is_pointer_v<BaseT>)
         {
-            return TStack<TParam>::Get(L, Index);
+            return TStack<BaseT>::Get(L, Index);
         }
         else if constexpr (eastl::is_enum_v<BaseT>)
         {
             return TStack<BaseT>::Get(L, Index);
         }
-        else
+        else if constexpr (eastl::is_lvalue_reference_v<TParam>)
         {
             return TStack<BaseT&>::Get(L, Index);
+        }
+        else
+        {
+            return TStack<BaseT>::Get(L, Index);
         }
     }
     

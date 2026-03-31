@@ -56,7 +56,9 @@ namespace Lumina::ImGuiX
 
     bool ButtonEx(char const* pIcon, char const* pLabel, ImVec2 const& size, const ImColor& backgroundColor, const ImColor& iconColor, const ImColor& foregroundColor, bool shouldCenterContents)
     {
-         bool wasPressed = false;
+    	// Taken from Esoterica.
+    	
+    	bool wasPressed = false;
 
         ImU32 HoveredColor = ImGui::ColorConvertFloat4ToU32(backgroundColor.Value * 1.15f);
         ImU32 ActiveColor  = ImGui::ColorConvertFloat4ToU32(backgroundColor.Value * 1.25f);
@@ -135,7 +137,6 @@ namespace Lumina::ImGuiX
             ImGui::PushStyleColor( ImGuiCol_ButtonActive, ActiveColor );
             ImGui::PushStyleColor( ImGuiCol_Text, (ImVec4) foregroundColor );
 
-            // Render frame
             ImU32 const color = ImGui::GetColorU32( ( held && hovered ) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button );
             //ImGui::RenderNavCursor( bb, ID );
             ImGui::RenderFrame( bb.Min, bb.Max, color, true, style.FrameRounding );
@@ -145,7 +146,6 @@ namespace Lumina::ImGuiX
 
             if ( shouldCenterContents )
             {
-                // Icon and Label - ensure label is centered!
                 if ( labelSize.x > 0 )
                 {
                     ImVec2 const textOffset( ( bb.GetWidth() / 2 ) - ( buttonWidthWithFramePadding / 2 ) + iconSize.x + spacing + style.FramePadding.x, 0 );
@@ -156,7 +156,7 @@ namespace Lumina::ImGuiX
                     ImVec2 const iconOffset( offsetX, offsetY );
                     pWindow->DrawList->AddText( pos + iconOffset, finalIconColor, pIcon );
                 }
-                else // Only an icon
+                else
                 {
                     float const offsetX = ( bb.GetWidth() - iconSize.x ) / 2.0f;
                     float const offsetY = ( ( bb.GetHeight() - iconSize.y ) / 2.0f );
@@ -164,7 +164,7 @@ namespace Lumina::ImGuiX
                     pWindow->DrawList->AddText( pos + iconOffset, finalIconColor, pIcon );
                 }
             }
-            else // No centering
+            else
             {
                 ImVec2 const textOffset( iconSize.x + spacing + style.FramePadding.x, 0 );
                 ImGui::RenderTextClipped( bb.Min + textOffset, bb.Max, pLabel, NULL, &labelSize, ImVec2( 0, 0.5f ), &bb );

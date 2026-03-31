@@ -27,6 +27,9 @@ namespace Lumina
         CStruct*                Type;
         FPropertyChangedEventFn PreChangeCallback;
         FPropertyChangedEventFn PostChangeCallback;
+        FPropertyChangedEventFn StartChangeCallback;
+        FPropertyChangedEventFn FinishChangeCallback;
+
     };
     
     class FPropertyRow
@@ -166,7 +169,9 @@ namespace Lumina
         void SetObject(void* InObject, CStruct* StructType);
         void SetPreEditCallback(const FPropertyChangedEventFn& Callback);
         void SetPostEditCallback(const FPropertyChangedEventFn& Callback);
-            
+        void SetStartEditCallback(const FPropertyChangedEventFn& Callback);
+        void SetFinishEditCallback(const FPropertyChangedEventFn& Callback);
+
         FCategoryPropertyRow* FindOrCreateCategoryRow(const FName& CategoryName);
 
         FPropertyChangedEventCallbacks ChangeEventCallbacks;

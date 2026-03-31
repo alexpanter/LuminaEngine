@@ -21,6 +21,8 @@ namespace Lumina
     {
         None,
         Updated,
+        Started,
+        Finished,
     };
     
     struct RUNTIME_API IPropertyTypeCustomization : TSharedFromThis<IPropertyTypeCustomization>

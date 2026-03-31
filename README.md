@@ -137,6 +137,7 @@ Contributions to Lumina are recognized in several ways, including Steam keys for
 > **Python not found?** Ensure Python is added to PATH during installation (check "Add Python to PATH" when installing)
 > **Error C1076 compiler limit: internal heap limit reached** - Try again, this is currently an issue with a font file.
 > **Build fails?** [Submit an issue](https://github.com/mrdrelliot/LuminaEngine/issues) or contact me on Discord
+> **An application control policy has blocked this file** - Garbage Windows 11 feature, disable "Smart App Control"
 
 > [!NOTE]
 > The `LUMINA_DIR` environment variable is set automatically during build. If needed, set it manually:

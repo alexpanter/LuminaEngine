@@ -233,6 +233,52 @@ namespace Lumina
                 }
             }
             break;
+        case EPropertyChangeOp::Started:
+            {
+                if (Callbacks.StartChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.StartChangeCallback(Move(Event));
+                }
+             
+                if (Callbacks.PreChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PreChangeCallback(Move(Event));
+                }
+                
+                Customization->UpdatePropertyValue(PropertyHandle);
+
+                if (Callbacks.PostChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PostChangeCallback(Move(Event));
+                }
+            }
+            break;
+        case EPropertyChangeOp::Finished:
+            {
+                if (Callbacks.PreChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PreChangeCallback(Move(Event));
+                }
+                
+                Customization->UpdatePropertyValue(PropertyHandle);
+
+                if (Callbacks.PostChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PostChangeCallback(Move(Event));
+                }
+                
+                if (Callbacks.FinishChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.FinishChangeCallback(Move(Event));
+                }
+            }
+            break;
         }
 
         ChangeOp = EPropertyChangeOp::None;
@@ -439,6 +485,52 @@ namespace Lumina
                 }
             }
             break;
+        case EPropertyChangeOp::Started:
+            {
+                if (Callbacks.StartChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.StartChangeCallback(Move(Event));
+                }
+             
+                if (Callbacks.PreChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PreChangeCallback(Move(Event));
+                }
+                
+                Customization->UpdatePropertyValue(PropertyHandle);
+
+                if (Callbacks.PostChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PostChangeCallback(Move(Event));
+                }
+            }
+            break;
+        case EPropertyChangeOp::Finished:
+            {
+                if (Callbacks.PreChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PreChangeCallback(Move(Event));
+                }
+                
+                Customization->UpdatePropertyValue(PropertyHandle);
+
+                if (Callbacks.PostChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.PostChangeCallback(Move(Event));
+                }
+                
+                if (Callbacks.FinishChangeCallback)
+                {
+                    FPropertyChangedEvent Event{Callbacks.Type, PropertyHandle->Property, PropertyHandle->Property->Name};
+                    Callbacks.FinishChangeCallback(Move(Event));
+                }
+            }
+            break;
         }
 
         ChangeOp = EPropertyChangeOp::None;
@@ -629,6 +721,16 @@ namespace Lumina
     void FPropertyTable::SetPostEditCallback(const FPropertyChangedEventFn& Callback)
     {
         ChangeEventCallbacks.PostChangeCallback = Callback;
+    }
+
+    void FPropertyTable::SetStartEditCallback(const FPropertyChangedEventFn& Callback)
+    {
+        ChangeEventCallbacks.StartChangeCallback = Callback;
+    }
+
+    void FPropertyTable::SetFinishEditCallback(const FPropertyChangedEventFn& Callback)
+    {
+        ChangeEventCallbacks.FinishChangeCallback = Callback;
     }
 
     FCategoryPropertyRow* FPropertyTable::FindOrCreateCategoryRow(const FName& CategoryName)

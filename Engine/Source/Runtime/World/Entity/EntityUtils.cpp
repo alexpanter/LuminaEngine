@@ -89,14 +89,19 @@ namespace Lumina::ECS::Utils
             Ar << EntityID;
             Entity = (entt::entity)EntityID;
 
-            Entity = Registry.create(Entity);
-
+            if (!Registry.valid(Entity))
+            {
+                entt::entity New = Registry.create(Entity);
+                ALERT_IF_NOT(New == Entity);
+                Entity = New;
+            }
+            
             bool bHasRelationship = false;
             Ar << bHasRelationship;
 
             if (bHasRelationship)
             {
-                FRelationshipComponent& RelationshipComponent = Registry.emplace<FRelationshipComponent>(Entity);
+                FRelationshipComponent& RelationshipComponent = Registry.emplace_or_replace<FRelationshipComponent>(Entity);
                 Ar << RelationshipComponent;
             }
 
@@ -119,7 +124,12 @@ namespace Lumina::ECS::Utils
                     {
                         STagComponent NewTagComponent;
                         Struct->SerializeTaggedProperties(Ar, &NewTagComponent);
-                        Registry.storage<STagComponent>(entt::hashed_string(NewTagComponent.Tag.c_str())).emplace(Entity, NewTagComponent);
+                        auto HashedString = entt::hashed_string(NewTagComponent.Tag.c_str());
+                        
+                        if (!Registry.storage<STagComponent>(HashedString).contains(Entity))
+                        {
+                            Registry.storage<STagComponent>(HashedString).emplace(Entity, NewTagComponent);
+                        }
                     }
                     else
                     {
@@ -402,11 +412,14 @@ namespace Lumina::ECS::Utils
         ChildRelationship->Prev = entt::null;
         ChildRelationship->Next = entt::null;
         
-        STransformComponent& TransformComponent = Registry.get<STransformComponent>(Child);
-        TransformComponent.Transform = TransformComponent.WorldTransform;
+        STransformComponent* TransformComponent = Registry.try_get<STransformComponent>(Child);
+        if (!ALERT_IF_NOT(TransformComponent, "Missing child transform component"))
+        {
+            return;
+        }
         
-        Registry.emplace_or_replace<STransformComponent>(Child, TransformComponent);
-        Registry.emplace_or_replace<FNeedsTransformUpdate>(Child);
+        TransformComponent->SetWorldTransform(TransformComponent->WorldTransform);
+        Registry.emplace_or_replace<STransformComponent>(Child, *TransformComponent);
     }
 
     bool IsDescendantOf(FEntityRegistry& Registry, entt::entity Potential, entt::entity Ancestor)
@@ -520,6 +533,85 @@ namespace Lumina::ECS::Utils
         }
         
         return false;
+    }
+
+    void ResolveTransformChain(FEntityRegistry& Registry, entt::entity Entity)
+    {
+        LUMINA_PROFILE_SCOPE();
+        
+        TFixedVector<entt::entity, 64> AncestorChain;
+        
+        entt::entity Current = Entity;
+        while (Current != entt::null)
+        {
+            AncestorChain.push_back(Current);
+    
+            if (!Registry.all_of<FRelationshipComponent>(Current))
+            {
+                break;
+            }
+    
+            entt::entity Parent = Registry.get<FRelationshipComponent>(Current).Parent;
+            if (Parent == entt::null || !Registry.valid(Parent))
+            {
+                break;
+            }
+            
+            if (!Registry.all_of<FNeedsTransformUpdate>(Parent))
+            {
+                break;
+            }
+    
+            Current = Parent;
+        }
+    
+        for (int32 i = (int32)AncestorChain.size() - 1; i >= 0; --i)
+        {
+            entt::entity Ancestor = AncestorChain[i];
+            auto& Transform = Registry.get<STransformComponent>(Ancestor);
+    
+            if (Registry.all_of<FRelationshipComponent>(Ancestor))
+            {
+                entt::entity Parent = Registry.get<FRelationshipComponent>(Ancestor).Parent;
+    
+                if (Parent != entt::null && Registry.valid(Parent))
+                {
+                    glm::mat4 ParentWorld = Registry.get<STransformComponent>(Parent).CachedMatrix;
+                    glm::mat4 Local       = Transform.LocalTransform.GetMatrix();
+                    Transform.WorldTransform = FTransform(ParentWorld * Local);
+                }
+                else
+                {
+                    Transform.WorldTransform = Transform.LocalTransform;
+                }
+            }
+            else
+            {
+                Transform.WorldTransform = Transform.LocalTransform;
+            }
+    
+            Transform.CachedMatrix = Transform.WorldTransform.GetMatrix();
+            Registry.erase<FNeedsTransformUpdate>(Ancestor);
+        }
+        
+        TFunction<void(entt::entity)> UpdateChildrenRecursive;
+        UpdateChildrenRecursive = [&](entt::entity ParentEntity)
+        {
+            ForEachChild(Registry, ParentEntity, [&](entt::entity Child)
+            {
+                auto& ParentTransform = Registry.get<STransformComponent>(ParentEntity);
+                auto& ChildTransform  = Registry.get<STransformComponent>(Child);
+    
+                ChildTransform.WorldTransform = FTransform(ParentTransform.CachedMatrix * ChildTransform.LocalTransform.GetMatrix());
+                ChildTransform.CachedMatrix   = ChildTransform.WorldTransform.GetMatrix();
+    
+                Registry.remove<FNeedsTransformUpdate>(Child);
+    
+                UpdateChildrenRecursive(Child);
+            });
+        };
+    
+        UpdateChildrenRecursive(Entity);
     }
 
     entt::id_type GetTypeID(FStringView Name)

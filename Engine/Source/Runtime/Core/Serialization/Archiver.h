@@ -32,7 +32,7 @@ namespace Lumina
 {
     class CObject;
 
-    class FArchive
+    class RUNTIME_API FArchive
     {
     public:
     

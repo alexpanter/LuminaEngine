@@ -45,7 +45,7 @@ namespace glm
         float w;
     };
 
-    REFLECT()
+    REFLECT(NoLua)
     struct quat
     {
         PROPERTY(Editable)

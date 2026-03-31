@@ -98,4 +98,16 @@ namespace Lumina
         void Draw(IPrimitiveDrawInterface* PDI, entt::registry& Registry, entt::entity Entity) override;
         
     };
+    
+    REFLECT()
+    class RUNTIME_API CComponentVisualizer_Camera : public CComponentVisualizer
+    {
+        GENERATED_BODY()
+    public:
+        
+        CStruct* GetSupportedComponentType() const override;
+        
+        void Draw(IPrimitiveDrawInterface* PDI, entt::registry& Registry, entt::entity Entity) override;
+        
+    };
 }

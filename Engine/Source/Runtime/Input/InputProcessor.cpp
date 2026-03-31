@@ -1,5 +1,7 @@
 ﻿#include "pch.h"
 #include "InputProcessor.h"
+
+#include "Core/Engine/Engine.h"
 #include "Core/Windows/Window.h"
 #include "Events/Event.h"
 #if WITH_EDITOR
@@ -21,7 +23,6 @@ namespace Lumina
 			FMouseMovedEvent& MouseEvent = Event.As<FMouseMovedEvent>();
 			MouseDeltaX += MouseEvent.GetDeltaX();
 			MouseDeltaY += MouseEvent.GetDeltaY();
-
 			MouseX = MouseEvent.GetX();
 			MouseY = MouseEvent.GetY();
 		}
@@ -29,40 +30,39 @@ namespace Lumina
 		{
 			FMouseButtonEvent& MouseButtonEvent = Event.As<FMouseButtonPressedEvent>();
 			uint32 MouseCode = static_cast<uint32>(MouseButtonEvent.GetButton());
-			MouseStates[MouseCode] = static_cast<Input::EMouseState>(GLFW_PRESS);
+			MouseStates[MouseCode]			= Input::EMouseState::Pressed;
+			MouseKeyDownTimes[MouseCode]	= 0.0f;
 		}
 		else if (Event.IsA<FMouseButtonReleasedEvent>())
 		{
-			FMouseButtonEvent& MouseButtonEvent = Event.As<FMouseButtonPressedEvent>();
+			FMouseButtonEvent& MouseButtonEvent = Event.As<FMouseButtonReleasedEvent>();
 			uint32 MouseCode = static_cast<uint32>(MouseButtonEvent.GetButton());
-			MouseStates[MouseCode] = static_cast<Input::EMouseState>(GLFW_RELEASE);
+			MouseStates[MouseCode]			= Input::EMouseState::Released;
+			MouseKeyDownTimes[MouseCode]	= -1.0f;
 		}
 		else if (Event.IsA<FKeyPressedEvent>())
 		{
 			FKeyPressedEvent& KeyEvent = Event.As<FKeyPressedEvent>();
 			uint32 KeyCode = static_cast<uint32>(KeyEvent.GetKeyCode());
-			KeyStates[KeyCode] = KeyEvent.IsRepeat() ? static_cast<Input::EKeyState>(GLFW_REPEAT) : static_cast<Input::EKeyState>(GLFW_PRESS);
+			KeyStates[KeyCode] = KeyEvent.IsRepeat() ? Input::EKeyState::Repeated : Input::EKeyState::Pressed;
 		}
 		else if (Event.IsA<FKeyReleasedEvent>())
 		{
 			FKeyReleasedEvent& KeyEvent = Event.As<FKeyReleasedEvent>();
 			uint32 KeyCode = static_cast<uint32>(KeyEvent.GetKeyCode());
-			KeyStates[KeyCode] = static_cast<Input::EKeyState>(GLFW_RELEASE);
+			KeyStates[KeyCode] = Input::EKeyState::Released;
 		}
 		else if (Event.IsA<FMouseScrolledEvent>())
 		{
 			FMouseScrolledEvent& MouseEvent = Event.As<FMouseScrolledEvent>();
 			MouseZ = MouseEvent.GetOffset();
-			
 			uint32 KeyCode = static_cast<uint32>(MouseEvent.GetCode());
-
-			//Gauge direction with offset.
-			MouseStates[KeyCode] = MouseZ > 0.0 ? Input::EMouseState::Up : Input::EMouseState::Down;
+			MouseStates[KeyCode] = MouseZ > 0.0 ? Input::EMouseState::Up : Input::EMouseState::Held;
 		}
 
-		// We never want to absorb here.
 		return false;
 	}
+
 	
 	void FInputProcessor::SetMouseMode(EMouseMode Mode)
 	{
@@ -97,9 +97,40 @@ namespace Lumina
 
 	void FInputProcessor::EndFrame()
 	{
+		for (auto& State : MouseStates)
+		{
+			if (State == Input::EMouseState::Pressed)
+			{
+				State = Input::EMouseState::Held;
+			}
+			if (State == Input::EMouseState::Released)
+			{
+				State = Input::EMouseState::Up;
+			}
+		}
+
+		for (auto& State : KeyStates)
+		{
+			if (State == Input::EKeyState::Pressed)
+			{
+				State = Input::EKeyState::Held;
+			}
+			if (State == Input::EKeyState::Released)
+			{
+				State = Input::EKeyState::Up;
+			}
+		}
+
+		for (uint32 i = 0; i < (uint32)EMouseKey::Num; i++)
+		{
+			if (MouseKeyDownTimes[i] >= 0.0f)
+			{
+				MouseKeyDownTimes[i] += (float)GEngine->GetDeltaTime();
+			}
+		}
+
 		MouseDeltaX = 0.0;
 		MouseDeltaY = 0.0;
-
-		MouseZ = 0.0;
+		MouseZ      = 0.0;
 	}
 }

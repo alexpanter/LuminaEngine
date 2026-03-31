@@ -140,6 +140,10 @@ namespace Lumina
             
             if (ImGui::Button(LE_ICON_REFRESH "##Refresh", GButtonSize))
             {
+                if (ScriptComponent->World)
+                {
+                    ScriptComponent->World->OnScriptComponentCreated(ScriptComponent->Entity, *ScriptComponent, true);
+                }
                 bWasChanged = true;
             }
             

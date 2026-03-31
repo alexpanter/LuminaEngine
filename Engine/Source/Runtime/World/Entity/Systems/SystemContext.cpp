@@ -72,31 +72,22 @@ namespace Lumina
     glm::vec3 FSystemContext::TranslateEntity(entt::entity Entity, const glm::vec3& Translation)
     {
         glm::vec3 NewLocation = Registry.get<STransformComponent>(Entity).Translate(Translation);
-        MarkEntityTransformDirty(Entity);
         return NewLocation;
     }
 
     void FSystemContext::SetEntityLocation(entt::entity Entity, const glm::vec3& Location)
     {
         Registry.get<STransformComponent>(Entity).SetLocation(Location);
-        MarkEntityTransformDirty(Entity);
     }
 
     void FSystemContext::SetEntityRotation(entt::entity Entity, const glm::quat& Rotation)
     {
         Registry.get<STransformComponent>(Entity).SetRotation(Rotation);
-        MarkEntityTransformDirty(Entity);
     }
 
     void FSystemContext::SetEntityScale(entt::entity Entity, const glm::vec3& Scale)
     {
         Registry.get<STransformComponent>(Entity).SetScale(Scale);
-        MarkEntityTransformDirty(Entity);
-    }
-
-    void FSystemContext::MarkEntityTransformDirty(entt::entity Entity, EMoveMode MoveMode, bool bActivate)
-    {
-        EmplaceOrReplace<FNeedsTransformUpdate>(Entity, FNeedsTransformUpdate{MoveMode, bActivate});  
     }
 
     void FSystemContext::DrawDebugLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness, float Duration)

@@ -57,7 +57,7 @@ namespace Lumina
         glm::vec3 DebugMissColor = glm::vec3(1.0f, 0.0f, 0.0f);
         
         PROPERTY(Script)
-        uint32 LayerMask;
+        ECollisionProfiles LayerMask;
         
         PROPERTY(Script)
         TVector<int64> IgnoreBodies;
@@ -90,7 +90,7 @@ namespace Lumina
         glm::vec3 DebugMissColor = glm::vec3(1.0f, 0.0f, 0.0f);
         
         PROPERTY(Script)
-        uint32 LayerMask;
+        ECollisionProfiles LayerMask;
         
         PROPERTY(Script)
         TVector<int64> IgnoreBodies;

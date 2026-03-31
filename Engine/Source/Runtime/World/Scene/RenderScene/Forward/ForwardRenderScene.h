@@ -48,6 +48,8 @@ namespace Lumina
             PointLightIcon,
             DirectionalLightIcon,
             SpotLightIcon,
+            CameraIcon,
+            CharacterIcon,
             #endif
             
             Num,
@@ -55,15 +57,34 @@ namespace Lumina
         
         void Init() override;
         void Shutdown() override;
-        void RenderScene(FRenderGraph& RenderGraph, const FViewVolume& ViewVolume) override;
-        void SetViewVolume(const FViewVolume& ViewVolume) override;
+        
+        void BeginFrame() override { }
+        void EndFrame() override { }
+        
+        void RenderView(FRenderGraph& RenderGraph, const FViewVolume& ViewVolume) override;
         void SwapchainResized(glm::vec2 NewSize);
         
-        void CompileDrawCommands(FRenderGraph& RenderGraph) override;
-                
         void DrawBillboard(FRHIImage* Image, const glm::vec3& Location, float Scale) override;
         void DrawLine(const glm::vec3& Start, const glm::vec3& End, const glm::vec4& Color, float Thickness, bool bDepthTest, float Duration) override { }
 
+        static FViewportState MakeViewportStateFromImage(const FRHIImage* Image);
+        
+        FRHIBuffer* GetNamedBuffer(ENamedBuffer Buffer) const { return NamedBuffers[(int)Buffer]; }
+        FRHIImage* GetNamedImage(ENamedImage Image) const { return NamedImages[(int)Image];}
+        
+        FRHIImage* GetRenderTarget() const override;
+        const FSceneRenderStats& GetRenderStats() const override;
+        FSceneRenderSettings& GetSceneRenderSettings() override;
+        entt::entity GetEntityAtPixel(uint32 X, uint32 Y) const override;
+        
+        
+    private:
+        
+        void InitBuffers();
+        void InitImages();
+        void InitFrameResources();
+        void CreateLayouts();
+        
         //~ Begin Render Passes
         void ResetPass(FRenderGraph& RenderGraph);
         void CullPass(FRenderGraph& RenderGraph);
@@ -83,25 +104,11 @@ namespace Lumina
         void ToneMappingPass(FRenderGraph& RenderGraph);
         void DebugDrawPass(FRenderGraph& RenderGraph);
         //~ End Render Passes
-
-        void InitBuffers();
-        void InitImages();
-        void InitFrameResources();
-        void CreateLayouts();
-
-        static FViewportState MakeViewportStateFromImage(const FRHIImage* Image);
         
-        FRHIBuffer* GetNamedBuffer(ENamedBuffer Buffer) const { return NamedBuffers[(int)Buffer]; }
-        FRHIImage* GetNamedImage(ENamedImage Image) const { return NamedImages[(int)Image];}
-        
-        FRHIImage* GetRenderTarget() const override;
-        const FSceneRenderStats& GetRenderStats() const override;
-        FSceneRenderSettings& GetSceneRenderSettings() override;
-        entt::entity GetEntityAtPixel(uint32 X, uint32 Y) const override;
-        THashSet<entt::entity> GetEntitiesInPixelRange(uint32 MinX, uint32 MinY, uint32 MaxX, uint32 MaxY) const override;
-        
-        
+        void CompileDrawCommands(FRenderGraph& RenderGraph);
+    
     private:
+        
         
         FViewportState                      SceneViewportState;
         FDelegateHandle                     SwapchainResizedHandle;

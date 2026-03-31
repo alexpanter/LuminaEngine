@@ -90,6 +90,11 @@ namespace Lumina
 
     protected:
         
+        void BeginTransaction() override;
+        void EndTransaction(FName Name) override;
+        void Undo() override;
+        void Redo() override;
+        
         void AddSelectedEntity(entt::entity Entity, bool bRebuild);
         void RemoveSelectedEntity(entt::entity Entity, bool bRebuild);
         void ClearSelectedEntities();
@@ -121,7 +126,8 @@ namespace Lumina
         
         void OnPrePropertyChangeEvent(const FPropertyChangedEvent& Event);
         void OnPostPropertyChangeEvent(const FPropertyChangedEvent& Event);
-        
+
+
         bool IsUnsavedDocument() override;
         
         void DrawEntityEditor(bool bFocused, entt::entity Entity);

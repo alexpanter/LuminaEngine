@@ -29,11 +29,5 @@ namespace Lumina
     void SCameraSystem::Update(const FSystemContext& SystemContext) noexcept
     {
         LUMINA_PROFILE_SCOPE();
-
-        auto View = SystemContext.CreateView<SCameraComponent, STransformComponent>();
-        View.each([](SCameraComponent& CameraComponent, const STransformComponent& TransformComponent)
-        {
-            CameraComponent.SetView(TransformComponent.WorldTransform.Location, TransformComponent.GetForward(), TransformComponent.GetUp());
-        });
     }
 }

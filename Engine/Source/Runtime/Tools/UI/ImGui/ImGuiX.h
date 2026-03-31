@@ -40,14 +40,16 @@ namespace Lumina::ImGuiX
     void TextTooltip(std::format_string<TArgs...> Fmt, TArgs&&... Args)
     {
         FFixedString Buffer;
-        std::format_to(std::back_inserter(Buffer), Fmt, Args...);
+        std::format_to(std::back_inserter(Buffer), Fmt, std::forward<TArgs>(Args)...);   
         TextTooltip_Internal(Buffer);
     }
 
     template <typename... TArgs>
-    void Text(std::format_string<TArgs...> fmt, TArgs&&... Args)
+    void Text(std::format_string<TArgs...> Fmt, TArgs&&... Args)
     {
-        ImGui::TextUnformatted(std::format(fmt, std::forward<TArgs>(Args)...).c_str());
+        FFixedString Buffer;
+        std::format_to(std::back_inserter(Buffer), Fmt, std::forward<TArgs>(Args)...);
+        ImGui::TextUnformatted(Buffer.c_str());
     }
     
     RUNTIME_API void TextUnformatted(FStringView String);

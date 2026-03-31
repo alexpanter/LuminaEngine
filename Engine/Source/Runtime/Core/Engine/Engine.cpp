@@ -2,6 +2,7 @@
 #include "Engine.h"
 #include "Assets/AssetRegistry/AssetRegistry.h"
 #include "Audio/AudioContext.h"
+#include "Audio/AudioGlobals.h"
 #include "Config/Config.h"
 #include "Core/Application/Application.h"
 #include "Core/Console/ConsoleVariable.h"
@@ -227,6 +228,8 @@ namespace Lumina
                 #endif
                 
                 GRenderManager->FrameEnd(UpdateContext, RenderGraph);
+                
+                GAudioContext->Update();
                 
                 Lua::FScriptingContext::Get().ProcessDeferredActions();
 
